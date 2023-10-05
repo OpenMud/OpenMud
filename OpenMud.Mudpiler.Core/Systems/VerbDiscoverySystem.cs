@@ -11,8 +11,6 @@ namespace OpenMud.Mudpiler.Core.Systems;
 [With(typeof(LogicIdentifierComponent), typeof(VerbDetailsComponent), typeof(RefreshVerbsComponent))]
 public class VerbDiscoverySystem : AEntitySetSystem<float>
 {
-    private static readonly VerbSrc DEFAULT_VERB_SOURCE = new(SourceType.User);
-
     private readonly LogicDirectory logicDirectory;
 
     public VerbDiscoverySystem(World world, LogicDirectory logicDirectory, bool useBuffer = false) :

@@ -133,7 +133,6 @@ public class EntityVisibilitySolver : IEntityVisibilitySolver
 [WithEither(typeof(RefreshVisibilityComponent), typeof(EntityVisualContextCacheComponent))]
 public class EntityVisualContextCacheSystem : AEntitySetSystem<float>
 {
-    public static readonly int DEFAULT_VIEW_DISTANCE = 8;
     private readonly LogicDirectory logicLookup;
 
     public EntityVisualContextCacheSystem(World world, LogicDirectory logicLookup, bool useBuffer = false) : base(world,
@@ -142,7 +141,6 @@ public class EntityVisualContextCacheSystem : AEntitySetSystem<float>
         this.logicLookup = logicLookup;
         world.SubscribeComponentAdded<LogicCreatedComponent>(SubscribeRefreshProperties);
     }
-
 
     private void SubscribeRefreshProperties(in Entity entity, in LogicCreatedComponent value)
     {

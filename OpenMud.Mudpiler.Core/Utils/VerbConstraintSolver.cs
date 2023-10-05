@@ -100,8 +100,6 @@ public static class VerbConstraintSolver
         if (!target.Has<IdentifierComponent>())
             return false;
 
-        var destinationName = target.Get<IdentifierComponent>().Name;
-
         return TestSourceType(world, visiblitySolver, details.SrcConstraints, ref target, ref source, out var _);
     }
 
@@ -112,7 +110,6 @@ public static class VerbConstraintSolver
         if (!host.Has<VerbDetailsComponent>() || !host.Has<IdentifierComponent>())
             return new CommandDetails[0];
 
-        var hostName = host.Get<IdentifierComponent>().Name;
         var verbs = host.Get<VerbDetailsComponent>();
 
         var commands = new List<CommandDetails>();

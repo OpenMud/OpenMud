@@ -103,28 +103,11 @@ public static class SlideConstraintSolver
         var exitedDispatch = oldLocLogics.Except(common).Where(x => x.HasProc("Exited"));
         var enteredDispatch = newLocLogics.Except(common).Where(x => x.HasProc("Entered"));
 
-        var (x, y, z) = (oldLocation.x, oldLocation.y, oldLocation.z);
-
         object CreateLocArg()
         {
             return curLogic.Environment.CreateDatum("/primitive_coord",
                 new WrappedProcArgumentList(oldLocation.x, oldLocation.y, oldLocation.z));
         }
-
-        /*
-            curLogic.Environment.CreateDatum(
-                    DmlEnv.ClassName<VarDmlCoord>(),
-                    new WrappedProcArgumentList(new[] {
-                        VarEnvObjectReference.CreateImmutable(
-                            new VarDmlCoord(
-                                oldLocation.x,
-                                oldLocation.y,
-                                oldLocation.z
-                            }
-                        )
-                    }
-                )
-            );*/
 
         foreach (var e in enteredDispatch) e.ExecProc("Entered", curLogic, CreateLocArg());
 
@@ -172,16 +155,6 @@ public static class SlideConstraintSolver
             .Select(logicLookup.Lookup)
             .ToArray();
 
-        var allow = ExecuteSlideLogic(curLogic, newLocLogics, oldLocLogics, out var collisionLogic);
-
-        bool isCollider(in LogicIdentifierComponent p)
-        {
-            return p.LogicInstanceId == logicLookup[collisionLogic];
-        }
-
-        if (allow)
-            return true;
-
-        return false;
+        return ExecuteSlideLogic(curLogic, newLocLogics, oldLocLogics, out var collisionLogic);
     }
 }

@@ -49,8 +49,7 @@ public class InteractionSystem : AEntitySetSystem<float>
         this.entityVisibilitySolver = entityVisibilitySolver;
     }
 
-    private void ValidateSourceType(SimpleSourceConstraint details, EnvObjectReference logicInstance, ref Entity user,
-        string usrName)
+    private void ValidateSourceType(SimpleSourceConstraint details, EnvObjectReference logicInstance, ref Entity user, string usrName)
     {
         if (!typeof(Atom).IsAssignableFrom(logicInstance.Type))
             throw new VerbRejectionException("Source type is not an atomic. Only atomics supported currently.");

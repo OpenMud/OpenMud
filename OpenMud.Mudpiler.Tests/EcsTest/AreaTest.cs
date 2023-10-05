@@ -184,7 +184,6 @@ xxx
         Stabalize(g);
 
         Assert.IsTrue(g.WorldMessages.Count() == 0);
-        var playerPos = DmlEnv.ParseCoord(g.GetHandle("player"));
 
         g.Slide("player", 0, -1);
         Stabalize(g);

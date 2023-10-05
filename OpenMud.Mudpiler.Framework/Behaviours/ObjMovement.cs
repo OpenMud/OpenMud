@@ -25,8 +25,6 @@ internal class ObjMovement : IRuntimeTypeBuilder
 
     public void Build(DatumHandle e, Datum datum, DatumProcCollection procedureCollection)
     {
-        var atomicHandle = (EntityHandle)e;
-
         procedureCollection.Register(0,
             new ActionDatumProc("Move", (args, datum) => Move((Atom)datum, args[0], args[1], args[3], args[3])));
     }

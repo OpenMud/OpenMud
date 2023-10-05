@@ -5,7 +5,6 @@ namespace OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 
 public enum DatumProcExecutionState
 {
-    NotStarted,
     Running,
     Completed
 }

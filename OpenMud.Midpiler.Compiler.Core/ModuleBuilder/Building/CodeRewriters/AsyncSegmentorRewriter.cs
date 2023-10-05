@@ -289,7 +289,7 @@ public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
 
     private BlockSyntax FindBlock(SyntaxNode node)
     {
-        SyntaxNode? n = null;
+        SyntaxNode? n;
         for (n = node; !(n is BlockSyntax) && n.Parent != null; n = n.Parent) ;
 
         if (n == null)

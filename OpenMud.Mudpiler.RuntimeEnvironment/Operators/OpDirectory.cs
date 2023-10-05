@@ -15,7 +15,6 @@ public class OpDirectory : IOpSolver
         typeof(bool)
     }.ToImmutableHashSet();
 
-    private readonly IOpSolver defaultObjectSolver = new OpObject();
     private readonly IOpSolver nullSolver = new OpNullSolver();
     private readonly IOpSolver primitiveSolver = new OpPrimitive();
     private readonly ExecuteTransaction setupExecutor;

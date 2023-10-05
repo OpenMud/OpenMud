@@ -237,8 +237,6 @@ public sealed class MudEnvironment
 
     private void SetupContext(Datum global, EnvObjectReference subjectInstance, ITransactionProcessor processor)
     {
-        var subjectType = subjectInstance.Type;
-
         var newContext = new DatumExecutionContext(
             global,
             processor,

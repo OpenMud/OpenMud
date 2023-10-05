@@ -8,7 +8,6 @@ namespace OpenMud.Mudpiler.Core.Systems;
 [With(typeof(VisionComponent))]
 public class EntityVisionSystem : AEntitySetSystem<float>
 {
-    public static readonly int DEFAULT_VIEW_DISTANCE = 8;
     private readonly EntityVisibilitySolver visibilitySolver;
 
     public EntityVisionSystem(World world, EntityVisibilitySolver visibilitySolver, bool useBuffer = false) : base(

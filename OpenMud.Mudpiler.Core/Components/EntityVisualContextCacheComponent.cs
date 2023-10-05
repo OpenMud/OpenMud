@@ -20,5 +20,6 @@ public struct EntityVisualContextCacheComponent
     public EntityVisualContextCacheComponent(IImmutableDictionary<string, float> visibleEntities, int range)
     {
         VisibleEntities = visibleEntities;
+        Range = range;
     }
 }

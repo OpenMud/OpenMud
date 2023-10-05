@@ -20,26 +20,6 @@ public enum ArgAs
     Sound
 }
 
-public interface IListEvalSourceConstraintElement
-{
-    object Evaluate(Func<string, dynamic> memberExecutor);
-}
-
-public class ListEvalSourceConstraintPrimitiveElement : IListEvalSourceConstraintElement
-{
-    public readonly object Element;
-
-    public ListEvalSourceConstraintPrimitiveElement(object element)
-    {
-        Element = element;
-    }
-
-    public object Evaluate(Func<string, dynamic> memberExecutor)
-    {
-        return Element;
-    }
-}
-
 public class ListEvalSourceConstraint : IDmlProcAttribute
 {
     public readonly int ArgIndex;

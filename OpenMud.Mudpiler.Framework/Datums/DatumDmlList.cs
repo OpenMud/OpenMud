@@ -9,7 +9,7 @@ public sealed class DatumDmlList : DmlList
 
     public DatumDmlList()
     {
-        host.CollectionChanged += (a, b) => Changed?.Invoke();
+        host.CollectionChanged += (_, _) => Changed?.Invoke();
     }
 
     public override IList<EnvObjectReference> Host => host;

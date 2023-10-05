@@ -33,6 +33,9 @@ public class GameSimulation
 
     private readonly MudEnvironment environment;
 
+    public event WorldEcho? OnWorldEcho;
+    public event EntityEcho? OnEntityEcho;
+
     public GameSimulation(IMudSceneBuilder builder, Assembly sourceAssembly, DrawingArea worldRenderTarget)
     {
         var entityBuilder = new BaseEntityBuilder();
@@ -75,9 +78,6 @@ public class GameSimulation
 
         builder.Build(_world);
     }
-
-    public event WorldEcho OnWorldEcho;
-    public event EntityEcho OnEntityEcho;
 
     private void On(in EntityEchoMessage message)
     {
