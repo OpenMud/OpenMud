@@ -15,15 +15,12 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
     public static readonly string ROOT_NAMESPACE = "DmlGenerate";
 
-    public static readonly string INITIALIZER_METHOD = "New";
-
     private static readonly ExpressionVisitor EXPR = new();
 
     private readonly Dictionary<string, ClassDeclarationSyntax> classDeclarations = new();
 
     private readonly IClassPrebuildProcessor[] classPreBuildProcessors =
     {
-        new FieldDefaultAssignments(),
         new ContexFieldTranslator()
     };
 
@@ -323,8 +320,6 @@ public class CSharpModule : IDreamMakerSymbolResolver
     {
         if (fullPath == null)
             fullPath = DmlPath.GLOBAL_PATH;
-
-        var modifiers = DmlPath.ExtractTailModifiers(fullPath, out var effectiveFullPath);
 
         //Define all of the base classes..
         var pathName = DmlPath.RootClassName(DmlPath.RemoveModifiers(fullPath));

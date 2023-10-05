@@ -68,7 +68,6 @@ public static class ParametersConstraintBuilder
     private class ConstraintSetResolver : DmlParserBaseVisitor<Func<IDreamMakerSymbolResolver, AttributeSyntax>>
     {
         private static readonly string SimpleAnnotationPath = typeof(SimpleSourceConstraint).FullName;
-        private static readonly string ListConstraintAnnotationPath = typeof(ListEvalSourceConstraint).FullName;
         private static readonly string ListEvalSourceConstraintPath = typeof(ListEvalSourceConstraint).FullName;
 
         private static readonly ExpressionVisitor EXPR = new();

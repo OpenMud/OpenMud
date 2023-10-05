@@ -48,7 +48,6 @@ public class DmmSceneBuilderFactory
         parser.AddErrorListener(errorListener);
 
         var ctx = parser.dmm_module();
-        var visitor = new DmmLibraryBuilder();
 
         if (errorListener.Errors.Any())
             throw new Exception(string.Join("\n", errorListener.Errors));

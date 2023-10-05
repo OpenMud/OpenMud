@@ -110,7 +110,6 @@ public class DmeProject
         //but because they are not currently being compiled into an intermediate form, this is necessary.
 
         var preprocessorCtx = new DmePreprocessContext(absEnvPath);
-        var sourceFile = preprocessorCtx.PreprocessFile(environmentFiles[0], EnvironmentConstants.BUILD_MACROS);
 
         var dmmSceneBuilder = new DmmSceneBuilderFactory(builder);
 

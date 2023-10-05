@@ -86,8 +86,7 @@ public class MsBuildDmlCompiler
 
         try
         {
-            var projectPath = CreateProject(cSharpIntermediate, projectDirectory);
-
+            CreateProject(cSharpIntermediate, projectDirectory);
             DoProjectRestore(projectDirectory, msbuildtools);
             var compiledBin = DoProjectBuild(projectDirectory, msbuildtools);
 
@@ -158,14 +157,6 @@ public class MsBuildDmlCompiler
 
         if (buildProc.ExitCode != 0)
             throw new Exception("Project restore error.");
-    }
-
-    private static CSharpCompilation CreateCompilation(SyntaxTree tree, string name)
-    {
-        return CSharpCompilation
-            .Create(name, options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
-            .AddReferences(MetadataReference.CreateFromFile(typeof(string).Assembly.Location))
-            .AddSyntaxTrees(tree);
     }
 
     public static string Compile(string text, string? destAssemblyName = null, bool disposeIntermediate = true)

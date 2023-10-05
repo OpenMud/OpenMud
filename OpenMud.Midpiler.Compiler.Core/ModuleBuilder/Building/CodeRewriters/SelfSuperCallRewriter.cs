@@ -149,12 +149,6 @@ internal class SelfSuperCallRewriter : CSharpSyntaxRewriter
 
     public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax m)
     {
-        if (m.Identifier.Text.Contains("GetEx"))
-        {
-            var hmm = 10;
-            hmm++;
-        }
-
         var working = ResolveSelfCalls(ResolveBaseCalls(m));
 
         return base.VisitMethodDeclaration(working);

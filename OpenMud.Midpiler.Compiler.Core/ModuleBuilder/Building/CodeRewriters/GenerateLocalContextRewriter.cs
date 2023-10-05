@@ -10,20 +10,6 @@ internal class GenerateLocalContextRewriter : CSharpSyntaxRewriter
 {
     private readonly HashSet<string> classDecl = new();
     private bool isDatumProc;
-    private HashSet<string> knownDeclarations = new();
-
-    public override SyntaxNode? VisitBlock(BlockSyntax node)
-    {
-        var nestedBlocks = node.DescendantNodes(n => !(n is BlockSyntax)).Where(x => x is BlockSyntax).ToHashSet();
-        var variableDeclarations = node
-            .DescendantNodes(n => !nestedBlocks.Contains(n))
-            .Where(x => x is VariableDeclarationSyntax)
-            .Cast<VariableDeclarationSyntax>()
-            .SelectMany(x => x.Variables.Select(v => v.Identifier.Text))
-            .ToHashSet();
-        return base.VisitBlock(node);
-    }
-
 
     private (ISet<LocalDeclarationStatementSyntax> decls, ISet<ParameterSyntax> parameters, ISet<IdentifierNameSyntax>
         varUses) FindMethodDeclarations(MethodDeclarationSyntax c)
