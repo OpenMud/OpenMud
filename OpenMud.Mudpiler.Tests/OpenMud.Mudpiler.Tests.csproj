@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Fody" Version="6.8.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="InlineIL.Fody" Version="1.7.4" />
+		<PackageReference Include="Microsoft.Build" Version="17.7.2">
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Build.Locator" Version="1.6.1">
+		</PackageReference>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
+		<PackageReference Include="Mono.Cecil" Version="0.11.5" />
+		<PackageReference Include="NUnit" Version="3.13.3" />
+		<PackageReference Include="NUnit3TestAdapter" Version="4.4.2" />
+		<PackageReference Include="NUnit.Analyzers" Version="3.6.1" />
+		<PackageReference Include="coverlet.collector" Version="3.2.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference
+			Include="..\OpenMud.Mudpiler.Compiler.DmlPreprocessor\OpenMud.Mudpiler.Compiler.DmlPreprocessor.csproj" />
+		<ProjectReference Include="..\OpenMud.Mudpiler.Compiler.Project\OpenMud.Mudpiler.Compiler.Project.csproj" />
+		<ProjectReference Include="..\OpenMud.Mudpiler.Core\OpenMud.Mudpiler.Core.csproj" />
+		<ProjectReference Include="..\OpenMud.Mudpiler.Framework\OpenMud.Mudpiler.Framework.csproj" />
+	</ItemGroup>
+
+</Project>

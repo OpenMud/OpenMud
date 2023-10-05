@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AntlrBuildTaskPath>$(ProjectDir)..\Reference\Antlr</AntlrBuildTaskPath>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Antlr4" Version="4.6.6">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Antlr4.CodeGenerator" Version="4.6.6">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Build" Version="17.7.2">
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Build.Locator" Version="1.6.1">
+		</PackageReference>
+		<!--<PackageReference Include="InlineIL.Fody" Version="1.7.4" /> -->
+		<PackageReference Include="Microsoft.CodeAnalysis" Version="3.9.0 " />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.9.0 " />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\OpenMud.Mudpiler.Compiler.DmlGrammar\OpenMud.Mudpiler.Compiler.DmlGrammar.csproj" />
+		<ProjectReference Include="..\OpenMud.Mudpiler.RuntimeEnvironment\OpenMud.Mudpiler.RuntimeEnvironment.csproj" />
+	</ItemGroup>
+
+</Project>

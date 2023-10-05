@@ -1,0 +1,109 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Compiler.Core", "OpenMud.Midpiler.Compiler.Core\OpenMud.Mudpiler.Compiler.Core.csproj", "{F3A65210-734F-4A11-9133-9F68F8855005}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Tests", "OpenMud.Mudpiler.Tests\OpenMud.Mudpiler.Tests.csproj", "{BC999638-E47B-4125-AA1D-08A835F6111B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Core", "OpenMud.Mudpiler.Core\OpenMud.Mudpiler.Core.csproj", "{8F13866F-9C51-4808-BF87-75C878794C1C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Client.Terminal", "OpenMud.Mudpiler.Client.Terminal\OpenMud.Mudpiler.Client.Terminal.csproj", "{F97CDB49-62D0-42E0-A3CD-7D35CB6F70AB}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Compiler.DmlGrammar", "OpenMud.Mudpiler.Compiler.DmlGrammar\OpenMud.Mudpiler.Compiler.DmlGrammar.csproj", "{60BA20DB-A04C-4028-B4A4-46C9E8BE00AB}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Compiler.DmmGrammar", "OpenMud.Mudpiler.Compiler.DmmGrammar\OpenMud.Mudpiler.Compiler.DmmGrammar.csproj", "{05546866-A3C8-4FC1-9D03-5A6F09710B65}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Compiler.DmeGrammar", "OpenMud.Mudpiler.Compiler.DmeGrammar\OpenMud.Mudpiler.Compiler.DmeGrammar.csproj", "{FEC48ABE-68D2-4F8C-B3C7-49AC8C2C6884}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Compiler.Project", "OpenMud.Mudpiler.Compiler.Project\OpenMud.Mudpiler.Compiler.Project.csproj", "{062D48CA-C3DC-41B2-8558-9FFC15931296}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Compiler.DmlPreprocessor", "OpenMud.Mudpiler.Compiler.DmlPreprocessor\OpenMud.Mudpiler.Compiler.DmlPreprocessor.csproj", "{4C6735EB-6412-4E98-8314-617A9B299BE3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Net.Server", "OpenMud.Mudpiler.Net.Server\OpenMud.Mudpiler.Net.Server.csproj", "{3AB89074-5877-4D45-92E1-A208A4CFF0DD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Compiler.Asset", "OpenMud.Mudpiler.Compiler.Asset\OpenMud.Mudpiler.Compiler.Asset.csproj", "{5415316D-B8CC-4991-B89F-B09296D1083C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Net.Core", "OpenMud.Mudpiler.Net.Core\OpenMud.Mudpiler.Net.Core.csproj", "{2118B861-EC38-45A6-B60A-D0D25D340E87}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Framework", "OpenMud.Mudpiler.Framework\OpenMud.Mudpiler.Framework.csproj", "{6794AE80-9651-476D-BB80-FCA6FE20F1DE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.RuntimeEnvironment", "OpenMud.Mudpiler.RuntimeEnvironment\OpenMud.Mudpiler.RuntimeEnvironment.csproj", "{6E0B8360-2BFE-4F45-99FE-D6B0FF115B84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenMud.Mudpiler.Compiler.Project.Cli", "OpenMud.Mudpiler.Compiler.Project.Cli\OpenMud.Mudpiler.Compiler.Project.Cli.csproj", "{8FDDB1F4-457D-4170-971D-38994570CF01}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F3A65210-734F-4A11-9133-9F68F8855005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3A65210-734F-4A11-9133-9F68F8855005}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3A65210-734F-4A11-9133-9F68F8855005}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3A65210-734F-4A11-9133-9F68F8855005}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC999638-E47B-4125-AA1D-08A835F6111B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC999638-E47B-4125-AA1D-08A835F6111B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC999638-E47B-4125-AA1D-08A835F6111B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC999638-E47B-4125-AA1D-08A835F6111B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F13866F-9C51-4808-BF87-75C878794C1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F13866F-9C51-4808-BF87-75C878794C1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F13866F-9C51-4808-BF87-75C878794C1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F13866F-9C51-4808-BF87-75C878794C1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F97CDB49-62D0-42E0-A3CD-7D35CB6F70AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F97CDB49-62D0-42E0-A3CD-7D35CB6F70AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F97CDB49-62D0-42E0-A3CD-7D35CB6F70AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F97CDB49-62D0-42E0-A3CD-7D35CB6F70AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60BA20DB-A04C-4028-B4A4-46C9E8BE00AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60BA20DB-A04C-4028-B4A4-46C9E8BE00AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60BA20DB-A04C-4028-B4A4-46C9E8BE00AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60BA20DB-A04C-4028-B4A4-46C9E8BE00AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05546866-A3C8-4FC1-9D03-5A6F09710B65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05546866-A3C8-4FC1-9D03-5A6F09710B65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05546866-A3C8-4FC1-9D03-5A6F09710B65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05546866-A3C8-4FC1-9D03-5A6F09710B65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FEC48ABE-68D2-4F8C-B3C7-49AC8C2C6884}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEC48ABE-68D2-4F8C-B3C7-49AC8C2C6884}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEC48ABE-68D2-4F8C-B3C7-49AC8C2C6884}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEC48ABE-68D2-4F8C-B3C7-49AC8C2C6884}.Release|Any CPU.Build.0 = Release|Any CPU
+		{062D48CA-C3DC-41B2-8558-9FFC15931296}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{062D48CA-C3DC-41B2-8558-9FFC15931296}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{062D48CA-C3DC-41B2-8558-9FFC15931296}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{062D48CA-C3DC-41B2-8558-9FFC15931296}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C6735EB-6412-4E98-8314-617A9B299BE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C6735EB-6412-4E98-8314-617A9B299BE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C6735EB-6412-4E98-8314-617A9B299BE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C6735EB-6412-4E98-8314-617A9B299BE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3AB89074-5877-4D45-92E1-A208A4CFF0DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3AB89074-5877-4D45-92E1-A208A4CFF0DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3AB89074-5877-4D45-92E1-A208A4CFF0DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3AB89074-5877-4D45-92E1-A208A4CFF0DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5415316D-B8CC-4991-B89F-B09296D1083C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5415316D-B8CC-4991-B89F-B09296D1083C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5415316D-B8CC-4991-B89F-B09296D1083C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5415316D-B8CC-4991-B89F-B09296D1083C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2118B861-EC38-45A6-B60A-D0D25D340E87}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2118B861-EC38-45A6-B60A-D0D25D340E87}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2118B861-EC38-45A6-B60A-D0D25D340E87}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2118B861-EC38-45A6-B60A-D0D25D340E87}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6794AE80-9651-476D-BB80-FCA6FE20F1DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6794AE80-9651-476D-BB80-FCA6FE20F1DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6794AE80-9651-476D-BB80-FCA6FE20F1DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6794AE80-9651-476D-BB80-FCA6FE20F1DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E0B8360-2BFE-4F45-99FE-D6B0FF115B84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E0B8360-2BFE-4F45-99FE-D6B0FF115B84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E0B8360-2BFE-4F45-99FE-D6B0FF115B84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E0B8360-2BFE-4F45-99FE-D6B0FF115B84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8FDDB1F4-457D-4170-971D-38994570CF01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FDDB1F4-457D-4170-971D-38994570CF01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FDDB1F4-457D-4170-971D-38994570CF01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FDDB1F4-457D-4170-971D-38994570CF01}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1C00689D-0E6C-429F-A496-FB8226E02C1D}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<RootNamespace>OpenMud.Mudpiler.Compiler.DmeGrammar</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Antlr4" Version="4.6.6">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Antlr4.CodeGenerator" Version="4.6.6">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Antlr4.Runtime" Version="4.6.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Antlr4 Update="DmeLexer.g4">
+			<DefaultCustomToolNamespace>OpenMud.Mudpiler.Compiler.DmeGrammar</DefaultCustomToolNamespace>
+			<CustomToolNamespace>OpenMud.Mudpiler.Compiler.DmeGrammar</CustomToolNamespace>
+		</Antlr4>
+		<Antlr4 Update="DmeParser.g4">
+			<DefaultCustomToolNamespace>OpenMud.Mudpiler.Compiler.DmeGrammar</DefaultCustomToolNamespace>
+			<CustomToolNamespace>OpenMud.Mudpiler.Compiler.DmeGrammar</CustomToolNamespace>
+		</Antlr4>
+	</ItemGroup>
+
+</Project>

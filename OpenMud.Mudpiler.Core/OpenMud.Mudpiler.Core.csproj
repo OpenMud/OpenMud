@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<RootNamespace>OpenMud.Mudpiler.Core</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Antlr4 Remove="Contexts\**" />
+		<Compile Remove="Contexts\**" />
+		<EmbeddedResource Remove="Contexts\**" />
+		<None Remove="Contexts\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Antlr4" Version="4.6.6">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Antlr4.Runtime" Version="4.6.6" />
+		<PackageReference Include="DefaultEcs" Version="0.17.2" />
+		<PackageReference Include="GoRogue" Version="2.6.4" />
+		<PackageReference Include="Microsoft.Toolkit.HighPerformance" Version="7.1.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\OpenMud.Mudpiler.RuntimeEnvironment\OpenMud.Mudpiler.RuntimeEnvironment.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Environment\Operators\" />
+		<Folder Include="Environment\Proc\" />
+		<Folder Include="Environment\RuntimeTypes\" />
+		<Folder Include="Environment\Settings\" />
+		<Folder Include="Environment\WorldPiece\" />
+	</ItemGroup>
+
+</Project>

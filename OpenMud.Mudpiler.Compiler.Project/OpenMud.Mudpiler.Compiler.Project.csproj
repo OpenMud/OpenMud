@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OpenMud.Mudpiler.Compiler.Project</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenMud.Midpiler.Compiler.Core\OpenMud.Mudpiler.Compiler.Core.csproj" />
+    <ProjectReference Include="..\OpenMud.Mudpiler.Compiler.DmlPreprocessor\OpenMud.Mudpiler.Compiler.DmlPreprocessor.csproj" />
+    <ProjectReference Include="..\OpenMud.Mudpiler.Compiler.DmmGrammar\OpenMud.Mudpiler.Compiler.DmmGrammar.csproj" />
+    <ProjectReference Include="..\OpenMud.Mudpiler.Core\OpenMud.Mudpiler.Core.csproj" />
+  </ItemGroup>
+
+</Project>
