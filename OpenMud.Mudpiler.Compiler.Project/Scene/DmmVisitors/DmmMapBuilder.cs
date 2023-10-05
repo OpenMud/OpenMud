@@ -16,7 +16,7 @@ internal class DmmMapBuilder : DmmParserBaseVisitor<Dictionary<Tuple<int, int>, 
     {
         var mapDecl = new Dictionary<Tuple<int, int>, string>();
 
-        var rows = context.STRING().GetText().ToString().Trim('"').Split(new[] { '\r', '\n' }).Select(x => x.Trim())
+        var rows = context.STRING().GetText().Trim('"').Split(new[] { '\r', '\n' }).Select(x => x.Trim())
             .Where(x => x.Length > 0);
 
         var (originX, originY) = (int.Parse(context.x.Text), int.Parse(context.y.Text));
@@ -25,7 +25,7 @@ internal class DmmMapBuilder : DmmParserBaseVisitor<Dictionary<Tuple<int, int>, 
         {
             for (var x = 0; x < rowText.Length; x += typeKeyLength)
                 mapDecl[Tuple.Create(x / typeKeyLength + originX, originY)] =
-                    rowText.Substring(x, typeKeyLength).ToString();
+                    rowText.Substring(x, typeKeyLength);
             originY++;
         }
 

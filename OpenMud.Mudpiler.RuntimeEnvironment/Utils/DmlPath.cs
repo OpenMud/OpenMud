@@ -67,7 +67,7 @@ public static class DmlPath
         return newPath;
     }
 
-    public static string ResolveParentPath(string fullPath)
+    public static string? ResolveParentPath(string fullPath)
     {
         if (NormalizeClassName(fullPath) == NormalizeClassName(GLOBAL_PATH))
             return null;

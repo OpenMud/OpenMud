@@ -1,5 +1,3 @@
 ﻿namespace OpenMud.Mudpiler.Core.Components;
 
-public record struct TangibleComponent
-{
-}
+public record struct TangibleComponent;

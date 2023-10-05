@@ -75,10 +75,10 @@ public class DmmSceneBuilderFactory
                 var initArgs = new Dictionary<string, object>();
 
                 foreach (var (k, v) in cls.IntParameters)
-                    initArgs[k] = (object)v;
+                    initArgs[k] = v;
 
                 foreach (var (k, v) in cls.StringParameters)
-                    initArgs[k] = (object)v;
+                    initArgs[k] = v;
 
                 if (initArgs.Any())
                     e.Set(new LogicFieldInitializerComponent(initArgs));

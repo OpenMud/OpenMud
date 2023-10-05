@@ -39,12 +39,12 @@ internal class ObjMovement : IRuntimeTypeBuilder
             return VarEnvObjectReference.CreateImmutable(1);
         }
 
-        var world = (EnvObjectReference)((EnvObjectReference)datum.ctx.global).Get<Global>().world;
+        var world = ((EnvObjectReference)datum.ctx.global).Get<Global>().world;
 
         var moveResult = mobMovement.Jump(datum, dest, dir, stepX, stepY);
         //Move it into the world.
         if (DmlEnv.AsLogical(moveResult))
-            ((EnvObjectReference)world.Get<GameWorld>().contents).Get<DmlList>()
+            (world.Get<GameWorld>().contents).Get<DmlList>()
                 .Add(VarEnvObjectReference.CreateImmutable(datum));
 
         return moveResult;

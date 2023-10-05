@@ -279,13 +279,10 @@ internal class InjectStepSuccession : CSharpSyntaxRewriter
 
 public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
 {
-    private static readonly string LABEL_PREFIX = "jmp_";
-
-    private static bool injectOnNextStatement;
-    private Dictionary<BlockSyntax, List<Tuple<InvocationExpressionSyntax, BlockSyntax>>> blockGroupings;
+    private Dictionary<BlockSyntax, List<Tuple<InvocationExpressionSyntax, BlockSyntax>>>? blockGroupings;
     private readonly List<Tuple<InvocationExpressionSyntax, BlockSyntax>> injectionPoints = new();
     private bool injectJumps;
-    private Dictionary<InvocationExpressionSyntax, string> topLevelAnchorNames;
+    private Dictionary<InvocationExpressionSyntax, string>? topLevelAnchorNames;
 
     private BlockSyntax FindBlock(SyntaxNode node)
     {
@@ -394,7 +391,6 @@ public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
         if (!BuilderAnnotations.HasProcNameAnnotation(node))
             return base.VisitMethodDeclaration(node);
 
-        injectOnNextStatement = false;
         injectJumps = true;
         injectionPoints.Clear();
 

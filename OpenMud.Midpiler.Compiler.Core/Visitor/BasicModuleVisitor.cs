@@ -277,8 +277,8 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
         var parseOrder =
             context.object_function_definition().Cast<ParserRuleContext>()
-                .Concat(context.object_tree_definition().Cast<ParserRuleContext>())
-                .Concat(context.variable_declaration().Cast<ParserRuleContext>())
+                .Concat(context.object_tree_definition())
+                .Concat(context.variable_declaration())
                 .OrderBy(x => x.Start.Line);
 
         return new CompositeClassPieceBuilder(

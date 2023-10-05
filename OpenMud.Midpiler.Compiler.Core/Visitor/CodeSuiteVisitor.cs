@@ -42,7 +42,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             return SyntaxFactory.IfStatement(
                 spawnCall,
                 SyntaxFactory.Block(
-                    SyntaxFactory.List(new StatementSyntax[]
+                    SyntaxFactory.List(new []
                     {
                         Visit(context.suite())(builder),
                         SyntaxFactory.ReturnStatement()

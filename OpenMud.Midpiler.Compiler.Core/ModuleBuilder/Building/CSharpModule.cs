@@ -315,8 +315,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
             .Where(y => y.Value.Identifier.Text == BuiltinTypes.ResolveClassAlias(n.Identifier.Text)).Single().Key;
     }
 
-    private ClassDeclarationSyntax DefineClass(string fullPath,
-        Func<ClassDeclarationSyntax, ClassDeclarationSyntax> define)
+    private ClassDeclarationSyntax DefineClass(string? fullPath, Func<ClassDeclarationSyntax, ClassDeclarationSyntax> define)
     {
         if (fullPath == null)
             fullPath = DmlPath.GLOBAL_PATH;
