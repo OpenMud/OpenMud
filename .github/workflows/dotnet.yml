@@ -12,7 +12,7 @@ on:
 jobs:
   build:
 
-    runs-on: microsoft/dotnet-framework-build
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v3
