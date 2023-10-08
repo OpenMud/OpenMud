@@ -1,0 +1,7 @@
+{
+  "extends": "@parcel/config-default",
+  "transformers": {
+    "*.{jpg,png,bmp,json,css}": ["@parcel/transformer-raw"]
+  },
+  "reporters":  ["...", "parcel-reporter-static-files-copy"]
+}

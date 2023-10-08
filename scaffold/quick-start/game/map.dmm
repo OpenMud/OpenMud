@@ -1,0 +1,20 @@
+"a" = (/turf/wall,/area/cave)
+"b" = (/mob/rat,/turf/floor,/area/cave)
+"c" = (/turf/floor,/area/cave)
+"d" = (/obj/cheese,/turf/floor,/area/cave)
+"e" = (/turf/floor,/area/outside)
+"f" = (/obj/scroll,/turf/floor,/area/outside)
+
+(1,1,1) = {"
+aaaaaaaaaaa
+abccccaccca
+acccccadcca
+acccaccccca
+aaaaacaaaaa
+eeeaaccccca
+eeeeaaaaaca
+eeefeeeaace
+eeeeeeeeaae
+eeeeeeeeeee
+eeeeeeeeeee
+"}
