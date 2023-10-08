@@ -9,43 +9,6 @@
 		<IsTestProject>true</IsTestProject>
 	</PropertyGroup>
 
-	<ItemGroup>
-	  <Compile Remove="EcsTest\**" />
-	  <Compile Remove="PreprocessorTest\**" />
-	  <EmbeddedResource Remove="EcsTest\**" />
-	  <EmbeddedResource Remove="PreprocessorTest\**" />
-	  <None Remove="EcsTest\**" />
-	  <None Remove="PreprocessorTest\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Compile Remove="EnvironmentTests\AtomicTests.cs" />
-	  <Compile Remove="EnvironmentTests\CommentsTest.cs" />
-	  <Compile Remove="EnvironmentTests\ControlFlowTests.cs" />
-	  <Compile Remove="EnvironmentTests\DeferExecutionMechanicsTest.cs" />
-	  <Compile Remove="EnvironmentTests\DeleteTests.cs" />
-	  <Compile Remove="EnvironmentTests\DmmTests.cs" />
-	  <Compile Remove="EnvironmentTests\DynamicVerbs.cs" />
-	  <Compile Remove="EnvironmentTests\FlexibleArguments.cs" />
-	  <Compile Remove="EnvironmentTests\ImplicitReturnTests.cs" />
-	  <Compile Remove="EnvironmentTests\InheritanceTests.cs" />
-	  <Compile Remove="EnvironmentTests\InstantiationTests.cs" />
-	  <Compile Remove="EnvironmentTests\InteractionTests.cs" />
-	  <Compile Remove="EnvironmentTests\IsTypeTestCase.cs" />
-	  <Compile Remove="EnvironmentTests\ListTests.cs" />
-	  <Compile Remove="EnvironmentTests\NewTest.cs" />
-	  <Compile Remove="EnvironmentTests\ObjectTreePathsTests.cs" />
-	  <Compile Remove="EnvironmentTests\OperationsTests.cs" />
-	  <Compile Remove="EnvironmentTests\OperatorOverloadingTest.cs" />
-	  <Compile Remove="EnvironmentTests\PropertyAccessors.cs" />
-	  <Compile Remove="EnvironmentTests\StringExpressionsTest.cs" />
-	  <Compile Remove="EnvironmentTests\SystemTests.cs" />
-	  <Compile Remove="EnvironmentTests\TasksTests.cs" />
-	  <Compile Remove="EnvironmentTests\TypesOfTest.cs" />
-	  <Compile Remove="EnvironmentTests\Usings.cs" />
-	  <Compile Remove="EnvironmentTests\VariableScopingAndStatePersistanceTests.cs" />
-	  <Compile Remove="EnvironmentTests\VerbTests.cs" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Fody" Version="6.8.0">
