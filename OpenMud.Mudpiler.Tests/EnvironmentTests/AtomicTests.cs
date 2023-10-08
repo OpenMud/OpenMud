@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using NUnit.Framework;
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
