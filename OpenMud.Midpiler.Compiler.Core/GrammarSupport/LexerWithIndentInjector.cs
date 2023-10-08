@@ -145,6 +145,7 @@ public class LexerWithIndentInjector : DmlLexer
                 case '\r':
                 case '\n':
                 case '\f':
+                case '#':
                 case TokenConstants.Eof
                     : // skip the trailing inconsistent dedent or the trailing unexpected indent (or the trailing indent)
                     return; // We're on a blank line or before a comment or before the EOF, skip the NEWLINE token

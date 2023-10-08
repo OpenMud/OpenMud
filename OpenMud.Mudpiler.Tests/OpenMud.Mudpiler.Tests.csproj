@@ -29,8 +29,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference
-			Include="..\OpenMud.Mudpiler.Compiler.DmlPreprocessor\OpenMud.Mudpiler.Compiler.DmlPreprocessor.csproj" />
+		<ProjectReference Include="..\OpenMud.Mudpiler.Compiler.DmlPreprocessor\OpenMud.Mudpiler.Compiler.DmlPreprocessor.csproj" />
 		<ProjectReference Include="..\OpenMud.Mudpiler.Compiler.Project\OpenMud.Mudpiler.Compiler.Project.csproj" />
 		<ProjectReference Include="..\OpenMud.Mudpiler.Core\OpenMud.Mudpiler.Core.csproj" />
 		<ProjectReference Include="..\OpenMud.Mudpiler.Framework\OpenMud.Mudpiler.Framework.csproj" />

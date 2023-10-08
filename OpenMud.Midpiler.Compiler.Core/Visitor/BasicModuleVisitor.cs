@@ -12,10 +12,18 @@ namespace OpenMud.Mudpiler.Compiler.Core.Visitor;
 
 public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 {
-    private static readonly CodeSuiteVisitor CODE = new();
+    private readonly CodeSuiteVisitor CODE;
     private static readonly ExpressionVisitor EXPR = new();
 
     private int methodDefinitionOrder;
+
+    private readonly SourceMapping mapping;
+
+    internal BasicModuleVisitor(SourceMapping mapping)
+    {
+        this.mapping = mapping;
+        this.CODE = new(mapping);
+    }
 
     private static ParameterSyntax CreateParameter(DmlParser.ParameterContext c, IDreamMakerSymbolResolver resolver)
     {

@@ -2,6 +2,7 @@
 using System.Reflection;
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
 using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 
@@ -43,7 +44,14 @@ world
 #endif
 ";
 
-        var r = Preprocessor.Preprocess(".", testCode, NullResourceResolver, processImport);
+        var r = Preprocessor.PreprocessAsDocument(
+            "testfile.dml",
+            ".",
+            Enumerable.Empty<string>(),
+            testCode, 
+            NullResourceResolver,
+            processImport,
+            out _).AsPlainText(false);
         Assert.IsTrue(r.Trim() == "world");
     }
 
@@ -61,7 +69,7 @@ world
     var
         testvar = TEST_VAR_VALUE
 ";
-        var r = Preprocessor.Preprocess(".", testCode, NullResourceResolver, processImport,
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, NullResourceResolver, processImport,
             new Dictionary<string, MacroDefinition>
             {
                 { "TEST_VAR_VALUE", new MacroDefinition("\"test_value\"") }
@@ -86,7 +94,7 @@ world
     var
         testvar = TEST_VAR_VALUE
 ";
-        var r = Preprocessor.Preprocess(".", testCode, NullResourceResolver, processImport,
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, NullResourceResolver, processImport,
             new Dictionary<string, MacroDefinition>
             {
                 { "TEST_VAR_VALUE", new MacroDefinition("\"test_value\"") }
@@ -113,7 +121,7 @@ world
         map_format = TOPDOWN_MAP	// This is another string with a single quote'
 
 ";
-        var r = Preprocessor.Preprocess(".", testCode, NullResourceResolver, processImport,
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, NullResourceResolver, processImport,
             new Dictionary<string, MacroDefinition>
             {
                 { "TOPDOWN_MAP", new MacroDefinition("\"test_value\"") }
@@ -140,7 +148,7 @@ world
         map_format = TOPDOWN_MAP	// This is another string with a single quote""
 
 ";
-        var r = Preprocessor.Preprocess(".", testCode, NullResourceResolver, processImport,
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, NullResourceResolver, processImport,
             new Dictionary<string, MacroDefinition>
             {
                 { "TOPDOWN_MAP", new MacroDefinition("\"test_value\"") }
@@ -166,7 +174,7 @@ world
         map_format = ""hello//world""
 
 ";
-        var r = Preprocessor.Preprocess(".", testCode, NullResourceResolver, processImport);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, NullResourceResolver, processImport);
 
         var assembly = MsBuildDmlCompiler.Compile(r);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
@@ -193,7 +201,15 @@ hello
 world
 #endif
 ";
-        var r = Preprocessor.Preprocess(".", testCode, NullResourceResolver, processImport);
+        var r = Preprocessor.PreprocessAsDocument(
+            "testFile.dml",
+            ".",
+            Enumerable.Empty<string>(),
+            testCode,
+            NullResourceResolver,
+            processImport,
+            out _)
+            .AsPlainText(false);
         Assert.IsTrue(r.Trim() == "hello");
     }
 
@@ -206,8 +222,9 @@ world
 #define DEBUG
 hello
 ";
-        var r = Preprocessor.Preprocess(".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant);
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
         Assert.IsTrue(r.Trim() == "hello");
         Assert.IsTrue(resultant.ContainsKey("DEBUG"));
     }
@@ -221,8 +238,9 @@ hello
 world
 ";
         importableFiles.Add("hello.dm", "hello");
-        var r = Preprocessor.Preprocess(".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant);
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -238,8 +256,10 @@ world
 world
 ";
         importableLibFiles.Add("hello.dm", "hello");
-        var r = Preprocessor.Preprocess(".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+        var rDoc = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
             out var resultant);
+
+        var r = rDoc.AsPlainText(false);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -261,8 +281,9 @@ world
         importableFiles["testfile.dm"] = @"
 #undef test
 hello";
-        var r = Preprocessor.Preprocess(".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant);
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -287,8 +308,9 @@ hello
 world
 #endif
 ";
-        var r = Preprocessor.Preprocess(".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant);
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -305,8 +327,9 @@ world
 
 test(1,2,3)
 ";
-        var r = Preprocessor.Preprocess(".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant);
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -323,8 +346,9 @@ test(1,2,3)
 test(1,2,3)
 ""test(1,2,3) test test test""
 ";
-        var r = Preprocessor.Preprocess(".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant);
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -349,7 +373,7 @@ test(1,2,3)
     testFalse = FALSE
 
 ";
-        var r = Preprocessor.Preprocess(".", testCode, NullResourceResolver, processImport,
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, NullResourceResolver, processImport,
             EnvironmentConstants.BUILD_MACROS);
 
         var assembly = MsBuildDmlCompiler.Compile(r);
@@ -391,7 +415,7 @@ turf/door/open
             return Path.Combine(possible[1], rsrc);
         }
 
-        var r = Preprocessor.Preprocess(".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
 
         var assembly = MsBuildDmlCompiler.Compile(r);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
@@ -430,7 +454,7 @@ turf/door/open
             return Path.Combine(possible[1], rsrc);
         }
 
-        var r = Preprocessor.Preprocess(".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
 
         var assembly = MsBuildDmlCompiler.Compile(r);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
@@ -468,18 +492,18 @@ turf/door/open
             return "";
         }
 
-        var r = Preprocessor.Preprocess(".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var r = Preprocessor.Preprocess( "testFile.dml",".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
     }
 
-    private (IImmutableDictionary<string, MacroDefinition> macros, string importBody) processImport(
+    private (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) processImport(
         IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib,
         string fileName)
     {
         var contents = isLib ? importableLibFiles[fileName] : importableFiles[fileName];
-        contents = Preprocessor.Preprocess(".", resourceDirectories, contents, NullResourceResolver, processImport,
+        var r = Preprocessor.PreprocessAsDocument(fileName, ".", resourceDirectories, contents, NullResourceResolver, processImport,
             out var newMacros, dict);
 
-        return (newMacros, contents);
+        return (newMacros, r);
     }
 
     private static string NullResourceResolver(List<string> possible, string name)

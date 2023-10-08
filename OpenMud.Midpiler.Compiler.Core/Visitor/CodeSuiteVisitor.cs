@@ -22,8 +22,14 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 {
     private static readonly string VARGEN_PREFIX = "__supportvar";
     private readonly ExpressionVisitor EXPR = new();
+    private readonly SourceMapping mapping;
 
     private int vargenIndex;
+
+    internal CodeSuiteVisitor(SourceMapping mapping)
+    {
+        this.mapping = mapping;
+    }
 
     public IdentifierNameSyntax GenerateSupportVariable()
     {
@@ -263,12 +269,46 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
     public override CodePieceBuilder VisitSuite_single_stmt(DmlParser.Suite_single_stmtContext c)
     {
-        return resolver => SyntaxFactory.Block(new[] { Visit(c.simple_stmt())(resolver) });
+        return resolver =>
+        {
+            var r = Visit(c.simple_stmt())(resolver);
+
+            var addr = mapping.Lookup(c.start.Line);
+
+            if (addr.HasValue)
+            {
+                r = r.WithAdditionalAnnotations(
+                    BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line));
+            }
+
+            return SyntaxFactory.Block(new[]
+            {
+                r
+            });
+        };
     }
 
     public override CodePieceBuilder VisitSuite_multi_stmt(DmlParser.Suite_multi_stmtContext c)
     {
-        return resolver => SyntaxFactory.Block(c.stmt().Select(Visit).Where(x => x != null).Select(s => s(resolver)));
+        return resolver => SyntaxFactory.Block(
+            c.stmt()
+                .Select(s => Tuple.Create(s, Visit(s)))
+                .Where(x => x.Item2 != null)
+                .Select(s =>
+                    {
+                        var r = s.Item2(resolver);
+
+                        var addr = mapping.Lookup(s.Item1.Start.Line);
+
+                        if (addr.HasValue)
+                        {
+                            r = r.WithAdditionalAnnotations(
+                                BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line));
+                        }
+
+                        return r;
+                    }
+                ));
     }
 
     public override CodePieceBuilder VisitSuite_empty([NotNull] DmlParser.Suite_emptyContext context)

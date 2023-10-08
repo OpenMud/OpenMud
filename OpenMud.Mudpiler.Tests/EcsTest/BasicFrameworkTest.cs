@@ -32,7 +32,7 @@ internal class BasicFrameworkTest
 
     return 1
 ";
-        dmlCode = Preprocessor.Preprocess(".", dmlCode, (a, b) => throw new NotImplementedException(),
+        dmlCode = Preprocessor.Preprocess("testfile.dme", ".", dmlCode, (a, b) => throw new NotImplementedException(),
             (a, b, c, d) => throw new Exception("Import not supported"), EnvironmentConstants.BUILD_MACROS);
 
         var assembly = MsBuildDmlCompiler.Compile(dmlCode);

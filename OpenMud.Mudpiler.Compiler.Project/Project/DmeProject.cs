@@ -2,6 +2,7 @@
 using System.Reflection;
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
 using OpenMud.Mudpiler.Compiler.Project.Scene;
 using OpenMud.Mudpiler.Core.Scene;
 using OpenMud.Mudpiler.RuntimeEnvironment;
@@ -22,11 +23,11 @@ public class DmePreprocessContext
 
     public IEnumerable<string> ImportedMaps => importedMaps;
 
-    private string PreprocessContents(string resourceBasePath, IEnumerable<string> resourceDirectories, string contents,
+    private SourceFileDocument PreprocessContents(string fullFilePath, string resourceBasePath, IEnumerable<string> resourceDirectories, string contents,
         IImmutableDictionary<string, MacroDefinition>? predef,
         out IImmutableDictionary<string, MacroDefinition> resultantMacro)
     {
-        return Preprocessor.Preprocess(resourceBasePath, resourceDirectories, contents, ResolveResourceDirectory,
+        return Preprocessor.PreprocessAsDocument(fullFilePath, resourceBasePath, resourceDirectories, contents, ResolveResourceDirectory,
             ProcessImport, out resultantMacro, predef);
     }
 
@@ -44,38 +45,42 @@ public class DmePreprocessContext
         throw new Exception("Resouree could not be found: " + path);
     }
 
-    private (IImmutableDictionary<string, MacroDefinition> macros, string importBody) ProcessImport(
+    private (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) ProcessImport(
         IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib,
         string fileName)
     {
         if (fileName.ToLower().EndsWith(".dmm"))
         {
             importedMaps.Add(Path.Combine(workingDirectory, fileName));
-            return (dict, "");
+            return (dict, SourceFileDocument.Empty);
         }
 
         var r = PreprocessFile(fileName, resourceDirectories, dict, out var resultant);
         return (resultant, r);
     }
 
-    public string PreprocessFile(string dmeFile, IEnumerable<string> resourceDirectories,
+    public SourceFileDocument PreprocessFile(string dmeFile, IEnumerable<string> resourceDirectories,
         IImmutableDictionary<string, MacroDefinition>? predef,
         out IImmutableDictionary<string, MacroDefinition> resultantMacro)
     {
         var rsrcPath = Path.GetDirectoryName(dmeFile) ?? "./";
 
+        dmeFile = Path.GetFullPath(dmeFile);
+
         return new DmePreprocessContext(Path.Join(workingDirectory, Path.GetDirectoryName(dmeFile) ?? "./"),
                 importedMaps)
-            .PreprocessContents(rsrcPath, resourceDirectories, File.ReadAllText(dmeFile), predef, out resultantMacro);
+            .PreprocessContents(dmeFile, rsrcPath, resourceDirectories, File.ReadAllText(dmeFile), predef, out resultantMacro);
     }
 
-    public string PreprocessFile(string dmeFile, IImmutableDictionary<string, MacroDefinition>? predef = null,
+    public SourceFileDocument PreprocessFile(string dmeFile, IImmutableDictionary<string, MacroDefinition>? predef = null,
         IEnumerable<string> resourceDirectories = null)
     {
         var rsrcPath = Path.Combine(workingDirectory, Path.GetDirectoryName(dmeFile) ?? "./");
 
+        dmeFile = Path.GetFullPath(dmeFile);
+
         return new DmePreprocessContext(rsrcPath, importedMaps)
-            .PreprocessContents(rsrcPath, resourceDirectories ?? Enumerable.Empty<string>(), File.ReadAllText(dmeFile),
+            .PreprocessContents(dmeFile, rsrcPath, resourceDirectories ?? Enumerable.Empty<string>(), File.ReadAllText(dmeFile),
                 predef, out var _);
     }
 }
@@ -95,7 +100,7 @@ public class DmeProject
     {
         var rootCtx = new DmePreprocessContext(Path.GetDirectoryName(dmeFile) ?? Directory.GetCurrentDirectory());
 
-        return rootCtx.PreprocessFile(dmeFile);
+        return rootCtx.PreprocessFile(dmeFile).AsPlainText();
     }
 
     public static DmeProject Load(string path, IMudEntityBuilder builder)
@@ -135,7 +140,7 @@ public class DmeProject
 
         var preprocessorCtx = new DmePreprocessContext(absEnvPath);
 
-        var sourceFile = preprocessorCtx.PreprocessFile(environmentFiles[0], buildMacros);
+        var sourceFile = preprocessorCtx.PreprocessFile(environmentFiles[0], buildMacros).AsPlainText();
 
         var dmmSceneBuilder = new DmmSceneBuilderFactory(builder);
         var maps = preprocessorCtx.ImportedMaps.ToImmutableDictionary(

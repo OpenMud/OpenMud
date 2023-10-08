@@ -18,6 +18,26 @@ public static class BuilderAnnotations
     public static readonly SyntaxAnnotation DmlImmediateEvaluateMethod = new();
     public static readonly SyntaxAnnotation DmlNativeDeferred = new();
 
+    public static SyntaxAnnotation MapSourceFile(string filename, int lineNumber)
+    {
+        return new SyntaxAnnotation("sourceMap", $"{lineNumber}:{filename}");
+    }
+    public static bool GetSourceMap(SyntaxNode n, out string filename, out int lineNumber)
+    {
+        filename = "";
+        lineNumber = 0;
+
+        if (!n.HasAnnotations("sourceMap"))
+            return false;
+
+        var str = n.GetAnnotations("sourceMap").First().Data;
+
+        lineNumber = int.Parse(str.Substring(0, str.IndexOf(":")));
+        filename = str.Substring(str.IndexOf(":") + 1);
+
+        return true;
+    }
+
     public static SyntaxAnnotation CreateProcNameAnnotation(string name)
     {
         return new SyntaxAnnotation("dmlProcName", name);

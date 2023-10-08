@@ -5,6 +5,10 @@
 //Misc Support Rules
 lexer grammar DmlLexer;
 
+channels {
+    LineDirectiveChannel
+}
+
 RESOURCE
   : RESOURCE_LITERAL
   ;
@@ -68,6 +72,8 @@ DO:          'do';
 WHILE:       'while';
 
 OPERATOR:    'operator';
+
+SYMBOL_POUNDLINE: '#line' ' '+ [0-9]+ ' '+ '"' ('\\"'|.)*? '"' -> channel(LineDirectiveChannel);
 
 FWD_SLASH:                '/';
 

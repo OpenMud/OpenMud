@@ -25,15 +25,15 @@ public class ErrorListener : IAntlrErrorListener<int>, IAntlrErrorListener<IToke
 
 public class Preprocessor
 {
-    public static string Preprocess(string resourcePathBase, string text,
+    public static string Preprocess(string fileName, string resourcePathBase, string text,
         ResolveResourceDirectory resolveResourceDirectory, ProcessImport processImport,
         IImmutableDictionary<string, MacroDefinition>? predefined = null)
     {
-        return Preprocess(resourcePathBase, Enumerable.Empty<string>(), text, resolveResourceDirectory, processImport,
+        return Preprocess(fileName, resourcePathBase, Enumerable.Empty<string>(), text, resolveResourceDirectory, processImport,
             out var _, predefined);
     }
 
-    public static string Preprocess(string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
+    public static SourceFileDocument PreprocessAsDocument(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
         ResolveResourceDirectory resolveResourceDirectory, ProcessImport processImport,
         out IImmutableDictionary<string, MacroDefinition> resultantDefinitions,
         IImmutableDictionary<string, MacroDefinition>? predefined = null)
@@ -53,7 +53,7 @@ public class Preprocessor
 
 
         var ctx = parser.dmlDocument();
-        var visitor = new DmlPreprocessorVisitor(resourcePathBase, resourceDirectory, commonTokenStream,
+        var visitor = new DmlPreprocessorVisitor(filePath, resourcePathBase, resourceDirectory, commonTokenStream,
             resolveResourceDirectory, processImport, predefined);
 
         var allErrors = errorListener.Errors.ToList();
@@ -66,5 +66,25 @@ public class Preprocessor
         resultantDefinitions = visitor.MacroDefinitions;
 
         return r;
+    }
+
+
+    public static string Preprocess(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
+        ResolveResourceDirectory resolveResourceDirectory, ProcessImport processImport,
+        out IImmutableDictionary<string, MacroDefinition> resultantDefinitions,
+        IImmutableDictionary<string, MacroDefinition>? predefined = null)
+    {
+        var r = PreprocessAsDocument(
+            filePath,
+            resourcePathBase,
+            resourceDirectory,
+            text,
+            resolveResourceDirectory,
+            processImport,
+            out resultantDefinitions,
+            predefined
+        );
+
+        return r.AsPlainText();
     }
 }

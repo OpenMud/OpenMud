@@ -162,7 +162,19 @@ public class MsBuildDmlCompiler
     public static string Compile(string text, string? destAssemblyName = null, bool disposeIntermediate = true)
     {
         var inputStream = new AntlrInputStream(text);
+        inputStream.Mark();
+
+        var lineMappings = new SourceMapping(new DmlLexer(inputStream)
+            .GetAllTokens()
+            .Where(t => t.Channel == DmlLexer.LineDirectiveChannel)
+            .Select(t => t)
+            .ToList()
+        );
+
+        inputStream.Reset();
+
         var lexer = new LexerWithIndentInjector(inputStream);
+        
         var commonTokenStream = new CommonTokenStream(lexer);
         var errorListener = new ErrorListener();
 
@@ -172,7 +184,7 @@ public class MsBuildDmlCompiler
         parser.AddErrorListener(errorListener);
 
         var ctx = parser.dml_module();
-        var visitor = new BasicModuleVisitor();
+        var visitor = new BasicModuleVisitor(lineMappings);
 
         var allErrors = lexer.GetErrorMessages().Concat(errorListener.Errors).ToList();
 

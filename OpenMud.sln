@@ -31,7 +31,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Framework"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.RuntimeEnvironment", "OpenMud.Mudpiler.RuntimeEnvironment\OpenMud.Mudpiler.RuntimeEnvironment.csproj", "{6E0B8360-2BFE-4F45-99FE-D6B0FF115B84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenMud.Mudpiler.Compiler.Project.Cli", "OpenMud.Mudpiler.Compiler.Project.Cli\OpenMud.Mudpiler.Compiler.Project.Cli.csproj", "{8FDDB1F4-457D-4170-971D-38994570CF01}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenMud.Mudpiler.Compiler.Project.Cli", "OpenMud.Mudpiler.Compiler.Project.Cli\OpenMud.Mudpiler.Compiler.Project.Cli.csproj", "{8FDDB1F4-457D-4170-971D-38994570CF01}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

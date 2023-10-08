@@ -4,18 +4,19 @@ using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using OpenMud.Mudpiler.Compiler.DmeGrammar;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
 
 namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
 
-public delegate (IImmutableDictionary<string, MacroDefinition> macros, string importBody) ProcessImport(
+public delegate (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) ProcessImport(
     IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib, string fileName);
 
 public delegate string ResolveResourceDirectory(List<string> knownFileDirs, string path);
 
-internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
+internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
 {
     private static readonly Regex resourceRegex = new(@"'[^'\r\n]*'");
-
+    private readonly string fileName;
     private readonly ProcessImport processImport;
     private readonly ResolveResourceDirectory resolveResourceDirectory;
     private readonly List<string> resourceDirectories = new();
@@ -26,18 +27,19 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
 
     private Dictionary<string, MacroDefinition> ConditionalSymbols = new();
 
-    public DmlPreprocessorVisitor(string resourcePathBase, IEnumerable<string> resourceDirectory,
+    public DmlPreprocessorVisitor(string fileName, string resourcePathBase, IEnumerable<string> resourceDirectory,
         CommonTokenStream commonTokenStream, ResolveResourceDirectory resolveResourceDirectory,
         ProcessImport processImport, IImmutableDictionary<string, MacroDefinition> macros) :
-        this(resourcePathBase, resourceDirectory, commonTokenStream, resolveResourceDirectory, processImport)
+        this(fileName, resourcePathBase, resourceDirectory, commonTokenStream, resolveResourceDirectory, processImport)
     {
         ConditionalSymbols = macros.ToDictionary(x => x.Key, x => x.Value);
     }
 
-    public DmlPreprocessorVisitor(string resourcePathBase, IEnumerable<string> resourceDirectory,
+    public DmlPreprocessorVisitor(string fileName, string resourcePathBase, IEnumerable<string> resourceDirectory,
         CommonTokenStream commonTokenStream, ResolveResourceDirectory resolveResourceDirectory,
         ProcessImport processImport)
     {
+        this.fileName = fileName;
         resourceDirectories = resourceDirectory.ToList();
         this.resourcePathBase = resourcePathBase;
         _conditions.AddFirst(true);
@@ -48,126 +50,6 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
 
     public IImmutableDictionary<string, MacroDefinition> MacroDefinitions => ConditionalSymbols.ToImmutableDictionary();
     public IEnumerable<string> ResourceSearchDirectory => resourceDirectories;
-
-    private Func<Match, bool> CreateCommentBlackouts(string source, bool blackoutResources)
-    {
-        //Sometimes just writing a parser is simpler than trying to get Antlr to do what you want it to.
-        List<Tuple<int, int>> blackouts = new();
-
-        var multilineCommentDepth = 0;
-        var isInString = false;
-        var isInResource = false;
-        var isInSingleLineComment = false;
-
-        var start = 0;
-
-        void EndOfBlackout(int idx)
-        {
-            blackouts.Add(Tuple.Create(start, idx));
-            start = 0;
-        }
-
-        for (var i = 0; i < source.Length; i++)
-        {
-            var remaining = source.Length - i - 1;
-
-            bool acceptAndSkip(string v)
-            {
-                if (remaining < v.Length)
-                    return false;
-
-                for (var w = 0; w < v.Length; w++)
-                    if (source[w + i] != v[w])
-                        return false;
-
-                i += v.Length - 1;
-                return true;
-            }
-
-            if (multilineCommentDepth > 0)
-            {
-                if (acceptAndSkip("*/"))
-                {
-                    multilineCommentDepth--;
-
-                    if (multilineCommentDepth == 0)
-                        EndOfBlackout(i);
-                    continue;
-                }
-
-                if (acceptAndSkip("/*")) multilineCommentDepth++;
-            }
-            else if (isInString)
-            {
-                if (acceptAndSkip("\\\""))
-                    continue;
-
-                if (acceptAndSkip("\""))
-                {
-                    isInString = false;
-                    EndOfBlackout(i);
-                }
-            }
-            else if (isInResource)
-            {
-                if (acceptAndSkip("\\\'"))
-                    continue;
-
-                if (acceptAndSkip("'"))
-                {
-                    if (blackoutResources)
-                        EndOfBlackout(i);
-                    isInResource = false;
-                }
-            }
-            else if (isInSingleLineComment)
-            {
-                if (acceptAndSkip("\r\n") || acceptAndSkip("\n") || acceptAndSkip("\r"))
-                {
-                    isInSingleLineComment = false;
-                    EndOfBlackout(i);
-                }
-            }
-            else
-            {
-                var startBuffer = i;
-                if (acceptAndSkip("//"))
-                {
-                    isInSingleLineComment = true;
-                    start = startBuffer;
-                }
-                else if (acceptAndSkip("/*"))
-                {
-                    multilineCommentDepth++;
-                    start = startBuffer;
-                }
-                else if (acceptAndSkip("\""))
-                {
-                    isInString = true;
-                    start = startBuffer;
-                }
-                else if (acceptAndSkip("'"))
-                {
-                    isInResource = true;
-
-                    if (blackoutResources)
-                        start = startBuffer;
-                }
-            }
-        }
-
-        return m =>
-        {
-            return !Enumerable.Range(m.Index, m.Length).Any(
-                idx => blackouts.Any(blk => idx >= blk.Item1 && idx <= blk.Item2)
-            );
-        };
-    }
-
-    public Func<Match, bool> CreateBlackouts(string source, bool blackoutResources = true)
-    {
-        return CreateCommentBlackouts(source, blackoutResources);
-    }
 
     private static string NormalizeResourcePath(string path)
     {
@@ -182,18 +64,19 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
         return path;
     }
 
-    private string ApplyResourceMacros(string source)
+    private SourceFileDocument ApplyResourceMacros(SourceFileDocument source)
     {
         var processedOrigins = new HashSet<int>();
         while (true)
         {
-            var allowMatch = CreateBlackouts(source, false);
+            var unpacked = source.Unpack();
+            var allowMatch = Blackout.CreateBlackouts(unpacked.Contents, false);
 
             var nextApplication = resourceRegex
-                .Matches(source)
+                .Matches(unpacked.Contents)
                 .OrderBy(m => m.Index)
                 .Where(m => !processedOrigins.Contains(m.Index))
-                .Where(allowMatch)
+                .Where(allowMatch.Allow)
                 .FirstOrDefault();
 
             if (nextApplication == null)
@@ -206,14 +89,15 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
                            NormalizeResourcePath(resolveResourceDirectory(ResourceSearchDirectory.ToList(), path)) +
                            "'";
 
-            source = source.Substring(0, nextApplication.Index) + newValue +
-                     source.Substring(nextApplication.Index + nextApplication.Length);
+            source = unpacked.ReplaceAndPack(nextApplication, newValue);
         }
 
         return source;
     }
 
-    private string ApplyMacros(string source)
+
+
+    private SourceFileDocument ApplyMacros(SourceFileDocument source)
     {
         var candidates = ConditionalSymbols.ToDictionary(
             x => x.Value,
@@ -222,13 +106,14 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
 
         while (true)
         {
-            var allowMatch = CreateBlackouts(source);
+            var unpacked = source.Unpack();
+            var allowMatch = Blackout.CreateBlackouts(unpacked.Contents);
 
             var nextApplication = candidates
                 .SelectMany(x =>
                     x.Value
-                        .Matches(source)
-                        .Where(allowMatch)
+                        .Matches(unpacked.Contents)
+                        .Where(allowMatch.Allow)
                         .Select(m => Tuple.Create(x.Key, m))
                 )
                 .FirstOrDefault();
@@ -236,7 +121,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
             if (nextApplication == null)
                 break;
 
-            source = nextApplication.Item1.Apply(source, nextApplication.Item2);
+            source = nextApplication.Item1.Apply(unpacked, nextApplication.Item2);
         }
 
         source = ApplyResourceMacros(source);
@@ -244,18 +129,19 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
         return source;
     }
 
-    public override string VisitDmlDocument([NotNull] DmeParser.DmlDocumentContext context)
+    public override SourceFileDocument VisitDmlDocument([NotNull] DmeParser.DmlDocumentContext context)
     {
-        var sb = new StringBuilder();
-        foreach (DmeParser.TextContext text in context.text())
-            sb.Append(Visit(text));
+        var sb = new List<SourceFileDocument>();
 
-        return sb.ToString();
+        foreach (DmeParser.TextContext text in context.text())
+            sb.Add(Visit(text));
+
+        return new SourceFileDocument(sb.SelectMany(s => s.Contents));
     }
 
-    public override string VisitText([NotNull] DmeParser.TextContext context)
+    public override SourceFileDocument VisitText([NotNull] DmeParser.TextContext context)
     {
-        var result = _tokensStream.GetText(context);
+        var result = SourceFileDocument.Create(fileName, context.Start.Line, _tokensStream.GetText(context));
 
         var directive = false;
 
@@ -263,18 +149,18 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
         {
             if (context.directive().GetText().StartsWith("include") ||
                 context.directive().GetText().StartsWith("import"))
-                return Visit(context.directive()) + "\r\n";
+                return Visit(context.directive());// + "\r\n";
 
-            _compilied = Visit(context.directive()) == true.ToString();
+            _compilied = Visit(context.directive()).AsLogical();
             directive = true;
         }
 
         if (!_compilied || directive)
         {
-            var sb = new StringBuilder(result.Length);
-            foreach (var c in result) sb.Append(c == '\r' || c == '\n' ? c : ' ');
+            //var sb = new StringBuilder(result.Length);
+            //foreach (var c in result) sb.Append(c == '\r' || c == '\n' ? c : ' ');
 
-            result = sb.ToString();
+            result = new SourceFileDocument(Enumerable.Empty<SourceFileLine>()); //sb.ToString();
         }
 
         if (_compilied && !directive) result = ApplyMacros(result);
@@ -284,7 +170,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
     }
 
 
-    public override string VisitPreprocessorImport([NotNull] DmeParser.PreprocessorImportContext context)
+    public override SourceFileDocument VisitPreprocessorImport([NotNull] DmeParser.PreprocessorImportContext context)
     {
         var fileImport = context.directive_text().GetText().Trim();
 
@@ -307,21 +193,21 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
         return importBody;
     }
 
-    public override string VisitPreprocessorConditional([NotNull] DmeParser.PreprocessorConditionalContext context)
+    public override SourceFileDocument VisitPreprocessorConditional([NotNull] DmeParser.PreprocessorConditionalContext context)
     {
         if (context.IF() != null)
         {
-            var exprResult = Visit(context.preprocessor_expression()) == true.ToString();
+            var exprResult = Visit(context.preprocessor_expression()).AsLogical();
             _conditions.AddFirst(exprResult);
-            return (exprResult && IsCompiliedText()).ToString();
+            return SourceFileDocument.CreateStatus(exprResult && IsCompiliedText());
         }
 
         if (context.ELIF() != null)
         {
             _conditions.RemoveFirst();
-            var exprResult = Visit(context.preprocessor_expression()) == true.ToString();
+            var exprResult = Visit(context.preprocessor_expression()).AsLogical();
             _conditions.AddFirst(exprResult);
-            return (exprResult && IsCompiliedText()).ToString();
+            return SourceFileDocument.CreateStatus(exprResult && IsCompiliedText());
         }
 
         if (context.ELSE() != null)
@@ -329,14 +215,14 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
             var val = _conditions.First.Value;
             _conditions.RemoveFirst();
             _conditions.AddFirst(!val);
-            return (!val ? IsCompiliedText() : false).ToString();
+            return SourceFileDocument.CreateStatus(val && IsCompiliedText());
         }
 
         _conditions.RemoveFirst();
-        return _conditions.First.Value.ToString();
+        return SourceFileDocument.CreateStatus(_conditions.First.Value);
     }
 
-    public override string VisitPreprocessorDef([NotNull] DmeParser.PreprocessorDefContext context)
+    public override SourceFileDocument VisitPreprocessorDef([NotNull] DmeParser.PreprocessorDefContext context)
     {
         var conditionalSymbolText = context.CONDITIONAL_SYMBOL().GetText();
         if (context.IFDEF() != null || context.IFNDEF() != null)
@@ -344,24 +230,24 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
             var condition = ConditionalSymbols.ContainsKey(conditionalSymbolText);
             if (context.IFNDEF() != null) condition = !condition;
             _conditions.AddFirst(condition);
-            return (condition && IsCompiliedText()).ToString();
+            return SourceFileDocument.CreateStatus(condition  && IsCompiliedText());
         }
 
         if (IsCompiliedText()) ConditionalSymbols.Remove(conditionalSymbolText);
-        return IsCompiliedText().ToString();
+        return SourceFileDocument.CreateStatus(IsCompiliedText());
     }
 
-    public override string VisitPreprocessorPragma([NotNull] DmeParser.PreprocessorPragmaContext context)
+    public override SourceFileDocument VisitPreprocessorPragma([NotNull] DmeParser.PreprocessorPragmaContext context)
     {
-        return IsCompiliedText().ToString();
+        return SourceFileDocument.CreateStatus(IsCompiliedText());
     }
 
-    public override string VisitPreprocessorError([NotNull] DmeParser.PreprocessorErrorContext context)
+    public override SourceFileDocument VisitPreprocessorError([NotNull] DmeParser.PreprocessorErrorContext context)
     {
-        return IsCompiliedText().ToString();
+        return SourceFileDocument.CreateStatus(IsCompiliedText());
     }
 
-    public override string VisitPreprocessorDefine([NotNull] DmeParser.PreprocessorDefineContext context)
+    public override SourceFileDocument VisitPreprocessorDefine([NotNull] DmeParser.PreprocessorDefineContext context)
     {
         if (IsCompiliedText())
         {
@@ -377,7 +263,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
             DefineSymbol(directiveName, directiveText);
         }
 
-        return IsCompiliedText().ToString();
+        return SourceFileDocument.CreateStatus(IsCompiliedText());
     }
 
     private void DefineSymbol(string directiveName, string directiveText)
@@ -411,61 +297,59 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
         ConditionalSymbols[directiveName] = new MacroDefinition(directiveText, argList);
     }
 
-    public override string VisitPreprocessorConstant([NotNull] DmeParser.PreprocessorConstantContext context)
+    public override SourceFileDocument VisitPreprocessorConstant([NotNull] DmeParser.PreprocessorConstantContext context)
     {
         if (context.TRUE() != null || context.FALSE() != null)
-            return (context.TRUE() != null).ToString();
-        return context.GetText();
+            return SourceFileDocument.CreateStatus(context.TRUE() != null);
+        return SourceFileDocument.Create(fileName, context.Start.Line, context.GetText());
     }
 
-    public override string VisitPreprocessorConditionalSymbol(
+    public override SourceFileDocument VisitPreprocessorConditionalSymbol(
         [NotNull] DmeParser.PreprocessorConditionalSymbolContext context)
     {
         if (ConditionalSymbols.TryGetValue(context.CONDITIONAL_SYMBOL().GetText(), out var symbol))
-            return symbol.Text;
-        return false.ToString();
+            return SourceFileDocument.Create(fileName, context.start.Line, symbol.Text);
+
+        return SourceFileDocument.CreateStatus(false);
     }
 
-    public override string VisitPreprocessorParenthesis([NotNull] DmeParser.PreprocessorParenthesisContext context)
+    public override SourceFileDocument VisitPreprocessorParenthesis([NotNull] DmeParser.PreprocessorParenthesisContext context)
     {
         return Visit(context.preprocessor_expression());
     }
 
-    public override string VisitPreprocessorNot([NotNull] DmeParser.PreprocessorNotContext context)
+    public override SourceFileDocument VisitPreprocessorNot([NotNull] DmeParser.PreprocessorNotContext context)
     {
-        return (!bool.Parse(Visit(context.preprocessor_expression()))).ToString();
+        return SourceFileDocument.CreateStatus(!(Visit(context.preprocessor_expression())).AsLogical());
     }
 
-    public override string VisitPreprocessorBinary([NotNull] DmeParser.PreprocessorBinaryContext context)
+    public override SourceFileDocument VisitPreprocessorBinary([NotNull] DmeParser.PreprocessorBinaryContext context)
     {
-        var expr1Result = Visit(context.preprocessor_expression(0));
-        var expr2Result = Visit(context.preprocessor_expression(1));
+        var expr1Result = Visit(context.preprocessor_expression(0));//.AsLogical();
+        var expr2Result = Visit(context.preprocessor_expression(1));//.AsLogical();
         var op = context.op.Text;
         var result = false;
         switch (op)
         {
             case "&&":
-                result = expr1Result == true.ToString() && expr2Result == true.ToString();
+                result = expr1Result.AsLogical() && expr2Result.AsLogical();
                 break;
             case "||":
-                result = expr1Result == true.ToString() || expr2Result == true.ToString();
+                result = expr1Result.AsLogical() || expr2Result.AsLogical();
                 break;
             case "==":
-                result = expr1Result == expr2Result;
+                result = expr1Result.AsLogical() == expr2Result.AsLogical();
                 break;
             case "!=":
-                result = expr1Result != expr2Result;
+                result = expr1Result.AsLogical() != expr2Result.AsLogical();
                 break;
             case "<":
             case ">":
             case "<=":
             case ">=":
-                int x1, x2;
                 result = false;
-                if (int.TryParse(expr1Result, out var _) && int.TryParse(expr2Result, out var _))
+                if (expr1Result.TryNumeric(out var x1) && expr2Result.TryNumeric(out var x2))
                 {
-                    x1 = int.Parse(expr1Result);
-                    x2 = int.Parse(expr2Result);
                     switch (op)
                     {
                         case "<":
@@ -489,12 +373,12 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<string>
                 break;
         }
 
-        return result.ToString();
+        return SourceFileDocument.CreateStatus(result);
     }
 
-    public override string VisitPreprocessorDefined([NotNull] DmeParser.PreprocessorDefinedContext context)
+    public override SourceFileDocument VisitPreprocessorDefined([NotNull] DmeParser.PreprocessorDefinedContext context)
     {
-        return ConditionalSymbols.ContainsKey(context.CONDITIONAL_SYMBOL().GetText()).ToString();
+        return SourceFileDocument.CreateStatus(ConditionalSymbols.ContainsKey(context.CONDITIONAL_SYMBOL().GetText()));
     }
 
     private bool IsCompiliedText()

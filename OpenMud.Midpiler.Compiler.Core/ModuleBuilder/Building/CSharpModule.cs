@@ -56,7 +56,8 @@ public class CSharpModule : IDreamMakerSymbolResolver
             new ManagedArgListWrapper(),
             new GenerateLocalContextRewriter(),
             new AsyncSegmentorRewriter(),
-            new ImmediateEvaluationRewriter()
+            new ImmediateEvaluationRewriter(),
+            new SourceMapperRewriter()
         };
     }
 
