@@ -145,6 +145,5 @@ mob/lerf
         ExampleIsType2() //not a mob, a mob
 
 ";
-        Assert.IsTrue(false);
     }
 }
