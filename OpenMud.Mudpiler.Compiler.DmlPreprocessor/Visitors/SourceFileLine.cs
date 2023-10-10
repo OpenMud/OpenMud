@@ -81,7 +81,7 @@ internal struct UnpackedSourceFileDocument
         int lineNumber = 0;
 
         //foreach (var c in Contents)
-        for(var i = 0; i <= idx; i++)
+        for(var i = 0; i <= idx && i < Contents.Length; i++)
         {
             char c = Contents[i];
             switch (c)

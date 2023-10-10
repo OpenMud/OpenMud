@@ -67,7 +67,7 @@ public class DmePreprocessContext
 
         dmeFile = Path.GetFullPath(dmeFile);
 
-        return new DmePreprocessContext(Path.Join(workingDirectory, Path.GetDirectoryName(dmeFile) ?? "./"),
+        return new DmePreprocessContext(Path.GetDirectoryName(dmeFile) ?? workingDirectory,
                 importedMaps)
             .PreprocessContents(dmeFile, rsrcPath, resourceDirectories, File.ReadAllText(dmeFile), predef, out resultantMacro);
     }
@@ -115,6 +115,7 @@ public class DmeProject
         //but because they are not currently being compiled into an intermediate form, this is necessary.
 
         var preprocessorCtx = new DmePreprocessContext(absEnvPath);
+        preprocessorCtx.PreprocessFile(environmentFiles[0], null).AsPlainText();
 
         var dmmSceneBuilder = new DmmSceneBuilderFactory(builder);
 

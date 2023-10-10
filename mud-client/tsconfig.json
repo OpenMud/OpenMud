@@ -1,0 +1,41 @@
+{
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "module": "commonjs",
+      "sourceMap": true,
+    },
+    "include": [
+      "test/**/*"
+    ]
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "target": "ESNext",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+    "module": "ESNext",                                /* Specify what module code is generated. */
+    "declaration": true,                              /* Generate .d.ts files from TypeScript and JavaScript files in your project. */
+    "sourceMap": true,                                /* Create source map files for emitted JavaScript files. */
+    "outDir": "./dist/",                                   /* Specify an output folder for all emitted files. */
+    "esModuleInterop": true,                             /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
+    "forceConsistentCasingInFileNames": true,            /* Ensure that casing is correct in imports. */
+
+    /* Type Checking */
+    "strict": true,                                      /* Enable all strict type-checking options. */
+    "skipLibCheck": true,
+    "baseUrl": "src",
+    "paths":{
+      "src/*": ["src/*"],
+      "src/components/*": ["src/components/*"],
+      "src/messages/*": ["src/messages/*"],
+    },
+    "types": ["excalibur"],
+    "moduleResolution": "Node"
+  },
+  "include": [
+    "@types/**/*",
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

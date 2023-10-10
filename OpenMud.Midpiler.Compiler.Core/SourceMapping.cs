@@ -19,7 +19,7 @@ namespace OpenMud.Mudpiler.Compiler.Core
             {
                 var d = token.Text.Trim();
 
-                var components = d.Split(new char[] { ' ', '\t'}, StringSplitOptions.RemoveEmptyEntries);
+                var components = d.Split(new char[] { ' ', '\t'}, 3, StringSplitOptions.RemoveEmptyEntries);
 
                 bool isInvalid = components.Length != 3 ||
                                components[0].ToLower() != "#line" ||

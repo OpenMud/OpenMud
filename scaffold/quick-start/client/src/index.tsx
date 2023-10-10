@@ -4,26 +4,12 @@ import { Dispatch, SetStateAction, memo, useEffect, useState } from 'react';
 
 import { Game } from './game'
 
-import { CommandBar } from './gui/cmd';
-import { ICommandInteractionWidget, NetPlayerControlSystem } from "./systems/NetPlayerControlSystem";
-import { SvrActionableCommands } from "./models/SvrActionableCommands";
-import { ConsoleLogger } from "@microsoft/signalr/dist/esm/Utils";
-import { ParameterInput } from "./gui/parameter_input";
-import CssBaseline from '@mui/material/CssBaseline';
-import { ThemeProvider, createTheme } from "@mui/material";
-
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-  },
-});
-
-
+import { CommandBar } from 'openmud';
+import { ICommandInteractionWidget, NetPlayerControlSystem } from "openmud";
+import { SvrActionableCommands } from "openmud";
 
 const container = document.getElementById("app");
 const root = createRoot(container)
-
-
 
 class ActionableCommandsListener implements ICommandInteractionWidget {
     private playerControlSystem: NetPlayerControlSystem | undefined;
@@ -43,7 +29,7 @@ class ActionableCommandsListener implements ICommandInteractionWidget {
     }
 
     activeEntity(): string | undefined {
-        return this._activeEntity;//return this.ninjakeys.nativeElement._selected?.subject_entity;
+        return this._activeEntity;
     }
 
     configureUpdateCommands(setCommands: Dispatch<SetStateAction<any>>) {
@@ -86,7 +72,6 @@ function processCommand(processCommand: any, additionalText: string) {
     const commandString = processCommand.name + additionalText;
 
     game.dispatchCommand(entity, commandString);
-    //console.log("Dispatched command '" + commandString + "' on: " + entity);
 }
 
 const Viewport = memo(() => {
@@ -98,8 +83,7 @@ const Viewport = memo(() => {
             game.stop();
         }
     })
-
-    console.log("Viewport rendered..");
+    
     return <canvas id="viewport"></canvas>
 });
 
