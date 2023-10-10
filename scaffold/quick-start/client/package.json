@@ -1,5 +1,5 @@
 {
-  "name": "{JsLogicalProjectName}",
+  "name": "{{js_logical_project_name}}",
   "version": "1.0.0",
   "description": "",
   "scripts": {

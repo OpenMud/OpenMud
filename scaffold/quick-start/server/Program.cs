@@ -9,7 +9,7 @@ using OpenMud.Mudpiler.Net.Core.Encoding;
 using OpenMud.Mudpiler.Net.Core.Encoding.Components;
 using OpenMud.Mudpiler.Net.Core.Hubs;
 
-namespace {LogicalProjectName}.Server;
+namespace {{logical_project_name}}.Server;
 
 internal class Program
 {

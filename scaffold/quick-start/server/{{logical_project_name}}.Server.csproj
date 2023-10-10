@@ -4,7 +4,7 @@
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<RootNamespace>{LogicalProjectName}.Server</RootNamespace>
+		<RootNamespace>{{logical_project_name}}.Server</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
