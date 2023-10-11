@@ -78,7 +78,11 @@ public class MsBuildDmlCompiler
         if (destAssemblyName == null)
             destAssemblyName = Guid.NewGuid() + ".dmlproject.dll";
 
+        if (!destAssemblyName.ToLower().EndsWith(".dll"))
+            throw new Exception("invalid destination file ext.");
+
         var absoluteAssemblyName = Path.GetFullPath(destAssemblyName);
+        var absoluteAssemblyDebugName = absoluteAssemblyName.Substring(0, absoluteAssemblyName.Length - 4) + ".pdb";
 
         var projectDirectory = destAssemblyName + "_project";
 
@@ -88,9 +92,10 @@ public class MsBuildDmlCompiler
         {
             CreateProject(cSharpIntermediate, projectDirectory);
             DoProjectRestore(projectDirectory, msbuildtools);
-            var compiledBin = DoProjectBuild(projectDirectory, msbuildtools);
+            var (compiledBin, compiledPdb) = DoProjectBuild(projectDirectory, msbuildtools);
 
             File.Copy(compiledBin, absoluteAssemblyName, true);
+            File.Copy(compiledPdb, absoluteAssemblyDebugName, true);
 
             return absoluteAssemblyName;
         }
@@ -101,9 +106,10 @@ public class MsBuildDmlCompiler
         }
     }
 
-    private static string DoProjectBuild(string projectPath, string msbuildtools)
+    private static (string bin, string pdb) DoProjectBuild(string projectPath, string msbuildtools)
     {
         var binFile = Path.Join(projectPath, ".\\dmlbins\\DmlProject.dll");
+        var pdbFile = Path.Join(projectPath, ".\\dmlbins\\DmlProject.pdb");
 
         var startInfo = new ProcessStartInfo
         {
@@ -129,7 +135,7 @@ public class MsBuildDmlCompiler
         if (buildProc.ExitCode != 0)
             throw new Exception("Project build error.");
 
-        return binFile;
+        return (binFile, pdbFile);
     }
 
     private static void DoProjectRestore(string projectPath, string msbuildtools)

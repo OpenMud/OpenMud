@@ -5,16 +5,47 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>omd</ToolCommandName>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
   </PropertyGroup>
+
+
+
+  <ItemGroup>
+    <None Remove="Resources\FluidR3Mono_GM.sf3" />
+    <None Remove="Resources\FluidR3Mono_License.md" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
-    <PackageReference Include="SmartFormat.NET" Version="3.3.0" />
+    <PackageReference Include="Scriban" Version="5.9.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OpenMud.Mudpiler.Compiler.Asset\OpenMud.Mudpiler.Compiler.Asset.csproj" />
     <ProjectReference Include="..\OpenMud.Mudpiler.Compiler.Project\OpenMud.Mudpiler.Compiler.Project.csproj" />
+    <ProjectReference Include="..\OpenMud.Mudpiler.Net.Server\OpenMud.Mudpiler.Net.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\FluidR3Mono_GM.sf3" />
+    <EmbeddedResource Include="Resources\FluidR3Mono_License.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

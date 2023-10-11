@@ -115,7 +115,7 @@ public static class AssetCompiler
         return soundDirectory;
     }
 
-    private static void Process(AudioConverter audioConverter, string src, string dst)
+    private static void Process(AudioConverter audioConverter, string src, string dst, string resourceDefinition)
     {
         var dmiSourceFiles = Directory.GetFiles(src, "*.dmi", SearchOption.AllDirectories);
         Dictionary<string, string> assetDirectory = new();
@@ -145,9 +145,7 @@ public static class AssetCompiler
             }
         }
 
-        var indexName = $"{dst}/resources.ts";
-
-        GenerateAssetIndex(assetDirectory, animationsDirectory, ProcessAudio(audioConverter, src, dst), indexName);
+        GenerateAssetIndex(assetDirectory, animationsDirectory, ProcessAudio(audioConverter, src, dst), resourceDefinition);
 
         //
     }
@@ -178,7 +176,7 @@ public static class AssetCompiler
 
         var idxContents = $@"
 import {{ Loader, Sound }} from ""excalibur"";
-import {{ AsepriteResource }} from ""@excalibur-aseprite"";
+import {{ AsepriteResource }} from ""@excaliburjs/plugin-aseprite"";
 
 const GameIcons = {{
 {resourceDecl}
@@ -193,13 +191,13 @@ const GameSounds = {{
 }}
 
 
-const loader = new Loader()
+const GameResourceLoader = new Loader()
 const allResources: any = {{...GameIcons, ...GameSounds}}
 for (const res in allResources) {{
-  loader.addResource(allResources[res])
+  GameResourceLoader.addResource(allResources[res])
 }}
 
-export {{ loader, GameIcons, GameSounds, GameIconAnimationsIndex }}
+export {{ GameResourceLoader, GameIcons, GameSounds, GameIconAnimationsIndex }}
 
 ";
 
@@ -307,7 +305,7 @@ export {{ loader, GameIcons, GameSounds, GameIconAnimationsIndex }}
         return jsonBuilder.ToString();
     }
 
-    public static void Compile(AudioConverter audioConverter, string sourceDirectory, string outputDirectory)
+    public static void Compile(AudioConverter audioConverter, string sourceDirectory, string outputDirectory, string resourceDefinition)
     {
 
         if (!Directory.Exists(sourceDirectory))
@@ -316,6 +314,6 @@ export {{ loader, GameIcons, GameSounds, GameIconAnimationsIndex }}
         if (!Directory.Exists(outputDirectory))
             throw new Exception("Destination directory does not exist!");
 
-        Process(audioConverter, sourceDirectory, outputDirectory);
+        Process(audioConverter, sourceDirectory, outputDirectory, resourceDefinition);
     }
 }

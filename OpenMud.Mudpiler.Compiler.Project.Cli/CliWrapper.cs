@@ -25,7 +25,7 @@ namespace OpenMud.Mudpiler.Compiler.Project.Cli
                 using (Process process = new Process())
                 {
                     process.StartInfo.FileName = commandName;
-                    process.StartInfo.Arguments = "-v";
+                    process.StartInfo.Arguments = "-h";
                     process.StartInfo.UseShellExecute = false;
                     process.StartInfo.RedirectStandardOutput = true;
                     process.StartInfo.RedirectStandardError = true;

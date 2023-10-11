@@ -30,7 +30,7 @@ public class Program
 
     public static void Main()
     {
-        project = DmeProject.Compile(Directory.GetCurrentDirectory(), new BaseEntityBuilder(),
+        project = DmeProject.CompileAndLoad(Directory.GetCurrentDirectory(), new BaseEntityBuilder(),
             EnvironmentConstants.BUILD_MACROS, false);
         // Setup the engine and create the main window.
         Game.Create(160, 50);

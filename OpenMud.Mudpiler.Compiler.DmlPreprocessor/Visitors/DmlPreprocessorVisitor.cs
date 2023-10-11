@@ -85,9 +85,10 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
             processedOrigins.Add(nextApplication.Index);
             var path = nextApplication.Value.Trim('\'');
 
-            var newValue = "'" +
-                           NormalizeResourcePath(resolveResourceDirectory(ResourceSearchDirectory.ToList(), path)) +
-                           "'";
+            var resourcePath = resolveResourceDirectory(ResourceSearchDirectory.ToList(), path);
+            resourcePath = NormalizeResourcePath(Path.GetRelativePath(resourcePathBase, resourcePath));
+
+            var newValue = "'" + resourcePath + "'";
 
             source = unpacked.ReplaceAndPack(nextApplication, newValue);
         }

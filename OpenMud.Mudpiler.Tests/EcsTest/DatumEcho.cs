@@ -77,7 +77,7 @@ public class DatumEcho
 
     return 1
 ";
-        var assembly = SimpleDmlCompiler.Compile(dmlCode);
+        var assembly = SimpleDmlCompiler.CompileAndLoad(dmlCode);
         var env = new TestPhysicalEnvironmentSolver();
         var system = ByondEnvironment.CreateFromAssembly(Assembly.LoadFile(assembly), new BaseDmlFramework(env));
 

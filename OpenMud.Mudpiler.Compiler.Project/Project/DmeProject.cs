@@ -42,16 +42,18 @@ public class DmePreprocessContext
                 return b;
         }
 
-        throw new Exception("Resouree could not be found: " + path);
+        throw new Exception("Resource could not be found: " + path);
     }
 
     private (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) ProcessImport(
         IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib,
         string fileName)
     {
+        fileName = Path.Combine(workingDirectory, fileName);
+
         if (fileName.ToLower().EndsWith(".dmm"))
         {
-            importedMaps.Add(Path.Combine(workingDirectory, fileName));
+            importedMaps.Add(fileName);
             return (dict, SourceFileDocument.Empty);
         }
 
@@ -103,25 +105,15 @@ public class DmeProject
         return rootCtx.PreprocessFile(dmeFile).AsPlainText();
     }
 
-    public static DmeProject Load(string path, IMudEntityBuilder builder)
+    public static DmeProject Load(string binPath, IMudEntityBuilder builder)
     {
-        var absEnvPath = Path.GetFullPath(path);
-        var environmentFiles = Directory.GetFiles(absEnvPath, "*.dme");
-
-        if (environmentFiles.Length != 1)
-            throw new Exception("A project should only have one DME file. Loading failed.");
-
-        //Todo: This is kind of a hack. We shouldnt need to preprocess all the source fildes to find the maps...
-        //but because they are not currently being compiled into an intermediate form, this is necessary.
-
-        var preprocessorCtx = new DmePreprocessContext(absEnvPath);
-        preprocessorCtx.PreprocessFile(environmentFiles[0], null).AsPlainText();
+        var absEnvPath = Path.GetFullPath(binPath);
+        var importedMaps = Directory.GetFiles(absEnvPath, "*.dmm");
 
         var dmmSceneBuilder = new DmmSceneBuilderFactory(builder);
 
-        var binDir = Path.Join(path, ".\\bin");
-        var asmBinPath = Path.Join(binDir, "DmlProject.dll");
-        var maps = preprocessorCtx.ImportedMaps.ToImmutableDictionary(
+        var asmBinPath = Path.Join(binPath, "DmlProject.dll");
+        var maps = importedMaps.ToImmutableDictionary(
             x => Path.GetRelativePath(absEnvPath, x),
             x => dmmSceneBuilder.Build(File.ReadAllText(x))
         );
@@ -130,7 +122,20 @@ public class DmeProject
     }
 
 
-    public static DmeProject Compile(string path, IMudEntityBuilder builder,
+    public static DmeProject CompileAndLoad(string path, IMudEntityBuilder builder,
+        IImmutableDictionary<string, MacroDefinition>? buildMacros = null, bool disposeIntermediateCompile = true)
+    {
+        var binDir = Path.Join(path, ".\\bin");
+
+        Directory.CreateDirectory(binDir);
+
+        Compile(path, binDir, buildMacros, disposeIntermediateCompile);
+
+        return Load(binDir, builder);
+    }
+
+
+    public static void Compile(string path, string outputDirectory,
         IImmutableDictionary<string, MacroDefinition>? buildMacros = null, bool disposeIntermediateCompile = true)
     {
         var absEnvPath = Path.GetFullPath(path);
@@ -143,22 +148,14 @@ public class DmeProject
 
         var sourceFile = preprocessorCtx.PreprocessFile(environmentFiles[0], buildMacros).AsPlainText();
 
-        var dmmSceneBuilder = new DmmSceneBuilderFactory(builder);
-        var maps = preprocessorCtx.ImportedMaps.ToImmutableDictionary(
-            x => Path.GetRelativePath(absEnvPath, x),
-            x => dmmSceneBuilder.Build(File.ReadAllText(x))
-        );
+        Directory.CreateDirectory(outputDirectory);
 
+        File.WriteAllText(Path.Join(outputDirectory, "srcGlob.txt"), sourceFile);
 
-        var binDir = Path.Join(path, ".\\bin");
-
-        Directory.CreateDirectory(binDir);
-
-        File.WriteAllText(Path.Join(binDir, "srcGlob.txt"), sourceFile);
-
-        var asmBinPath = Path.Join(binDir, "DmlProject.dll");
+        var asmBinPath = Path.Join(outputDirectory, "DmlProject.dll");
         MsBuildDmlCompiler.Compile(sourceFile, asmBinPath, disposeIntermediateCompile);
 
-        return new DmeProject(Assembly.LoadFile(asmBinPath), maps);
+        foreach(var map in preprocessorCtx.ImportedMaps)
+            File.Copy(map, Path.Join(outputDirectory, Path.GetFileName(map)), true);
     }
 }

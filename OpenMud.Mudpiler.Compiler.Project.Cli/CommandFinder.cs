@@ -18,8 +18,7 @@ namespace OpenMud.Mudpiler.Compiler.Project.Cli
                 var paths = new[] { Environment.CurrentDirectory }
                     .Concat(Environment.GetEnvironmentVariable("PATH").Split(';'));
 
-                var extensions = new[] {".cmd", ".bat", ".exe" }
-                    .Where(e => e.StartsWith("."));
+                var extensions = new[] { ".cmd", ".bat", ".exe", ".sh", "" };
 
                 var combinations = paths.SelectMany(x => extensions,
                     (path, extension) => Path.Combine(path, command + extension));
