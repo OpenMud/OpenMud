@@ -1,6 +1,6 @@
 {
   "name": "openmud",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "",
   "type": "module",
   "exports": {
@@ -25,7 +25,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "unbuild",
+    "build": "unbuild --sourcemap",
     "dev": "unbuild --stub",
     "lint": "eslint .",
     "prepublishOnly": "nr build",
@@ -43,6 +43,7 @@
     "@microsoft/signalr": "^7.0.11",
     "@mui/material": "^5.14.11",
     "excalibur": "^0.28.1",
+    "openmud": "^1.0.4",
     "react": "^18.2.0",
     "react-command-palette": "^0.22.1",
     "react-dom": "^18.2.0",
