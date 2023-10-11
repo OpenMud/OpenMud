@@ -33,9 +33,6 @@
 	may see it.
 */
 
-#define FILE_DIR sounds
-#define FILE_DIR icons
-
 
 world
 	// Set the world's name. This will appear in the title bar.
