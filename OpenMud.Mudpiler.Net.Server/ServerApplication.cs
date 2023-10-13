@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using DefaultEcs;
+using Microsoft.Extensions.FileProviders;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.RuntimeTypes;
 using OpenMud.Mudpiler.Framework;
@@ -13,12 +14,12 @@ namespace OpenMud.Mudpiler.Net.Server;
 
 public static class ServerApplication
 {
-    public static WebApplication Create(string workingDir, string[] args)
+    public static WebApplication Create(string workingDir, string[] args, string? staticAssets = null)
     {
 
         var builder = WebApplication.CreateBuilder(args);
-        // Add services to the container.
-        
+        // Add services to the container
+
         builder.Services.AddControllers();
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
@@ -54,7 +55,7 @@ public static class ServerApplication
         app.UseAuthorization();
         app.MapControllers();
         app.MapHub<WorldHub>("/worldHub");
-
+        app.UseRouting();
         app.UseCors(builder =>
         {
             builder.WithOrigins("http://localhost:1234")
@@ -62,6 +63,23 @@ public static class ServerApplication
                 .WithMethods("GET", "POST")
                 .AllowCredentials();
         });
+
+        if (staticAssets != null)
+        {
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapGet("/", async context =>
+                {
+                    context.Response.Redirect("/index.html");
+                    await context.Response.CompleteAsync();
+                });
+            });
+
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                FileProvider = new PhysicalFileProvider(staticAssets)
+            });
+        }
 
         return app;
     }

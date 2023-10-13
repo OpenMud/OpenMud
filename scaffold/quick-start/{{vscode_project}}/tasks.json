@@ -7,6 +7,9 @@
             "command": "omd",
             "args": [
                 "build"
+                "--assets",
+                "--logic",
+                "--client"
             ],
             "group": "build"
         }

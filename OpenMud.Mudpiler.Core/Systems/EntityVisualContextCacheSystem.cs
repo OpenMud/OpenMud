@@ -66,6 +66,9 @@ public class EntityVisibilitySolver : IEntityVisibilitySolver
         if (fieldOfView < 0)
             fieldOfView = DEFAULT_VIEW_DISTANCE;
 
+        if(fieldOfView == 0)
+            return ImmutableDictionary<string, float>.Empty;
+
         if (HasValidVisible(entity, fieldOfView))
             return TruncateRange(entity.Get<EntityVisualContextCacheComponent>().VisibleEntities, fieldOfView);
 

@@ -7,7 +7,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             "program": "omd",
-            "args": ["run", "--debug", "--urls", "https://localhost:7087"],
+            "args": ["run", "--debug", "--client", "--urls", "https://localhost:7087"],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
             "console": "internalConsole",

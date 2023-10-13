@@ -33,7 +33,7 @@ namespace OpenMud.Mudpiler.Compiler.Project.Cli
                     process.Start();
                     process.WaitForExit();
 
-                    return process.ExitCode == 0;
+                    return true;
                 }
             }
             catch (Exception)

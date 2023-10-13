@@ -6,6 +6,7 @@ using OpenMud.Mudpiler.Compiler.Project.Cli;
 using System.IO;
 using System.Reflection;
 using System.Resources;
+using Microsoft.Build.Experimental;
 using OpenMud.Mudpiler.Compiler.Asset;
 using OpenMud.Mudpiler.Compiler.Project.Project;
 using OpenMud.Mudpiler.Net.Server;
@@ -13,20 +14,30 @@ using OpenMud.Mudpiler.RuntimeEnvironment;
 using Scriban;
 
 
-[Verb("build", HelpText = "Build the server logic module")]
+[Verb("build", HelpText = "Build the game into a client/server module.")]
 class BuildOptions
 {
     [Option("project", Required = false, HelpText = "Path to project directory")]
     public string? Project { get; set; }
-    [Option("resources", Required = false, Default = false, HelpText = "Build resources only")]
-    public bool resources { get; set; }
+
+    [Option("client", Required = false, HelpText = "Whether to compile the client component of the application (orchestrate the NPM Build command.)")]
+    public bool Client { get; set; }
+
+    [Option("assets", Required = false, HelpText = "Whether to convert / compile assets (required whenever graphics / audio changes.)")]
+    public bool Assets { get; set; }
+
+    [Option("logic", Required = false, Default = false, HelpText = "Build and compile the logic / maps associated to the game.")]
+    public bool Logic { get; set; }
 
 }
 
-[Verb("run", HelpText = "Run the game logic server")]
+[Verb("run", HelpText = "Run the game server & optionally the client as well.")]
 class RunOptions
 {
-    [Option("debug", Default = false)]
+    [Option("client", Default = false, HelpText = "Manage hosting of the client application.")]
+    public bool Client { get; set; }
+
+    [Option("debug", Default = false, HelpText = "Run in debug mode")]
     public bool Debug { get; set; }
 
     [Option("project", Required = false, HelpText = "Path to project directory")]
@@ -52,7 +63,7 @@ class CreateTemplateConfiguration
     }
 }
 
-[Verb("create", HelpText = "Run the game logic server")]
+[Verb("create", HelpText = "Create a new project using scaffolding.")]
 class CreateOptions
 {
     [Option("template", Required = false, HelpText = "Name of the template to use when generating the project files.")]
@@ -64,7 +75,7 @@ class CreateOptions
     [Option("project", Required = true, HelpText = "Source project name")]
     public string ProjectName { get; set; }
 
-    [Option("merge", Required = false, Default = false, HelpText = "Source project name")]
+    [Option("merge", Required = false, Default = false, HelpText = "Merge templates against the current directory structure (not reccomended.)")]
     public bool Merge { get; set; }
 }
 
@@ -140,21 +151,71 @@ class Program
 
     private static int DoBuild(BuildOptions opts)
     {
-        if (!BuildAssets(opts))
+        bool performedBuildStep = false;
+
+        if (opts.Assets)
         {
-            Console.Error.WriteLine("Error building assets.");
-            return 1;
+            performedBuildStep = true;
+            if (!BuildAssets(opts))
+            {
+                Console.Error.WriteLine("Error building assets.");
+                return 1;
+            }
         }
 
-        if (opts.resources)
-            return 0;
+        if (opts.Logic)
+        {
+            performedBuildStep = true;
+            if (!BuildLogicAndMaps(opts))
+            {
+                Console.Error.WriteLine("Error compiling server logic.");
+                return 0;
+            }
+        }
 
-        BuildLogicAndMaps(opts);
+        if (opts.Client)
+        {
+            performedBuildStep = true;
+            if (!BuildClient(opts))
+            {
+                Console.Error.WriteLine("Error compiling client.");
+                return 1;
+            }
+        }
+
+        if (!performedBuildStep)
+        {
+            Console.Error.WriteLine("No build targets defined. Use a combination of --client, --logic, or --assets flags to invoke the build accordingly.");
+            return 1;
+        }
 
         return 0;
     }
 
-    private static int BuildLogicAndMaps(BuildOptions opts)
+
+    private static bool BuildClient(BuildOptions opts)
+    {
+        var projectDirectory = opts.Project ?? Directory.GetCurrentDirectory();
+        var clientDir = Path.Join(projectDirectory, "./client");
+
+
+        var npmPath = CommandFinder.GetCommandPath("npm");
+        CliWrapper? npmCmd = npmPath == null ? null : new CliWrapper(npmPath);
+
+        if (npmPath == null || !npmCmd.IsInstalled())
+        {
+            Console.Error.WriteLine(
+                "NPM was not installed on the system or could not be found. NPM must be installed to operate on the client project.");
+            return false;
+        }
+
+        npmCmd.RunCommand("install", clientDir);
+        npmCmd.RunCommand("run build", clientDir);
+
+        return true;
+    }
+
+    private static bool BuildLogicAndMaps(BuildOptions opts)
     {
         var projectDirectory = opts.Project ?? Directory.GetCurrentDirectory();
         var game = Path.Join(projectDirectory, "./game");
@@ -165,14 +226,14 @@ class Program
             Console.Error.WriteLine(
                 "Unable to find game folder. Project malformed.");
 
-            return 1;
+            return false;
         }
 
         Directory.CreateDirectory(binDir);
 
         DmeProject.Compile(game, binDir, EnvironmentConstants.BUILD_MACROS);
 
-        return 0;
+        return true;
     }
 
     private static int DoRun(RunOptions opts)
@@ -188,6 +249,16 @@ class Program
             return 1;
         }
 
+
+        var clientBin = opts.Client ? Path.Join(projectDirectory, "./client/dist") : null;
+        if (clientBin != null && !Directory.Exists(clientBin))
+        {
+            Console.Error.WriteLine(
+                "Unable to find client bin folder. Make sure you ran a build operation on the project first.");
+
+            return 1;
+        }
+
         if (opts.Debug)
             System.Diagnostics.Debugger.Launch();
 
@@ -196,7 +267,7 @@ class Program
         if (opts.Urls.Any())
             aspArgs = "--urls " + string.Join(" ", opts.Urls);
 
-        var gameServer = ServerApplication.Create(binDir, aspArgs.Split(' '));
+        var gameServer = ServerApplication.Create(binDir, aspArgs.Split(' '), clientBin);
 
         gameServer.Run();
 
