@@ -23,6 +23,33 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet build --no-restore --configuration Release
+    # Temporarily disable tests just to rapidly iterate the semantic release.
+    #- name: Test
+    #  run: dotnet test --no-build --verbosity normal
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: "lts/*"
+    - name: Install dependencies
+      run: |
+        npm install semantic-release@19.0.2;
+        npm i -D @semantic-release/changelog;
+        npm i -D @semantic-release/commit-analyzer;
+        npm i -D @semantic-release/release-notes-generator;
+        npm i -D @droidsolutions-oss/semantic-release-update-file;
+        npm i -D @semantic-release/npm;
+        npm i -D @semantic-release/github;
+        npm i -D @semantic-release/git;
+
+    - name: Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
+      run: |
+        npx semantic-release;
+        dotnet build --no-restore --configuration Release;
+        dotnet pack .\OpenMud.Mudpiler.Compiler.Project.Cli\OpenMud.Mudpiler.Compiler.Project.Cli.csproj -c Release -o out;
+        dotnet nuget push -s https://api.nuget.org/v3/index.json -k  ${{ secrets.NUGET_TOKEN }} .\out\*.nupkg

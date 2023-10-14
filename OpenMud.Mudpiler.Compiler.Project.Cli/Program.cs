@@ -34,7 +34,7 @@ class BuildOptions
 [Verb("run", HelpText = "Run the game server & optionally the client as well.")]
 class RunOptions
 {
-    [Option("client", Default = false, HelpText = "Manage hosting of the client application.")]
+    [Option("client", Default = false, HelpText = "Manage hosting of the client application")]
     public bool Client { get; set; }
 
     [Option("debug", Default = false, HelpText = "Run in debug mode")]
@@ -75,7 +75,7 @@ class CreateOptions
     [Option("project", Required = true, HelpText = "Source project name")]
     public string ProjectName { get; set; }
 
-    [Option("merge", Required = false, Default = false, HelpText = "Merge templates against the current directory structure (not reccomended.)")]
+    [Option("merge", Required = false, Default = false, HelpText = "Merge templates against the current directory structure (not recommended.)")]
     public bool Merge { get; set; }
 }
 
