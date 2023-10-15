@@ -1,3 +1,15 @@
+# [2.0.0](https://github.com/JeremyWildsmith/OpenMud/compare/v1.0.0...v2.0.0) (2023-10-15)
+
+
+### Bug Fixes
+
+* **build:** Fix the build ([71ec779](https://github.com/JeremyWildsmith/OpenMud/commit/71ec7798af9564051c86498e238272f5490ca49e))
+
+
+### BREAKING CHANGES
+
+* **build:** Fix the build
+
 # 1.0.0 (2023-10-15)
 
 
