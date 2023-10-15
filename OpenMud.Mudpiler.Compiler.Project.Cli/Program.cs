@@ -72,7 +72,7 @@ class CreateOptions
     [Option("destination", Required = false, HelpText = "Where the project is created. Defaults to the current working directory.")]
     public string? Destination { get; set; }
 
-    [Option("project", Required = true, HelpText = "Source project name")]
+    [Option("project", Required = true, HelpText = "Source project name.")]
     public string ProjectName { get; set; }
 
     [Option("merge", Required = false, Default = false, HelpText = "Merge templates against the current directory structure (not recommended.)")]
