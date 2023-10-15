@@ -20,8 +20,6 @@ jobs:
         with:
           node-version: 18
           cache: yarn
-        working-directory: .\docs\dml-documentation
-
       - name: Install dependencies
         run: yarn install --frozen-lockfile
         working-directory: .\docs\dml-documentation
