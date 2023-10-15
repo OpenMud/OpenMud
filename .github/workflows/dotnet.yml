@@ -37,14 +37,12 @@ jobs:
         npm i -D @semantic-release/commit-analyzer;
         npm i -D @semantic-release/release-notes-generator;
         npm i -D @droidsolutions-oss/semantic-release-update-file;
-        npm i -D @semantic-release/npm;
         npm i -D @semantic-release/github;
         npm i -D @semantic-release/git;
 
     - name: Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
       run: |
         npx semantic-release;
