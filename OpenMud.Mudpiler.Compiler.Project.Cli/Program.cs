@@ -91,7 +91,7 @@ class Program
         ".json"
     };
 
-    public static readonly string SCAFFOLDING_REPO = "https://github.com/JeremyWildsmith/OpenMud.git";
+    public static readonly string SCAFFOLDING_REPO = "https://github.com/OpenMud/scaffold.git";
 
     static int Main(string[] args) =>
         Parser.Default.ParseArguments<CreateOptions, RunOptions, BuildOptions>(args)
