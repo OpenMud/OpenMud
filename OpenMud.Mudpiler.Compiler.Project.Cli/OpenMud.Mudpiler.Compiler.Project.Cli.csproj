@@ -11,7 +11,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>OpenMud CLI</Title>
     <RepositoryUrl>https://github.com/JeremyWildsmith/OpenMud</RepositoryUrl>
-	  <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+	<StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
 
 
