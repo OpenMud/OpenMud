@@ -24,10 +24,8 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore --configuration Release
-    # Temporarily disable tests just to rapidly iterate the semantic release.
-    #- name: Test
-    #  run: dotnet test --no-build --verbosity normal
-    
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
