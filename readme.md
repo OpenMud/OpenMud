@@ -8,7 +8,7 @@ OpenMud is a compiler which enables a user (ranging from developers to creative 
 OpenMud also implements all of the core client and server side logic necessary to run your game, while also leaving the door open for extensive customizations for advanced developers.
 
 ## What is the Licensing
-Currently, the entire project is unofficially planned to be licensed under AGPL, but I need to conduct an analysis of dependencies to determine what licenses are an option. I am open to suggestions on how best to license this project.
+The entire project is licensed under AGPL v3. This means that you are free to use the project for any means, but the project must be open-sourced.
 
 ## What is the Current State?
 
