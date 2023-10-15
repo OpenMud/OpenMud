@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/JeremyWildsmith/OpenMud/compare/v2.0.0...v2.0.1) (2023-10-15)
+
+
+### Bug Fixes
+
+* **build:** Re-enable nuget releases. ([c1b757d](https://github.com/JeremyWildsmith/OpenMud/commit/c1b757de206217113ffdc798707849f96f12cb15))
+
 # [2.0.0](https://github.com/JeremyWildsmith/OpenMud/compare/v1.0.0...v2.0.0) (2023-10-15)
 
 
