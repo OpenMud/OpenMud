@@ -1,3 +1,11 @@
+## [2.1.1](https://github.com/OpenMud/OpenMud/compare/v2.1.0...v2.1.1) (2023-10-15)
+
+
+### Bug Fixes
+
+* **build:** Its a backslash not a forward slash... ([b48896a](https://github.com/OpenMud/OpenMud/commit/b48896abc9f5749c42a18ef06517f228f5032f35))
+* **build:** Trying to fix the build. ([bb3622d](https://github.com/OpenMud/OpenMud/commit/bb3622dc8d99ced4fac1f0c4eed6acec51e7c104))
+
 # [2.1.0](https://github.com/OpenMud/OpenMud/compare/v2.0.2...v2.1.0) (2023-10-15)
 
 
