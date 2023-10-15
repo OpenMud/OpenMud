@@ -35,6 +35,21 @@
           }
         ]
       }
+    ],
+    [
+      "@semantic-release/exec", {
+        "publishCmd": "dotnet build --no-restore --configuration Release"
+      }
+    ],
+    [
+      "@semantic-release/exec", {
+        "publishCmd": "dotnet pack .\\OpenMud.Mudpiler.Compiler.Project.Cli\\OpenMud.Mudpiler.Compiler.Project.Cli.csproj -c Release -o out"
+      }
+    ],
+    [
+      "@semantic-release/exec", {
+        "publishCmd": "dotnet nuget push -s https://api.nuget.org/v3/index.json -k  ${{ secrets.NUGET_TOKEN }} .\\out\\*.nupkg"
+      }
     ]
   ],
   "pkgRoot": "./openmud"

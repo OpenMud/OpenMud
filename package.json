@@ -5,6 +5,7 @@
     "@excaliburjs/testing": "0.25.1",
     "@microsoft/signalr": "^7.0.11",
     "@mui/material": "^5.14.11",
+    "@semantic-release/exec": "^6.0.3",
     "excalibur": "^0.28.1",
     "react": "^18.2.0",
     "react-command-palette": "^0.22.1",
