@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/OpenMud/OpenMud/compare/v2.0.2...v2.1.0) (2023-10-15)
+
+
+### Features
+
+* **build:** Trying to get releases & docs to work. ([b6890d4](https://github.com/OpenMud/OpenMud/commit/b6890d42aef20c5c7c55a9012d296fcf31cb7d45))
+
 ## [2.0.2](https://github.com/JeremyWildsmith/OpenMud/compare/v2.0.1...v2.0.2) (2023-10-15)
 
 
