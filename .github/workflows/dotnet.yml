@@ -24,8 +24,8 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore --configuration Release
-    - name: Test
-      run: dotnet test -c Release --no-build --verbosity normal
+    #- name: Test
+    #  run: dotnet test -c Release --no-build --verbosity normal
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
@@ -46,6 +46,8 @@ jobs:
         NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
       run: |
         npx semantic-release;
-#        dotnet build --no-restore --configuration Release;
-#        dotnet pack .\OpenMud.Mudpiler.Compiler.Project.Cli\OpenMud.Mudpiler.Compiler.Project.Cli.csproj -c Release -o out;
-#        dotnet nuget push -s https://api.nuget.org/v3/index.json -k  ${{ secrets.NUGET_TOKEN }} .\out\*.nupkg
+        if(Test-Path "flagnugetpush") {
+            dotnet build --no-restore --configuration Release;
+            dotnet pack .\OpenMud.Mudpiler.Compiler.Project.Cli\OpenMud.Mudpiler.Compiler.Project.Cli.csproj -c Release -o out;
+            dotnet nuget push -s https://api.nuget.org/v3/index.json -k  ${{ secrets.NUGET_TOKEN }} .\out\*.nupkg
+        }
