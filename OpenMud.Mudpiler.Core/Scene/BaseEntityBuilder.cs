@@ -14,7 +14,8 @@ public class BaseEntityBuilder : IMudEntityBuilder
         if (initialZ == null)
             initialZ = AtomicDefaults.IdentifyDefaultLayer(className);
 
-        if (AtomicDefaults.CanSee(className)) entity.Set(new VisionComponent(AtomicDefaults.SightRange(className)));
+        if (AtomicDefaults.CanSee(className))
+            entity.Set(new VisionComponent(AtomicDefaults.SightRange(className)));
 
         if (AtomicDefaults.IsTangible(className))
             entity.Set(new TangibleComponent());

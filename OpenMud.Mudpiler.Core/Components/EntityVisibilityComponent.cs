@@ -14,7 +14,7 @@ public struct EntityVisibilityComponent
     public override bool Equals(object? obj)
     {
         return obj is EntityVisibilityComponent component && VisibleEntities.Count == component.VisibleEntities.Count &&
-               !VisibleEntities.Any(x => !component.VisibleEntities.Contains(x));
+               VisibleEntities.Intersect(component.VisibleEntities).Count == VisibleEntities.Count;
     }
 
     public override int GetHashCode()
