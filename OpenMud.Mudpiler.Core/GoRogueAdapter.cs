@@ -32,7 +32,7 @@ public sealed class GoRogueWalkabilityAdapter : IMapView<bool>
 
 public sealed class GoRogueDensityAdapter : GoRogueSenseAdapter
 {
-    private readonly Dictionary<Coord, double> coordCache = new();
+    private Dictionary<Coord, double>? coordCache = null;
     private readonly World world;
 
     public GoRogueDensityAdapter(World world, int worldWidth, int worldHeight)
@@ -44,26 +44,43 @@ public sealed class GoRogueDensityAdapter : GoRogueSenseAdapter
 
     public void ClearCache()
     {
-        coordCache.Clear();
+        coordCache = null;
+    }
+
+    public Dictionary<Coord, double> BuildCoordCache(Coord origin)
+    {
+        if (coordCache != null)
+            return coordCache;
+
+        var posMap = new Dictionary<Coord, List<Entity>>();
+
+        foreach (var r in world.GetEntities().With<PositionComponent>().AsEnumerable())
+        {
+            var p = r.Get<PositionComponent>();
+            var c = new Coord(p.x, p.y);
+
+            if(!posMap.ContainsKey(c))
+                posMap[c] = new List<Entity>();
+
+            posMap[c].Add(r);
+        }
+
+        coordCache = new();
+
+        foreach (var (k, v) in posMap)
+            coordCache[k] = Compute(v);
+
+        return coordCache;
     }
 
     public double this[Coord pos]
     {
         get
         {
-            if (coordCache.TryGetValue(pos, out var val))
+            if (BuildCoordCache(pos).TryGetValue(pos, out var val))
                 return val;
 
-            bool WithinCoord(in PositionComponent p)
-            {
-                return p.x == pos.X && p.y == pos.Y;
-            }
-
-            var r = Compute(world.GetEntities().With<PositionComponent>(WithinCoord).AsEnumerable());
-
-            coordCache[pos] = r;
-
-            return r;
+            return 0;
         }
     }
 

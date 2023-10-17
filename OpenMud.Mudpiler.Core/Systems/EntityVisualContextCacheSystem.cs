@@ -90,7 +90,7 @@ public class EntityVisibilitySolver : IEntityVisibilitySolver
 
         double computeDistance(in PositionComponent p)
         {
-            return Coord.EuclideanDistanceMagnitude(curLoc.x - p.x, curLoc.y - p.y);
+            return Coord.EuclideanDistanceMagnitude(curLoc.x - p.x,curLoc.y - p.y);
         }
 
         var visible = world
@@ -116,7 +116,7 @@ public class EntityVisibilitySolver : IEntityVisibilitySolver
         if (!entity.Has<EntityVisualContextCacheComponent>())
             return false;
 
-        if (entity.Get<EntityVisualContextCacheComponent>().Range >= fieldOfView)
+        if (entity.Get<EntityVisualContextCacheComponent>().Range < fieldOfView)
             return false;
 
         if (entity.Has<EntityVisualContextCacheAgeComponent>() &&
