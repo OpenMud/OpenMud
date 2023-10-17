@@ -1,3 +1,10 @@
+## [2.2.1](https://github.com/OpenMud/OpenMud/compare/v2.2.0...v2.2.1) (2023-10-17)
+
+
+### Bug Fixes
+
+* **core:** Resolved issue where vision was computed incorrectly, and performance was very poor. ([aadb46a](https://github.com/OpenMud/OpenMud/commit/aadb46af27c9eb76eb944a807d3f4b8f46f06712))
+
 # [2.2.0](https://github.com/OpenMud/OpenMud/compare/v2.1.1...v2.2.0) (2023-10-16)
 
 
