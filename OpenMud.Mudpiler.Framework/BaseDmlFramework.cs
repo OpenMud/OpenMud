@@ -5,6 +5,7 @@ using OpenMud.Mudpiler.Framework.Behaviours;
 using OpenMud.Mudpiler.Framework.Datums;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
+using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
 
 namespace OpenMud.Mudpiler.Framework;
@@ -40,6 +41,10 @@ public class BaseDmlFramework : IDmlFramework
             new DmlRuntimeTypeDescriptor(
                 "/primitive_coord",
                 typeof(VarDmlCoord)
+            ),
+            new DmlRuntimeTypeDescriptor(
+                "/sound",
+                typeof(SoundInfo)
             )
         };
     }
@@ -57,20 +62,36 @@ public class BaseDmlFramework : IDmlFramework
         {
             new GlobalTyping(typeSolver, instantiator),
             new GlobalPathing(world, logicLookup),
-            new AtomicReadWrite(logicLookup, Echo),
-            new WorldReadWrite(Echo),
+            new AtomicReadWrite(logicLookup, Echo, EchoSound),
+            new WorldReadWrite(Echo, EchoSound),
             new AtomicEnvironmentInteraction(world, logicLookup, instantiator, typeSolver, entityVisibilitySolver),
             new MobMovement(world, logicLookup),
             new ObjMovement(world, logicLookup),
             new AtomicCollision(),
             new MobDefaultProperties(),
             new AtomicBasic(world, logicLookup, instantiator),
-            new GlobalSound(),
+            new GlobalSound(instantiator),
             new GlobalTasks(),
             new ProcBasic(),
             new ListBasic(),
             new GlobalUtil()
         };
+    }
+
+    private void EchoSound(DatumHandle subject, SoundInfo message)
+    {
+        Guid? scope = subject is EntityHandle e ? logicLookup[e] : null;
+
+        var configuration = DmlEnv.AsLogical(message.repeat) ? SoundConfiguration.Loop : SoundConfiguration.Play;
+
+        world.Publish(
+            new ConfigureSoundMessage(
+                scope,
+                message.file.GetOrDefault<string?>(null),
+                DmlEnv.AsNumeric(message.channel),
+                configuration
+            )
+        );
     }
 
     private void Echo(DatumHandle subject, string message)

@@ -59,10 +59,40 @@ internal class TestGame
 
         _world.Subscribe<WorldEchoMessage>(On);
         _world.Subscribe<EntityEchoMessage>(On);
+        _world.Subscribe<ConfigureSoundMessage>(On);
     }
 
     public List<string> WorldMessages { get; } = new();
     public Dictionary<string, List<string>> EntityMessages { get; } = new();
+
+
+    public List<ConfigureSoundMessage> WorldSoundConfig { get; } = new();
+    public Dictionary<string, List<ConfigureSoundMessage>> EntitySoundConfig { get; } = new();
+
+    private void On(in ConfigureSoundMessage message)
+    {
+        string? name = null;
+
+        if (message.EntityScope.HasValue)
+        {
+            var logicId = message.EntityScope.Value;
+            name = _world.Where(
+                e => e.Has<LogicIdentifierComponent>() && e.Get<LogicIdentifierComponent>().LogicInstanceId == logicId
+            ).Single().Get<IdentifierComponent>().Name;
+        }
+
+        if (name == null)
+        {
+            WorldSoundConfig.Add(message);
+            return;
+        }
+
+        if(!EntitySoundConfig.ContainsKey(name))
+            EntitySoundConfig[name] = new List<ConfigureSoundMessage>();
+
+        EntitySoundConfig[name].Add(message);
+
+    }
 
     private void On(in EntityEchoMessage message)
     {
