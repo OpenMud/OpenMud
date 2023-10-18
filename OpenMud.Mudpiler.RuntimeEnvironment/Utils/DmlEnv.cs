@@ -26,9 +26,9 @@ public static class DmlEnv
         throw new Exception("Unknown class type.");
     }
 
-    public static bool IsNumericType(object o)
+    public static bool IsNumericType(object? o)
     {
-        return IsNumericType(o.GetType());
+        return o != null && IsNumericType(o.GetType());
     }
 
     public static bool IsNumericType(Type t)
@@ -52,23 +52,23 @@ public static class DmlEnv
         }
     }
 
-    public static int AsNumeric(EnvObjectReference subject)
+    public static int AsNumeric(EnvObjectReference? subject)
     {
-        if (subject.IsNull)
+        if (subject == null || subject.IsNull)
             return 0;
 
         return AsNumeric(subject.Get<object>());
     }
 
-    public static float AsDecimal(EnvObjectReference subject)
+    public static float AsDecimal(EnvObjectReference? subject)
     {
-        if (subject.IsNull)
+        if (subject == null || subject.IsNull)
             return 0;
 
         return AsDecimal(subject.Get<object>());
     }
 
-    public static int AsNumeric(object subject)
+    public static int AsNumeric(object? subject)
     {
         if (subject == null)
             return 0;
@@ -79,7 +79,7 @@ public static class DmlEnv
         throw new Exception("Unable to interpret as numeric.");
     }
 
-    public static float AsDecimal(object subject)
+    public static float AsDecimal(object? subject)
     {
         if (subject == null)
             return 0;
@@ -90,9 +90,9 @@ public static class DmlEnv
         throw new Exception("Unable to interpret as numeric.");
     }
 
-    public static bool AsLogical(EnvObjectReference subject)
+    public static bool AsLogical(EnvObjectReference? subject)
     {
-        if (subject.IsNull)
+        if (subject == null || subject.IsNull)
             return false;
 
         return AsLogical(subject.Target);
