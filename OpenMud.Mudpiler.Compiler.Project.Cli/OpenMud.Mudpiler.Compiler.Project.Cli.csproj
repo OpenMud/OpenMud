@@ -10,8 +10,12 @@
     <Version>1.0.0</Version>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>OpenMud CLI</Title>
-    <RepositoryUrl>https://github.com/JeremyWildsmith/OpenMud</RepositoryUrl>
+    <RepositoryUrl>https://github.com/OpenMud/OpenMud</RepositoryUrl>
 	<StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+	<PackageProjectUrl>https://openmug.github.io</PackageProjectUrl>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+	<PackageTags>game, byond, MUD, adventure</PackageTags>
+	<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
   </PropertyGroup>
 
 
@@ -35,6 +39,17 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\FluidR3Mono_GM.sf3" />
     <EmbeddedResource Include="Resources\FluidR3Mono_License.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
