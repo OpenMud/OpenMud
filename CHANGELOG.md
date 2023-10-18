@@ -1,3 +1,10 @@
+# [2.3.0](https://github.com/OpenMud/OpenMud/compare/v2.2.1...v2.3.0) (2023-10-18)
+
+
+### Features
+
+* **core:** Add package metadata. ([262a35c](https://github.com/OpenMud/OpenMud/commit/262a35c4b2d4b69326fb8885d65540ae94d12bf4))
+
 ## [2.2.1](https://github.com/OpenMud/OpenMud/compare/v2.2.0...v2.2.1) (2023-10-17)
 
 
