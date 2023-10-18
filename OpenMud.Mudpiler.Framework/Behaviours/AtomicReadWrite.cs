@@ -1,4 +1,5 @@
 ﻿using OpenMud.Mudpiler.Core.Utils;
+using OpenMud.Mudpiler.Framework.Datums;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
@@ -8,15 +9,18 @@ using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
 public delegate void DatumEcho(DatumHandle receiver, string message);
+public delegate void DatumSound(DatumHandle receiver, SoundInfo message);
 
 internal class AtomicReadWrite : IRuntimeTypeBuilder
 {
     private readonly DatumEcho echoHandler;
+    private readonly DatumSound soundHandler;
     private readonly LogicDirectory logicDirectory;
 
-    public AtomicReadWrite(LogicDirectory logicDirectory, DatumEcho echoHandler)
+    public AtomicReadWrite(LogicDirectory logicDirectory, DatumEcho echoHandler, DatumSound soundHandler)
     {
         this.echoHandler = echoHandler;
+        this.soundHandler = soundHandler;
         this.logicDirectory = logicDirectory;
     }
 
@@ -37,6 +41,9 @@ internal class AtomicReadWrite : IRuntimeTypeBuilder
                 },
                 (args, datum) =>
                 {
+                    if (args[0].Type.IsAssignableTo(typeof(SoundInfo)))
+                        return WriteSound(isMob, datum, args[0].Get<SoundInfo>());
+
                     return WriteAtomic(isMob, datum, args[0].GetOrDefault<string>("UNDEFINED SOURCE TYPE ERROR"));
                 }
             )
@@ -45,8 +52,16 @@ internal class AtomicReadWrite : IRuntimeTypeBuilder
 
     private EnvObjectReference WriteAtomic(bool isMob, Datum subject, string text)
     {
-        if (echoHandler != null && isMob)
+        if (isMob)
             echoHandler(logicDirectory[subject], text);
+
+        return VarEnvObjectReference.NULL;
+    }
+
+    private EnvObjectReference WriteSound(bool isMob, Datum subject, SoundInfo text)
+    {
+        if (isMob)
+            soundHandler(logicDirectory[subject], text);
 
         return VarEnvObjectReference.NULL;
     }

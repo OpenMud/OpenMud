@@ -90,7 +90,15 @@ public static class DmlEnv
         throw new Exception("Unable to interpret as numeric.");
     }
 
-    public static bool AsLogical(object subject)
+    public static bool AsLogical(EnvObjectReference subject)
+    {
+        if (subject.IsNull)
+            return false;
+
+        return AsLogical(subject.Target);
+    }
+
+    public static bool AsLogical(object? subject)
     {
         if (subject == null)
             return false;
