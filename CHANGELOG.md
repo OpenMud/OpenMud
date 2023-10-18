@@ -1,3 +1,10 @@
+## [2.3.1](https://github.com/OpenMud/OpenMud/compare/v2.3.0...v2.3.1) (2023-10-18)
+
+
+### Bug Fixes
+
+* **CICD:** Fix typo in metadata ([0a713fb](https://github.com/OpenMud/OpenMud/commit/0a713fb02e166d01b3d843891d72149cf73b5b35))
+
 # [2.3.0](https://github.com/OpenMud/OpenMud/compare/v2.2.1...v2.3.0) (2023-10-18)
 
 
