@@ -1,3 +1,15 @@
+# [2.4.0](https://github.com/OpenMud/OpenMud/compare/v2.3.1...v2.4.0) (2023-10-18)
+
+
+### Bug Fixes
+
+* **core:** Fixed unhandled null reference. ([b2c25d2](https://github.com/OpenMud/OpenMud/commit/b2c25d202f7b2d45ed00da26566e32a42126c658))
+
+
+### Features
+
+* **core:** Added basic audio support to framework + ecs, also included some test cases. ([51bd8ae](https://github.com/OpenMud/OpenMud/commit/51bd8ae44befb4c9425f29f27d2977a4181ac554))
+
 ## [2.3.1](https://github.com/OpenMud/OpenMud/compare/v2.3.0...v2.3.1) (2023-10-18)
 
 
