@@ -26,8 +26,6 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
     private readonly Dictionary<Type, Func<object>> scopedMessageEncoderFactory;
     private readonly Dictionary<Type, Func<object>> broadcastMessageEncoderFactory;
 
-    private readonly Dictionary<Type, object> scopedMessageEntityAssociators;
-
     public WorldEntityComponentEncoder(World world, IServiceProvider sp,
         IImmutableList<ServiceDescriptor> availableServices)
     {
@@ -136,8 +134,6 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
                         );
                     }
                 );
-
-        scopedMessageEntityAssociators = scopedMessageEncoderFactory.ToDictionary(x => x.Key, x => x.Value());
 
         this.world = world;
         Subscribe(world);
@@ -366,6 +362,8 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
     {
         QueueTransmitEntityState(entity, new[] { typeof(T) });
     }
+
+    //These are used via reflection.
     private void SubscribeMessage<T>(in T message)
     {
         QueueTransmitMessage(message);
