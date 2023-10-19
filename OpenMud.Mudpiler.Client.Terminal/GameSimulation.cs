@@ -81,17 +81,8 @@ public class GameSimulation
 
     private void On(in EntityEchoMessage message)
     {
-        var logicId = message.Id;
-
-        var e = _world.Where(
-            e => e.Has<LogicIdentifierComponent>() && e.Get<LogicIdentifierComponent>().LogicInstanceId == logicId
-        ).FirstOrDefault();
-
-        var name = e.Get<IdentifierComponent>().Name;
-        var eh = logicDirectory[logicId];
-
         if (OnEntityEcho != null)
-            OnEntityEcho(name, eh["name"], message.Message);
+            OnEntityEcho(message.Identifier, message.Name, message.Message);
     }
 
     private void On(in WorldEchoMessage message)

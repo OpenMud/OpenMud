@@ -71,15 +71,7 @@ internal class TestGame
 
     private void On(in ConfigureSoundMessage message)
     {
-        string? name = null;
-
-        if (message.EntityScope.HasValue)
-        {
-            var logicId = message.EntityScope.Value;
-            name = _world.Where(
-                e => e.Has<LogicIdentifierComponent>() && e.Get<LogicIdentifierComponent>().LogicInstanceId == logicId
-            ).Single().Get<IdentifierComponent>().Name;
-        }
+        string? name = message.EntityIdentifierScope;
 
         if (name == null)
         {
@@ -91,21 +83,14 @@ internal class TestGame
             EntitySoundConfig[name] = new List<ConfigureSoundMessage>();
 
         EntitySoundConfig[name].Add(message);
-
     }
 
     private void On(in EntityEchoMessage message)
     {
-        var logicId = message.Id;
+        if (!EntityMessages.ContainsKey(message.Identifier))
+            EntityMessages[message.Identifier] = new List<string>();
 
-        var name = _world.Where(
-            e => e.Has<LogicIdentifierComponent>() && e.Get<LogicIdentifierComponent>().LogicInstanceId == logicId
-        ).Single().Get<IdentifierComponent>().Name;
-
-        if (!EntityMessages.ContainsKey(name))
-            EntityMessages[name] = new List<string>();
-
-        EntityMessages[name].Add(message.Message);
+        EntityMessages[message.Identifier].Add(message.Message);
     }
 
     private void On(in WorldEchoMessage message)

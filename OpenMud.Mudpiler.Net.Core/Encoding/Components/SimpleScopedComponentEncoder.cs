@@ -4,13 +4,13 @@ using OpenMud.Mudpiler.Core.Components;
 
 namespace OpenMud.Mudpiler.Net.Core.Encoding.Components;
 
-public sealed class SimpleScopedEncoder<T> : IScopedEntityComponentEncoder
+public sealed class SimpleScopedComponentEncoder<T> : IScopedEntityComponentEncoder
 {
     private readonly string setterName;
     private Action<StateTransmitter, string>? action;
     private string? connection;
 
-    private SimpleScopedEncoder(string setterName, Type[]? cascade = null)
+    private SimpleScopedComponentEncoder(string setterName, Type[]? cascade = null)
     {
         this.setterName = setterName;
 
@@ -55,6 +55,6 @@ public sealed class SimpleScopedEncoder<T> : IScopedEntityComponentEncoder
     public static Func<IServiceProvider, ScopedEntityComponentEncoderFactory<T>> Factory(string setter,
         Type[]? cascade = null)
     {
-        return _ => () => new SimpleScopedEncoder<T>(setter, cascade);
+        return _ => () => new SimpleScopedComponentEncoder<T>(setter, cascade);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using DefaultEcs;
+using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.Messages;
 using OpenMud.Mudpiler.Core.Utils;
 using OpenMud.Mudpiler.Framework.Behaviours;
@@ -80,13 +81,21 @@ public class BaseDmlFramework : IDmlFramework
 
     private void EchoSound(DatumHandle subject, SoundInfo message)
     {
-        Guid? scope = subject is EntityHandle e ? logicLookup[e] : null;
+        string? entityIdentifierScope = null;
+
+        if (subject is EntityHandle e)
+        {
+            var scopeEntity = DmlEcs.FindEntity(world, logicLookup, e);
+
+            if (scopeEntity.Has<IdentifierComponent>())
+                entityIdentifierScope = scopeEntity.Get<IdentifierComponent>().Name;
+        }
 
         var configuration = DmlEnv.AsLogical(message.repeat) ? SoundConfiguration.Loop : SoundConfiguration.Play;
 
         world.Publish(
             new ConfigureSoundMessage(
-                scope,
+                entityIdentifierScope,
                 message.file.GetOrDefault<string?>(null),
                 DmlEnv.AsNumeric(message.channel),
                 configuration
@@ -99,11 +108,18 @@ public class BaseDmlFramework : IDmlFramework
         if (subject is EntityHandle e)
         {
             var entityId = logicLookup[e];
-            world.Publish(new EntityEchoMessage(entityId, message));
+
+            bool matching(in LogicIdentifierComponent c) => c.LogicInstanceId == entityId;
+            var worldEntity = world.GetEntities().With<IdentifierComponent>().With<LogicIdentifierComponent>(matching).AsEnumerable().FirstOrDefault();
+
+            if (worldEntity.IsAlive)
+            {
+                var name = e["name"] as string ?? "";
+                world.Publish(new EntityEchoMessage(worldEntity.Get<IdentifierComponent>().Name, name, message));
+                return;
+            }
         }
-        else
-        {
-            world.Publish(new WorldEchoMessage(message));
-        }
+        
+        world.Publish(new WorldEchoMessage(message));
     }
 }
