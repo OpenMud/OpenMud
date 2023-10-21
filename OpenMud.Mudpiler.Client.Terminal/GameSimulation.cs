@@ -67,6 +67,7 @@ public class GameSimulation
             new EntityVisualContextCacheSystem(_world, logicDirectory),
             new CommandDiscoverySystem(_world, visibilitySolver),
             new CommandDispatcherService(_world),
+            new CommandParserSystem(_world),
             new PathFindingSystem(_world, walkabilityAdapter),
             new ActionSystem<float>(deltaTime => scheduler.Update(deltaTime)),
             new GameFlowSystem(_world, logicDirectory),

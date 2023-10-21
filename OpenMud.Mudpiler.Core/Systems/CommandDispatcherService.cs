@@ -34,6 +34,7 @@ public class CommandDispatcherService : AEntitySetSystem<float>
         {
             var actionable = srcEntity.Get<ActionableCommandsComponent>();
             var hasTarget = subject.Operands.Length > 0;
+
             var cmdMatch = actionable
                 .Commands
                 .OrderByDescending(
@@ -44,7 +45,7 @@ public class CommandDispatcherService : AEntitySetSystem<float>
                     x.Target == null ||
                     (hasTarget && x.TargetName != null && x.TargetName.ToLower() == subject.Operands[0].ToLower())
                 )
-                .Where(x => subject.Target == null || subject.Target == x.Target)
+                .Where(x => x.Target == null || subject.Target == x.Target)
                 .FirstOrDefault();
 
             if (cmdMatch.IsNull)

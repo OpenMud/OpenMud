@@ -204,26 +204,32 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         );
     }
 
-    private static ExpressionPieceBuilder CreateBinAsn(string op, ExpressionPieceBuilder left,
-        ExpressionPieceBuilder right, bool blankAssignment = false)
+    public static ExpressionSyntax CreateBinAsn(string op, ExpressionSyntax left,
+        ExpressionSyntax right)
     {
         var dmlOp = typeof(DmlBinaryAssignment).FullName + "." +
                     Enum.GetName(typeof(DmlBinaryAssignment), DmlOperation.ParseBinaryAsn(op));
-        return resolver =>
-            SyntaxFactory.InvocationExpression(
+
+        return SyntaxFactory.InvocationExpression(
                     SyntaxFactory.ParseName("ctx.op.BinaryAssignment"),
                     SyntaxFactory.ArgumentList(
                         SyntaxFactory.SeparatedList(new[]
                         {
                             SyntaxFactory.Argument(SyntaxFactory.ParseExpression(dmlOp)),
-                            SyntaxFactory.Argument(left(resolver)),
-                            SyntaxFactory.Argument(right(resolver))
+                            SyntaxFactory.Argument(left),
+                            SyntaxFactory.Argument(right)
                             //blankAssignment ? CreateBlankAssignmentDelegate() : CreateAssignmentDelegate(left(resolver))//SyntaxFactory.Argument(null, SyntaxFactory.Token(SyntaxKind.OutKeyword), left(resolver))
                         }) //.Select(SyntaxFactory.Argument))
                     )
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlNativeDeferred);
+    }
+
+    private static ExpressionPieceBuilder CreateBinAsn(string op, ExpressionPieceBuilder left,
+        ExpressionPieceBuilder right)
+    {
+        return resolver => CreateBinAsn(op, left(resolver), right(resolver));
     }
 
 
@@ -315,8 +321,7 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
             CreateBinAsn(
                 c.op.GetText(),
                 lhs_eval,
-                Visit(c.src),
-                true
+                Visit(c.src)
             )
         );
     }
@@ -760,5 +765,18 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
             : c.list_expr().expr().Select(Visit).ToList();
 
         return resolver => CreateListLiteral(rawElements.Select(e => e(resolver)));
+    }
+
+    public override ExpressionPieceBuilder VisitExpr_prereturn(DmlParser.Expr_prereturnContext context)
+    {
+        return (resolver) => CreatePrereturnExpression();
+    }
+
+    public static ExpressionSyntax CreatePrereturnExpression()
+    {
+        return SyntaxFactory.InvocationExpression(
+            SyntaxFactory.ParseName("this.GetImplicitReturn"),
+            SyntaxFactory.ArgumentList()
+        );
     }
 }

@@ -356,6 +356,31 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 .WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
     }
 
+    public override CodePieceBuilder VisitPrereturn_augmentation(DmlParser.Prereturn_augmentationContext c)
+    {
+        return resolver =>
+        {
+            var assignment = ExpressionVisitor.CreateBinAsn(
+                c.augAsnOp().GetText(), 
+                ExpressionVisitor.CreatePrereturnExpression(),
+                EXPR.Visit(c.src)(resolver)
+            );
+
+            return SyntaxFactory.ExpressionStatement(
+                    SyntaxFactory.InvocationExpression(
+                        SyntaxFactory.ParseName("this.SetImplicitReturn"),
+                        SyntaxFactory.ArgumentList(
+                            SyntaxFactory.SeparatedList(new[]
+                            {
+                                SyntaxFactory.Argument(assignment)
+                            }) //.Select(SyntaxFactory.Argument))
+                        )
+                    )
+                )
+                .WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
+        };
+    }
+
 
     public override CodePieceBuilder VisitNew_call_implicit([NotNull] DmlParser.New_call_implicitContext c)
     {

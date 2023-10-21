@@ -50,6 +50,7 @@ internal class TestGame
             new EntityVisualContextCacheSystem(_world, logicDirectory),
             new CommandDiscoverySystem(_world, visiblitySolver),
             new CommandDispatcherService(_world),
+            new CommandParserSystem(_world),
             new PathFindingSystem(_world, walkabilityAdapter),
             new ActionSystem<float>(deltaTime => scheduler.Update(deltaTime)),
             new EntityVisionSystem(_world, visiblitySolver)
@@ -104,11 +105,20 @@ internal class TestGame
         e.Set(new ExecuteVerbComponent(source, destination, verb, arguments));
     }
 
-    public string Create(string className)
+    public void ExecuteCommand(string source, string destination, string command)
+    {
+        var e = _world.CreateEntity();
+        e.Set(new ParseCommandComponent(source, destination, command));
+    }
+
+    public string Create(string className, bool canImpersonate = false)
     {
         var entityBuilder = new BaseEntityBuilder();
         var e = _world.CreateEntity();
         entityBuilder.CreateAtomic(e, className);
+
+        if(canImpersonate)
+            e.Set(new PlayerCanImpersonateComponent());
 
         return e.Get<IdentifierComponent>().Name;
     }

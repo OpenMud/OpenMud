@@ -1,9 +1,9 @@
-﻿using System.Collections.Immutable;
-using System.Reflection;
-using DefaultEcs;
+﻿using DefaultEcs;
 using Microsoft.Extensions.DependencyInjection;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Net.Core.Components;
+using System.Collections.Immutable;
+using System.Reflection;
 
 namespace OpenMud.Mudpiler.Net.Core.Encoding;
 
@@ -185,7 +185,7 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
         if (!e.IsAlive)
             return null;
 
-        return GetOwningClient(entityIdentifier);
+        return GetOwningClient(e);
     }
 
     private IScopedEntityComponentEncoder? GetClientScope(in Entity entity, Type t)
@@ -273,6 +273,7 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
                 if (owningClient == null)
                     return;
 
+                scopedEncoder.Bind(owningClient);
                 if (!pendingClientBroadcast.ContainsKey(owningClient))
                     pendingClientBroadcast.Add(owningClient, new List<IEncodable>());
 
