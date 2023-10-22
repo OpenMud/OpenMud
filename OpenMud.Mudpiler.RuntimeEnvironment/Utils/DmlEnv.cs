@@ -28,6 +28,14 @@ public static class DmlEnv
 
     public static string? AsText(object? v)
     {
+        if (v is EnvObjectReference w)
+        {
+            if (w.IsNull)
+                return null;
+
+            return AsText(w.Target);
+        }
+
         if(v == null)
             return null;
 
