@@ -37,6 +37,11 @@ public abstract class DatumProcExecutionContext
         ImplicitReturn = r;
     }
 
+    public EnvObjectReference GetImplicitReturn()
+    {
+        return VarEnvObjectReference.CreateImmutable(ImplicitReturn);
+    }
+
     public DatumProcExecutionContext SetupContext(DatumProcExecutionContext? caller, Datum? usr, Datum self,
         DatumExecutionContext ctx)
     {

@@ -1,9 +1,9 @@
-﻿using System.Collections.Immutable;
-using System.Reflection;
-using DefaultEcs;
+﻿using DefaultEcs;
 using Microsoft.Extensions.DependencyInjection;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Net.Core.Components;
+using System.Collections.Immutable;
+using System.Reflection;
 
 namespace OpenMud.Mudpiler.Net.Core.Encoding;
 
@@ -12,14 +12,19 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
     private readonly World world;
 
     private readonly IImmutableList<Type> acceptedComponents;
+
     private readonly Dictionary<Type, Func<IBroadcastEntityComponentEncoder>> broadcastEncoderFactory;
 
     private readonly Dictionary<string, ClientScope> clientScopes = new();
     private readonly Dictionary<Type, Func<Entity, bool>> componentPresenceCheck;
 
-    private readonly List<IBroadcastEntityComponentEncoder> pendingBroadcast = new();
-    private readonly Dictionary<string, List<IBroadcastEntityComponentEncoder>> pendingClientBroadcast = new();
+    private readonly List<IEncodable> pendingBroadcast = new();
+
+    private readonly Dictionary<string, List<IEncodable>> pendingClientBroadcast = new();
     private readonly Dictionary<Type, Func<IScopedEntityComponentEncoder>> scopedEncoderFactory;
+
+    private readonly Dictionary<Type, Func<object>> scopedMessageEncoderFactory;
+    private readonly Dictionary<Type, Func<object>> broadcastMessageEncoderFactory;
 
     public WorldEntityComponentEncoder(World world, IServiceProvider sp,
         IImmutableList<ServiceDescriptor> availableServices)
@@ -36,6 +41,20 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
                 .Select(svc => svc.ServiceType)
                 .Where(t => t.IsGenericType &&
                             t.GetGenericTypeDefinition() == typeof(BroadcastEntityComponentEncodeFactory<>))
+                .Select(t => t.GetGenericArguments().First());
+
+        var broadcastMessageEncoderTypes =
+            availableServices
+                .Select(svc => svc.ServiceType)
+                .Where(t => t.IsGenericType &&
+                            t.GetGenericTypeDefinition() == typeof(BroadcastMessageEncodeFactory<>))
+                .Select(t => t.GetGenericArguments().First());
+
+        var scopedMessageEncoderTypes =
+            availableServices
+                .Select(svc => svc.ServiceType)
+                .Where(t => t.IsGenericType &&
+                            t.GetGenericTypeDefinition() == typeof(ScopedMessageEncoderFactory<>))
                 .Select(t => t.GetGenericArguments().First());
 
         scopedEncoderFactory =
@@ -64,6 +83,37 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
                             var factory = sp.GetService(factoryType) as Delegate;
 
                             return (IBroadcastEntityComponentEncoder)factory.DynamicInvoke();
+                        }
+                    )
+                );
+
+
+        broadcastMessageEncoderFactory =
+            broadcastMessageEncoderTypes
+                .ToDictionary(
+                    x => x,
+                    x => new Func<object>(
+                        () =>
+                        {
+                            var factoryType = typeof(BroadcastMessageEncodeFactory<>).MakeGenericType(x);
+                            var factory = sp.GetService(factoryType) as Delegate;
+
+                            return factory.DynamicInvoke();
+                        }
+                    )
+                );
+
+        scopedMessageEncoderFactory =
+            scopedMessageEncoderTypes
+                .ToDictionary(
+                    x => x,
+                    x => new Func<object>(
+                        () =>
+                        {
+                            var factoryType = typeof(ScopedMessageEncoderFactory<>).MakeGenericType(x);
+                            var factory = sp.GetService(factoryType) as Delegate;
+
+                            return factory.DynamicInvoke();
                         }
                     )
                 );
@@ -124,7 +174,18 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
             return null;
 
         return entity.Get<PlayerSessionOwnedComponent>().ConnectionId;
-        ;
+    }
+
+    private string? GetOwningClient(string entityIdentifier)
+    {
+        bool matching(in IdentifierComponent i) => i.Name == entityIdentifier;
+
+        var e = world.GetEntities().With<IdentifierComponent>(matching).AsEnumerable().FirstOrDefault();
+
+        if (!e.IsAlive)
+            return null;
+
+        return GetOwningClient(e);
     }
 
     private IScopedEntityComponentEncoder? GetClientScope(in Entity entity, Type t)
@@ -164,6 +225,17 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
         return Delegate.CreateDelegate(funcType, this, method);
     }
 
+    private object CreateSubscribeOn(Type type)
+    {
+        var funcType = typeof(MessageHandler<>).MakeGenericType(type);
+        var method =
+            typeof(WorldEntityComponentEncoder).GetMethod("SubscribeMessage",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+        method = method.MakeGenericMethod(type);
+
+        return Delegate.CreateDelegate(funcType, this, method);
+    }
+
     private Queue<Type> CreateInitialComponentScope(Entity entity, Type[]? typeConstraint)
     {
         var process = new Queue<Type>();
@@ -181,6 +253,45 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
             process.Enqueue(t);
 
         return process;
+    }
+
+    private void QueueTransmitMessage<T>(T message)
+    {
+        IMessageEncoder<T>? broadcastEncoder = null;
+        if (scopedMessageEncoderFactory.TryGetValue(typeof(T), out var factory))
+        {
+            var scopedEncoder = (IScopedMessageEncoder<T>)factory();
+
+            var entityScope = scopedEncoder.EntityMapper(message);
+
+            if (entityScope == null)
+                broadcastEncoder = scopedEncoder;
+            else
+            {
+                var owningClient = GetOwningClient(entityScope);
+
+                if (owningClient == null)
+                    return;
+
+                scopedEncoder.Bind(owningClient);
+                if (!pendingClientBroadcast.ContainsKey(owningClient))
+                    pendingClientBroadcast.Add(owningClient, new List<IEncodable>());
+
+                scopedEncoder.Accept(message);
+                pendingClientBroadcast[owningClient].Add(scopedEncoder);
+            }
+        }
+
+        if (broadcastEncoder == null)
+        {
+            if (!broadcastMessageEncoderFactory.TryGetValue(typeof(T), out var broadcastFactory))
+                return;
+
+            broadcastEncoder = (IMessageEncoder<T>)broadcastFactory();
+            broadcastEncoder.Accept(message);
+
+            pendingBroadcast.Add(broadcastEncoder);
+        }
     }
 
     private void QueueTransmitEntityState(in Entity entity, Type[]? typeConstraint = null,
@@ -212,7 +323,7 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
                 if (clientConstraint != null &&
                     !pendingClientBroadcast.TryGetValue(clientConstraint, out broadcastCollection))
                 {
-                    broadcastCollection = new List<IBroadcastEntityComponentEncoder>();
+                    broadcastCollection = new List<IEncodable>();
                     pendingClientBroadcast[clientConstraint] = broadcastCollection;
                 }
 
@@ -253,10 +364,16 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
         QueueTransmitEntityState(entity, new[] { typeof(T) });
     }
 
+    //These are used via reflection.
+    private void SubscribeMessage<T>(in T message)
+    {
+        QueueTransmitMessage(message);
+    }
+
     private void Subscribe(World world)
     {
         var allEncodedTypes = broadcastEncoderFactory.Keys.Union(scopedEncoderFactory.Keys).Distinct();
-
+        var allEncodedMessages = broadcastMessageEncoderFactory.Keys.Union(scopedMessageEncoderFactory.Keys).Distinct();
         foreach (var t in allEncodedTypes)
         {
             typeof(World).GetMethod("SubscribeComponentAdded")!.MakeGenericMethod(t)
@@ -264,6 +381,13 @@ public class WorldEntityComponentEncoder : IWorldStateEncoder
 
             typeof(World).GetMethod("SubscribeComponentChanged")!.MakeGenericMethod(t)
                 .Invoke(world, new[] { CreateSubscribeChanged(t) });
+        }
+
+        foreach (var t in allEncodedMessages)
+        {
+
+            typeof(World).GetMethod("Subscribe")!.MakeGenericMethod(t)
+                .Invoke(world, new[] { CreateSubscribeOn(t) });
         }
     }
 

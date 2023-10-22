@@ -67,6 +67,7 @@ public class GameSimulation
             new EntityVisualContextCacheSystem(_world, logicDirectory),
             new CommandDiscoverySystem(_world, visibilitySolver),
             new CommandDispatcherService(_world),
+            new CommandParserSystem(_world),
             new PathFindingSystem(_world, walkabilityAdapter),
             new ActionSystem<float>(deltaTime => scheduler.Update(deltaTime)),
             new GameFlowSystem(_world, logicDirectory),
@@ -81,17 +82,8 @@ public class GameSimulation
 
     private void On(in EntityEchoMessage message)
     {
-        var logicId = message.Id;
-
-        var e = _world.Where(
-            e => e.Has<LogicIdentifierComponent>() && e.Get<LogicIdentifierComponent>().LogicInstanceId == logicId
-        ).FirstOrDefault();
-
-        var name = e.Get<IdentifierComponent>().Name;
-        var eh = logicDirectory[logicId];
-
         if (OnEntityEcho != null)
-            OnEntityEcho(name, eh["name"], message.Message);
+            OnEntityEcho(message.Identifier, message.Name, message.Message);
     }
 
     private void On(in WorldEchoMessage message)

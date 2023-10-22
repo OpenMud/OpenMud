@@ -169,6 +169,7 @@ small_stmt
   | variable_declaration
   | flow_stmt
   | prereturn_assignment
+  | prereturn_augmentation
   | expr
   | return_stmt
   | set_src_statement
@@ -217,6 +218,8 @@ augAsnOp
   ;
 
 prereturn_assignment: DOT ASSIGNMENT src=expr;
+prereturn_augmentation: DOT augAsnOp src=expr;
+
 augmented_assignment: dest=expr_lhs op=augAsnOp
   src=expr;
 
@@ -362,4 +365,5 @@ expr
  | left=expr op=cmp_op right=expr #expr_cmp_binary
  | left=expr op=bit_op right=expr #expr_bit_binary
  | left=expr op=logic_op right=expr #expr_logic_binary
+ | DOT #expr_prereturn
 ;

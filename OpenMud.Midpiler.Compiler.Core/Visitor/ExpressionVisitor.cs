@@ -1,10 +1,14 @@
+using System.Text;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using OpenMud.Mudpiler.Compiler.Core.GrammarSupport;
 using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
 using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.CodeSuiteBuilder;
 using OpenMud.Mudpiler.Compiler.DmlGrammar;
+using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 
@@ -204,26 +208,32 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         );
     }
 
-    private static ExpressionPieceBuilder CreateBinAsn(string op, ExpressionPieceBuilder left,
-        ExpressionPieceBuilder right, bool blankAssignment = false)
+    public static ExpressionSyntax CreateBinAsn(string op, ExpressionSyntax left,
+        ExpressionSyntax right)
     {
         var dmlOp = typeof(DmlBinaryAssignment).FullName + "." +
                     Enum.GetName(typeof(DmlBinaryAssignment), DmlOperation.ParseBinaryAsn(op));
-        return resolver =>
-            SyntaxFactory.InvocationExpression(
+
+        return SyntaxFactory.InvocationExpression(
                     SyntaxFactory.ParseName("ctx.op.BinaryAssignment"),
                     SyntaxFactory.ArgumentList(
                         SyntaxFactory.SeparatedList(new[]
                         {
                             SyntaxFactory.Argument(SyntaxFactory.ParseExpression(dmlOp)),
-                            SyntaxFactory.Argument(left(resolver)),
-                            SyntaxFactory.Argument(right(resolver))
+                            SyntaxFactory.Argument(left),
+                            SyntaxFactory.Argument(right)
                             //blankAssignment ? CreateBlankAssignmentDelegate() : CreateAssignmentDelegate(left(resolver))//SyntaxFactory.Argument(null, SyntaxFactory.Token(SyntaxKind.OutKeyword), left(resolver))
                         }) //.Select(SyntaxFactory.Argument))
                     )
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlNativeDeferred);
+    }
+
+    private static ExpressionPieceBuilder CreateBinAsn(string op, ExpressionPieceBuilder left,
+        ExpressionPieceBuilder right)
+    {
+        return resolver => CreateBinAsn(op, left(resolver), right(resolver));
     }
 
 
@@ -315,8 +325,7 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
             CreateBinAsn(
                 c.op.GetText(),
                 lhs_eval,
-                Visit(c.src),
-                true
+                Visit(c.src)
             )
         );
     }
@@ -480,11 +489,97 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return s.Substring(1, s.Length - 2).Replace("\\\"", "\"");
     }
 
+    private (string formatString, List<ExpressionPieceBuilder> args) CreateFormatString(string s)
+    {
+        var formatOps = new List<ExpressionPieceBuilder>();
+        var rawOperands = new List<string>();
+        var formatStr = new StringBuilder();
+        var exprStr = new StringBuilder();
+        bool escaped = false;
+        int braceIndex = 0;
+
+        for (var i = 0; i < s.Length; i++)
+        {
+            var c = s[i];
+            char? nextChar = i + 1 >= s.Length ? null : s[i + 1];
+            if (escaped)
+            {
+                formatStr.Append(c);
+                escaped = false;
+            }
+            else if (braceIndex > 0)
+            {
+                if (c == ']')
+                {
+                    braceIndex--;
+                    if (braceIndex == 0)
+                    {
+                        formatStr.Append(c);
+                        rawOperands.Add(exprStr.ToString());
+                        exprStr.Clear();
+                    }
+                    else
+                        exprStr.Append(c);
+                }
+                else
+                    exprStr.Append(c);
+
+                if (c == '[')
+                    braceIndex++;
+            }
+            else if (c == '[')
+            {
+                if (nextChar != ']')
+                    braceIndex += 1;
+
+                formatStr.Append(c);
+            }
+            else
+            {
+                if (c == '\\')
+                    escaped = true;
+                formatStr.Append(c);
+            }
+        }
+
+        //We need to parse the expressions out.
+
+        foreach (var rawOp in rawOperands)
+        {
+            var lexer = new LexerWithIndentInjector(new AntlrInputStream(new StringReader(rawOp)));
+            var commonTokenStream = new CommonTokenStream(lexer);
+
+            var parser = new DmlParser(commonTokenStream);
+
+            var ctx = parser.expr();
+            
+            var allErrors = lexer.GetErrorMessages().ToList();
+
+            if (allErrors.Any())
+                throw new Exception("Error parsing string operands: " + string.Join("\n", allErrors));
+
+            formatOps.Add(this.Visit(ctx));
+        }
+
+        return (formatStr.ToString(), formatOps);
+    }
+
     public override ExpressionPieceBuilder VisitExpr_string_literal(
         [NotNull] DmlParser.Expr_string_literalContext context)
     {
-        return resolver => SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression,
-            SyntaxFactory.Literal(ParseEscapeString(context.GetText())));
+        var escapedString = ParseEscapeString(context.GetText());
+
+        var (stringLiteral, ops) = CreateFormatString(escapedString);
+
+        var strLiteralExpr = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression,
+            SyntaxFactory.Literal(stringLiteral));
+
+        if (ops.Count == 0)
+        {
+            return _ => strLiteralExpr;
+        }
+
+        return (r) => CreateCall(RuntimeFrameworkIntrinsic.TEXT, ops.Select(e => e(r)).Prepend(strLiteralExpr).Select(SyntaxFactory.Argument));
     }
 
     public override ExpressionPieceBuilder VisitInstance_call([NotNull] DmlParser.Instance_callContext c)
@@ -760,5 +855,18 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
             : c.list_expr().expr().Select(Visit).ToList();
 
         return resolver => CreateListLiteral(rawElements.Select(e => e(resolver)));
+    }
+
+    public override ExpressionPieceBuilder VisitExpr_prereturn(DmlParser.Expr_prereturnContext context)
+    {
+        return (resolver) => CreatePrereturnExpression();
+    }
+
+    public static ExpressionSyntax CreatePrereturnExpression()
+    {
+        return SyntaxFactory.InvocationExpression(
+            SyntaxFactory.ParseName("this.GetImplicitReturn"),
+            SyntaxFactory.ArgumentList()
+        );
     }
 }

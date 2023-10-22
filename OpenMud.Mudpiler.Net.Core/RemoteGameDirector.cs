@@ -38,14 +38,6 @@ public class RemoteGameDirector
         //TODO: Should check the entity is actually owned by the client.
         var e = world.CreateEntity();
 
-        var cmd = command.Split(" ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-
-        if (cmd.Length == 0)
-            return;
-
-        var verb = cmd[0];
-        var operands = cmd.Skip(1).ToArray();
-
-        e.Set(new ExecuteCommandComponent(source, subject, verb, operands));
+        e.Set(new ParseCommandComponent(source, subject, command));
     }
 }

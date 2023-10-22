@@ -2,6 +2,8 @@
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
+using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 
 namespace OpenMud.Mudpiler.Tests.EnvironmentTests;
 
@@ -81,5 +83,54 @@ internal class ImplicitReturnTests
 
         var mob = system.CreateAtomic("/mob/sub");
         Assert.IsTrue((int)mob.ExecProc("test").CompleteOrException() == 1);
+    }
+
+    [Test]
+    public void ManipulateImplicitReturn()
+    {
+        var dmlCode =
+            @"
+
+/proc/test_uniquelist()
+    var l = list(1,1,1,4,5,6,4,6,5,4)
+    return uniquelist(l)
+
+/proc/uniquelist(var/list/L)
+    . = list()
+    for(var/item in L)
+        if(!(item in .))
+            . += item
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var r = (DatumHandle)system.Global.ExecProc("test_uniquelist").CompleteOrException();
+
+        var l = r.Unwrap<DmlList>().Host.Select(DmlEnv.AsNumeric).ToList();
+
+        Assert.IsTrue(l.SequenceEqual(new[]
+        {
+            1,4,5,6
+        }));
+    }
+
+    [Test]
+    public void ArrayIndexImplicitReturn()
+    {
+        var dmlCode =
+            @"
+/proc/testIndex()
+    . = list(5,6,7,1)
+
+    return .[2]
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var r = system.Global.ExecProc("testIndex").CompleteOrException();
+
+        Assert.IsTrue(DmlEnv.AsNumeric(r) == 6);
     }
 }

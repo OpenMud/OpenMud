@@ -50,6 +50,7 @@ internal class TestGame
             new EntityVisualContextCacheSystem(_world, logicDirectory),
             new CommandDiscoverySystem(_world, visiblitySolver),
             new CommandDispatcherService(_world),
+            new CommandParserSystem(_world),
             new PathFindingSystem(_world, walkabilityAdapter),
             new ActionSystem<float>(deltaTime => scheduler.Update(deltaTime)),
             new EntityVisionSystem(_world, visiblitySolver)
@@ -71,15 +72,7 @@ internal class TestGame
 
     private void On(in ConfigureSoundMessage message)
     {
-        string? name = null;
-
-        if (message.EntityScope.HasValue)
-        {
-            var logicId = message.EntityScope.Value;
-            name = _world.Where(
-                e => e.Has<LogicIdentifierComponent>() && e.Get<LogicIdentifierComponent>().LogicInstanceId == logicId
-            ).Single().Get<IdentifierComponent>().Name;
-        }
+        string? name = message.EntityIdentifierScope;
 
         if (name == null)
         {
@@ -91,21 +84,14 @@ internal class TestGame
             EntitySoundConfig[name] = new List<ConfigureSoundMessage>();
 
         EntitySoundConfig[name].Add(message);
-
     }
 
     private void On(in EntityEchoMessage message)
     {
-        var logicId = message.Id;
+        if (!EntityMessages.ContainsKey(message.Identifier))
+            EntityMessages[message.Identifier] = new List<string>();
 
-        var name = _world.Where(
-            e => e.Has<LogicIdentifierComponent>() && e.Get<LogicIdentifierComponent>().LogicInstanceId == logicId
-        ).Single().Get<IdentifierComponent>().Name;
-
-        if (!EntityMessages.ContainsKey(name))
-            EntityMessages[name] = new List<string>();
-
-        EntityMessages[name].Add(message.Message);
+        EntityMessages[message.Identifier].Add(message.Message);
     }
 
     private void On(in WorldEchoMessage message)
@@ -119,11 +105,20 @@ internal class TestGame
         e.Set(new ExecuteVerbComponent(source, destination, verb, arguments));
     }
 
-    public string Create(string className)
+    public void ExecuteCommand(string source, string destination, string command)
+    {
+        var e = _world.CreateEntity();
+        e.Set(new ParseCommandComponent(source, destination, command));
+    }
+
+    public string Create(string className, bool canImpersonate = false)
     {
         var entityBuilder = new BaseEntityBuilder();
         var e = _world.CreateEntity();
         entityBuilder.CreateAtomic(e, className);
+
+        if(canImpersonate)
+            e.Set(new PlayerCanImpersonateComponent());
 
         return e.Get<IdentifierComponent>().Name;
     }

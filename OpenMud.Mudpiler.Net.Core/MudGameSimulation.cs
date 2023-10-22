@@ -49,6 +49,7 @@ public class MudGameSimulation : IGameSimulation
             new EntityVisualContextCacheSystem(EcsWorld, logicDirectory),
             new CommandDiscoverySystem(EcsWorld, visibilitySolver),
             new CommandDispatcherService(EcsWorld),
+            new CommandParserSystem(EcsWorld),
             new PathFindingSystem(EcsWorld, walkabilityAdapter),
             new ActionSystem<float>(deltaTime => scheduler.Update(deltaTime)),
             new GameFlowSystem(EcsWorld, logicDirectory),

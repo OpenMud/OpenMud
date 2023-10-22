@@ -6,13 +6,13 @@ namespace OpenMud.Mudpiler.Net.Core.Encoding.Components;
 
 public delegate bool EncoderFilter(in Entity e);
 
-public sealed class SimpleBroadcastEncoder<T> : IBroadcastEntityComponentEncoder
+public sealed class SimpleBroadcastComponentEncoder<T> : IBroadcastEntityComponentEncoder
 {
     private readonly EncoderFilter? filter;
     private readonly string setterName;
     private Action<StateTransmitter>? action;
 
-    private SimpleBroadcastEncoder(string setterName, Type[]? cascade, EncoderFilter? filter)
+    private SimpleBroadcastComponentEncoder(string setterName, Type[]? cascade, EncoderFilter? filter)
     {
         this.setterName = setterName;
         this.filter = filter;
@@ -50,6 +50,6 @@ public sealed class SimpleBroadcastEncoder<T> : IBroadcastEntityComponentEncoder
     public static Func<IServiceProvider, BroadcastEntityComponentEncodeFactory<T>> Factory(string setter,
         Type[]? cascade = null, EncoderFilter? filter = null)
     {
-        return _ => () => new SimpleBroadcastEncoder<T>(setter, cascade, filter);
+        return _ => () => new SimpleBroadcastComponentEncoder<T>(setter, cascade, filter);
     }
 }

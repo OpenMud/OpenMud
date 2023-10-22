@@ -2,12 +2,14 @@
 
 public struct EntityEchoMessage
 {
-    public readonly Guid Id;
+    public readonly string Identifier;
+    public readonly string Name;
     public readonly string Message;
 
-    public EntityEchoMessage(Guid id, string message)
+    public EntityEchoMessage(string identifier, string name, string message)
     {
-        Id = id;
+        Identifier = identifier;
+        Name = name;
         Message = message;
     }
 }

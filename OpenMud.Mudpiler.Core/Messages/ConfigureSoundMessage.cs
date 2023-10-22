@@ -15,14 +15,14 @@ namespace OpenMud.Mudpiler.Core.Messages
 
     public struct ConfigureSoundMessage
     {
-        public readonly Guid? EntityScope;
+        public readonly string? EntityIdentifierScope;
         public readonly string? Sound;
         public readonly int Channel;
         public readonly SoundConfiguration Configuration;
 
-        public ConfigureSoundMessage(Guid? entityScope, string? sound, int channel, SoundConfiguration configuration)
+        public ConfigureSoundMessage(string? entityIdentifierScope, string? sound, int channel, SoundConfiguration configuration)
         {
-            EntityScope = entityScope;
+            EntityIdentifierScope = entityIdentifierScope;
             Sound = sound;
             Channel = channel;
             Configuration = configuration;

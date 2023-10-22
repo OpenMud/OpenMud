@@ -26,6 +26,25 @@ public static class DmlEnv
         throw new Exception("Unknown class type.");
     }
 
+    public static string? AsText(object? v)
+    {
+        if (v is EnvObjectReference w)
+        {
+            if (w.IsNull)
+                return null;
+
+            return AsText(w.Target);
+        }
+
+        if(v == null)
+            return null;
+
+        if (v is string s)
+            return s;
+
+        return v.ToString();
+    }
+
     public static bool IsNumericType(object? o)
     {
         return o != null && IsNumericType(o.GetType());
