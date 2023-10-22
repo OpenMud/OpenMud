@@ -41,13 +41,20 @@ public class CommandParserSystem : AEntitySetSystem<float>
                 isEscaped = false;
             } else if (isString)
             {
-                currentOperand += c;
-
-                if (c == '"')
+                if (c == '\\' && !isEscaped)
+                    isEscaped = true;
+                else
                 {
-                    isString = false;
-                    currentOperand = currentOperand.Substring(1, currentOperand.Length - 2);
-                    Next();
+                    currentOperand += c;
+
+                    if (c == '"' && !isEscaped)
+                    {
+                        isString = false;
+                        currentOperand = currentOperand.Substring(1, currentOperand.Length - 2);
+                        Next();
+                    }
+
+                    isEscaped = false;
                 }
             }
             else
@@ -58,7 +65,6 @@ public class CommandParserSystem : AEntitySetSystem<float>
                     case ' ':
                         Next();
                         break;
-
                     case '"':
                         isString = true;
                         currentOperand += c;
