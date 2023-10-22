@@ -1,3 +1,18 @@
+# [2.5.0](https://github.com/OpenMud/OpenMud/compare/v2.4.0...v2.5.0) (2023-10-22)
+
+
+### Bug Fixes
+
+* **core:** AsText DmlEnv helper function now supports processing EnvObjectReference types. ([577545d](https://github.com/OpenMud/OpenMud/commit/577545d29c532bd742b033bfcfbae07c6495a068))
+* **core:** Proper escape sequence in command strings. ([4a8e6d4](https://github.com/OpenMud/OpenMud/commit/4a8e6d40c70ad699d07e6cd82c40199c858838be))
+
+
+### Features
+
+* **compiler:** Added support for manipulating & evaluating the pre-return assignment ([f039031](https://github.com/OpenMud/OpenMud/commit/f03903181334375382694b0379214263087a10c3))
+* **core:** Added string interpolation support & test cases. Added 'text' utility function implementation. ([50122f5](https://github.com/OpenMud/OpenMud/commit/50122f5cb83924c030378e881d2aacf510f8df5e))
+* **networking:** Added ECS Message synchronization support. Added entity/world echo & sound configure message synchronization. ([33d97c0](https://github.com/OpenMud/OpenMud/commit/33d97c09cb73881f5516ab8fae7107a3d3a65707))
+
 # [2.4.0](https://github.com/OpenMud/OpenMud/compare/v2.3.1...v2.4.0) (2023-10-18)
 
 
