@@ -17,7 +17,7 @@ namespace OpenMud.Mudpiler.Tests.EcsTest
                 w.Update(1);
         }
 
-        [Theory]
+        [Test]
         public void ArgConsumeTextTest()
         {
             var dmlCode =
@@ -46,6 +46,38 @@ namespace OpenMud.Mudpiler.Tests.EcsTest
 
             Assert.IsTrue(g.WorldMessages.Count == 2);
             Assert.IsTrue(g.WorldMessages[0] == "test text 15");
+            Assert.IsTrue(g.WorldMessages[1] == "6");
+        }
+
+        [Test]
+        public void ArgConsumeTextTestWithEscapeSequence()
+        {
+            var dmlCode =
+                @$"
+/mob
+    verb
+        say(a as text, w as num)
+            var l = w
+            l += 1
+            world << a
+            world << l
+";
+            var assembly = Assembly.LoadFile(MsBuildDmlCompiler.Compile(dmlCode));
+            var g = new TestGame(new NullSceneBuilder(5, 5), assembly);
+
+            Stabalize(g);
+
+            var name = $"/mob";
+            var instance = g.Create(name, true);
+
+            Stabalize(g);
+
+            g.ExecuteCommand(instance, instance, "say \"test \\\"text\\\" 15\" 5");
+
+            Stabalize(g);
+
+            Assert.IsTrue(g.WorldMessages.Count == 2);
+            Assert.IsTrue(g.WorldMessages[0] == "test \"text\" 15");
             Assert.IsTrue(g.WorldMessages[1] == "6");
         }
     }

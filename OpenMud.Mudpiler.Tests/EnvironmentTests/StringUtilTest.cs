@@ -14,29 +14,54 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
     public class StringUtilTest
     {
         [DatapointSource]
-        public Tuple<string, string, int>[] TEST_DATA =
+        public Tuple<string, object[], object>[] TEST_DATA =
         {
-            Tuple.Create("HeLlO WoRlD", "WORLD", 7),
-            Tuple.Create("HeLlO", "WORLD", 0),
-            Tuple.Create("", "", 0),
-            Tuple.Create("hello", "", 0),
-            Tuple.Create("hello hello", "hello", 1),
+            Tuple.Create("findtext", new object[] {"HeLlO WoRlD", "WORLD"}, (object)7),
+            Tuple.Create("findtext", new object[] {"HeLlO", "WORLD"}, (object)0),
+            Tuple.Create("findtext", new object[] { "", "" },(object) 0),
+            Tuple.Create("findtext", new object[] { "hello", "" },(object) 0),
+            Tuple.Create("findtext", new object[] { "hello hello", "hello" },(object) 1),
+
+            Tuple.Create("text", new object[] { "hello world"},(object) "hello world"),
+            Tuple.Create("text", new object[] { "hello []"},(object) "hello "),
+            Tuple.Create("text", new object[] { "hello []", 15},(object) "hello 15"),
+            Tuple.Create("text", new object[] { "hello [] world []", 2, 1},(object) "hello 2 world 1"),
+
+            Tuple.Create("text", new object[] { "hello [] world []", "text"},(object) "hello text world "),
+            Tuple.Create("text", new object[] { "hello \\[] world []", "text"},(object) "hello [] world text"),
         };
 
+        //Handle text() with '\'
+        //escape//character
         [Theory]
-        public void findtext_test(Tuple<string, string, int> data)
+        public void test(Tuple<string, object[], object> data)
         {
+            var operandsEncoded = String.Join(",", data.Item2.Select(v =>
+            {
+                if (v is String s)
+                    return $"\"{s}\"";
+
+                return v.ToString();
+            }));
+
             var dmlCode =
                 @$"
 /proc/test0()
-    return findtext(""{data.Item1}"", ""{data.Item2}"")
+    return {data.Item1}({operandsEncoded})
 ";
             var assembly = MsBuildDmlCompiler.Compile(dmlCode);
             var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
 
             var r0 = system.Global.ExecProc("test0").CompleteOrException();
 
-            Assert.IsTrue(DmlEnv.AsNumeric(r0) == data.Item3);
+            dynamic? buffer = default;
+
+            if (data.Item3.GetType() == typeof(int))
+                buffer = DmlEnv.AsNumeric(r0);
+            else
+                buffer = DmlEnv.AsText(r0);
+
+            Assert.IsTrue(((object)buffer).Equals(data.Item3));
         }
     }
 }

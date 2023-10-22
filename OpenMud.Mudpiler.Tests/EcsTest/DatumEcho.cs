@@ -45,8 +45,6 @@ public class DatumEcho
         var handle = g.GetHandle(instance);
         g.Environment.Global.ExecProc("speakto_test", handle).CompleteOrException();
 
-        //Because we are directly executing the speakto_test on the logic environment, it should propogate immediately. But for good practice we will give the ECS
-        //time to stabalize
         Stabalize(g);
 
         if (dp.Item2)
@@ -54,38 +52,4 @@ public class DatumEcho
         else
             Assert.IsTrue(g.EntityMessages.Values.Sum(v => v.Count) == 0);
     }
-
-
-    /*
-    [Test]
-    public void ListWriteBroadcastTest()
-    {
-
-        var dmlCode =
-@"
-
-/mob/bob
-
-/mob/tod
-
-/datum/watum
-
-/proc/test0()
-    var/list/a = newlist(/mob/tod, /mob/bob, /datum/watum)
-
-    a << ""Hello World?""
-
-    return 1
-";
-        var assembly = SimpleDmlCompiler.CompileAndLoad(dmlCode);
-        var env = new TestPhysicalEnvironmentSolver();
-        var system = ByondEnvironment.CreateFromAssembly(Assembly.LoadFile(assembly), new BaseDmlFramework(env));
-
-        system.Global.ExecProc("test0");
-
-        var echos = env.Echos.ToDictionary(x => x.Key, x => x.Value.Single());
-
-        Assert.IsTrue(echos.Values.Count == 2 && echos.Values.All(x => x == "Hello World?"));
-    }
-    */
 }

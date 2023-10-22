@@ -1,10 +1,14 @@
+using System.Text;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using OpenMud.Mudpiler.Compiler.Core.GrammarSupport;
 using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
 using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.CodeSuiteBuilder;
 using OpenMud.Mudpiler.Compiler.DmlGrammar;
+using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 
@@ -485,11 +489,97 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return s.Substring(1, s.Length - 2).Replace("\\\"", "\"");
     }
 
+    private (string formatString, List<ExpressionPieceBuilder> args) CreateFormatString(string s)
+    {
+        var formatOps = new List<ExpressionPieceBuilder>();
+        var rawOperands = new List<string>();
+        var formatStr = new StringBuilder();
+        var exprStr = new StringBuilder();
+        bool escaped = false;
+        int braceIndex = 0;
+
+        for (var i = 0; i < s.Length; i++)
+        {
+            var c = s[i];
+            char? nextChar = i + 1 >= s.Length ? null : s[i + 1];
+            if (escaped)
+            {
+                formatStr.Append(c);
+                escaped = false;
+            }
+            else if (braceIndex > 0)
+            {
+                if (c == ']')
+                {
+                    braceIndex--;
+                    if (braceIndex == 0)
+                    {
+                        formatStr.Append(c);
+                        rawOperands.Add(exprStr.ToString());
+                        exprStr.Clear();
+                    }
+                    else
+                        exprStr.Append(c);
+                }
+                else
+                    exprStr.Append(c);
+
+                if (c == '[')
+                    braceIndex++;
+            }
+            else if (c == '[')
+            {
+                if (nextChar != ']')
+                    braceIndex += 1;
+
+                formatStr.Append(c);
+            }
+            else
+            {
+                if (c == '\\')
+                    escaped = true;
+                formatStr.Append(c);
+            }
+        }
+
+        //We need to parse the expressions out.
+
+        foreach (var rawOp in rawOperands)
+        {
+            var lexer = new LexerWithIndentInjector(new AntlrInputStream(new StringReader(rawOp)));
+            var commonTokenStream = new CommonTokenStream(lexer);
+
+            var parser = new DmlParser(commonTokenStream);
+
+            var ctx = parser.expr();
+            
+            var allErrors = lexer.GetErrorMessages().ToList();
+
+            if (allErrors.Any())
+                throw new Exception("Error parsing string operands: " + string.Join("\n", allErrors));
+
+            formatOps.Add(this.Visit(ctx));
+        }
+
+        return (formatStr.ToString(), formatOps);
+    }
+
     public override ExpressionPieceBuilder VisitExpr_string_literal(
         [NotNull] DmlParser.Expr_string_literalContext context)
     {
-        return resolver => SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression,
-            SyntaxFactory.Literal(ParseEscapeString(context.GetText())));
+        var escapedString = ParseEscapeString(context.GetText());
+
+        var (stringLiteral, ops) = CreateFormatString(escapedString);
+
+        var strLiteralExpr = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression,
+            SyntaxFactory.Literal(stringLiteral));
+
+        if (ops.Count == 0)
+        {
+            return _ => strLiteralExpr;
+        }
+
+        return (r) => CreateCall(RuntimeFrameworkIntrinsic.TEXT, ops.Select(e => e(r)).Prepend(strLiteralExpr).Select(SyntaxFactory.Argument));
     }
 
     public override ExpressionPieceBuilder VisitInstance_call([NotNull] DmlParser.Instance_callContext c)

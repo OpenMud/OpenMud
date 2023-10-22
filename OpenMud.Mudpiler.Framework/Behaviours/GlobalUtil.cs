@@ -1,4 +1,5 @@
-﻿using OpenMud.Mudpiler.RuntimeEnvironment;
+﻿using System.Text;
+using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
@@ -18,6 +19,8 @@ internal class GlobalUtil : IRuntimeTypeBuilder
                 args[2, "Start"],
                 args[3, "End"]
             )));
+
+        procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.TEXT, text));
     }
 
     public bool AcceptsDatum(string target)
@@ -44,6 +47,44 @@ internal class GlobalUtil : IRuntimeTypeBuilder
             haystackText.IndexOf(needleText, startIdx, searchCount);
 
         return VarEnvObjectReference.CreateImmutable(pos + 1);
+    }
+
+    public EnvObjectReference text(ProcArgumentList args)
+    {
+        var formatString = DmlEnv.AsText(args.Get(0).GetOrDefault("")) ?? "";
+
+        var formatArgs = args.GetArgumentList().Skip(1).Select(DmlEnv.AsText).Select(x => x ?? "").ToArray();
+
+        var r = new StringBuilder();
+
+        bool escaped = false;
+        var subIdx = 0;
+
+        for (var i = 0; i < formatString.Length; i++)
+        {
+            var c = formatString[i];
+            char? next = i + 1 >= formatString.Length ? null : formatString[i + 1];
+
+            if (escaped)
+            {
+                r.Append(c);
+                escaped = false;
+            }
+            else if (c == '\\')
+            {
+                escaped = true;
+                continue;
+            } else if (c == '[' && next == ']')
+            {
+                var subStr = subIdx >= formatArgs.Length ? "" : formatArgs[subIdx++];
+                r.Append(subStr);
+                i++;
+            }
+            else
+                r.Append(c);
+        }
+
+        return VarEnvObjectReference.CreateImmutable(r.ToString());
     }
 
     public EnvObjectReference turn(EnvObjectReference envDir, EnvObjectReference envAngle)
