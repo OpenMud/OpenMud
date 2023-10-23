@@ -1,3 +1,10 @@
+## [2.5.1](https://github.com/OpenMud/OpenMud/compare/v2.5.0...v2.5.1) (2023-10-23)
+
+
+### Bug Fixes
+
+* **compiler:** Fixed issue where default parameter values were not being respected. Added test cases for coverage. ([70dcf8a](https://github.com/OpenMud/OpenMud/commit/70dcf8a99cc922e0b0f039f249deff54531a4477))
+
 # [2.5.0](https://github.com/OpenMud/OpenMud/compare/v2.4.0...v2.5.0) (2023-10-22)
 
 
