@@ -93,7 +93,7 @@ public sealed class DatumProcCollection
             {
                 var invokeCtx = subjectProc.Create().SetupContext(caller, usr, self, ctx);
                 invokeCtx.precedence = i;
-                invokeCtx.ActiveArguments = args;
+                invokeCtx.ActiveArguments = subjectProc.DefaultArgumentList().Overlay(args);
 
                 return invokeCtx;
             }

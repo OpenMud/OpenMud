@@ -36,6 +36,7 @@ NEWLINE
  : ( '\r'? '\n' | '\r' | '\f') SPACES?
  ;
  
+CALL:         'call';
 
 NULL:         'null';
 

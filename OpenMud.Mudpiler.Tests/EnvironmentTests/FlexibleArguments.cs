@@ -212,4 +212,25 @@ public class FlexibleArguments
         var r = (int)mob.ExecProc("test").CompleteOrException();
         Assert.IsTrue(r == 17 * 4);
     }
+
+    [Test]
+    public void DefaultParameterValueTest()
+    {
+        var dmlCode =
+            @"
+/mob
+    proc
+        test2(var/a=9, var/b)
+            return (a + 2) * (b - 3)
+        test()
+            return test2(b=7)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var mob = system.CreateAtomic("/mob");
+
+        var r = (int)mob.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(r == 44);
+    }
 }

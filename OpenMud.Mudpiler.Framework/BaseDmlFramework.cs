@@ -75,7 +75,7 @@ public class BaseDmlFramework : IDmlFramework
             new GlobalTasks(),
             new ProcBasic(),
             new ListBasic(),
-            new GlobalUtil()
+            new GlobalUtil(Scheduler)
         };
     }
 

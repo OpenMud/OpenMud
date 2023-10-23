@@ -1,8 +1,10 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using OpenMud.Mudpiler.Compiler.Core.Visitor;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
@@ -31,9 +33,10 @@ public static class DmlMethodBuilder
         var argNamesType = SyntaxFactory.ArrayType(SyntaxFactory.ParseTypeName("string"),
             SyntaxFactory.List(new[] { SyntaxFactory.ArrayRankSpecifier() }));
         var argNamesDecl = GenerateArgumentNamesImplementation(implArgNames, argNamesType);
+        var argDefaultsDecl = GenerateArgumentDefaults(e);
 
         var decl = GenerateDmlProcClassImplementation(className, name, createImpl, attr, argNamesDecl,
-            namePropertyImpl);
+            namePropertyImpl, argDefaultsDecl);
 
         var classNames = BuiltinTypes.EnumerateProcNameAliasesOf(DmlPath.Concat(className, e.Identifier.Text));
 
@@ -187,8 +190,7 @@ public static class DmlMethodBuilder
     }
 
     private static ClassDeclarationSyntax GenerateDmlProcClassImplementation(string className, string name,
-        MethodDeclarationSyntax createImpl, MethodDeclarationSyntax attr, MethodDeclarationSyntax argNamesDecl,
-        PropertyDeclarationSyntax nameProp)
+        params MemberDeclarationSyntax[] members)
     {
         return SyntaxFactory.ClassDeclaration(
                 SyntaxFactory.List<AttributeListSyntax>(),
@@ -198,7 +200,7 @@ public static class DmlMethodBuilder
                 SyntaxFactory.BaseList(SyntaxFactory.SeparatedList<BaseTypeSyntax>(new[]
                     { SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName(typeof(DmlDatumProc).FullName)) })),
                 SyntaxFactory.List<TypeParameterConstraintClauseSyntax>(),
-                SyntaxFactory.List(new MemberDeclarationSyntax[] { attr, createImpl, argNamesDecl, nameProp })
+                SyntaxFactory.List(members)
             )
             .WithAdditionalAnnotations(BuilderAnnotations.CreateProcClassPathAnnotation(className));
     }
@@ -225,6 +227,37 @@ public static class DmlMethodBuilder
                                             SyntaxFactory.Literal(e))
                                     )
                                 ))
+                        )
+                    )
+                })
+            ))
+            .WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation);
+    }
+
+    private static MethodDeclarationSyntax GenerateArgumentDefaults(MethodDeclarationSyntax e)
+    {
+        var argInit = e.ParameterList.Parameters.ToList().Select(p => p.Default?.Value).Select(e => e ?? ExpressionVisitor.CreateNull());
+
+        var defaultResult = SyntaxFactory.ArrayType(SyntaxFactory.ParseTypeName(typeof(EnvObjectReference).FullName),
+            SyntaxFactory.List(new[] { SyntaxFactory.ArrayRankSpecifier() }));
+
+        return SyntaxFactory.MethodDeclaration(
+                defaultResult,
+                "ArgumentDefaults"
+            )
+            .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword),
+                SyntaxFactory.Token(SyntaxKind.OverrideKeyword)))
+            .WithBody(SyntaxFactory.Block(
+                SyntaxFactory.List<StatementSyntax>(new[]
+                {
+                    SyntaxFactory.ReturnStatement(
+                        SyntaxFactory.ArrayCreationExpression(
+                            defaultResult,
+                            SyntaxFactory.InitializerExpression(SyntaxKind.ArrayInitializerExpression,
+                                SyntaxFactory.SeparatedList<ExpressionSyntax>(
+                                        argInit
+                                    )
+                                )
                         )
                     )
                 })

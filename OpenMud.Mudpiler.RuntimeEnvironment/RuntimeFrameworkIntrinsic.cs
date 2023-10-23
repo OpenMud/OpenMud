@@ -11,5 +11,6 @@ namespace OpenMud.Mudpiler.RuntimeEnvironment
     public static class RuntimeFrameworkIntrinsic
     {
         public static readonly string TEXT = "text";
+        public static readonly string INDIRECT_CALL = "_indirect_call";
     }
 }
