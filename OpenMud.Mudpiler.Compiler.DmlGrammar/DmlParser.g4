@@ -237,6 +237,7 @@ expr_complex
   | super_call
   | method_call
   | static_call
+  | indirect_call
   | augmented_assignment
   | copyinto_assignment
   | basic_assignment
@@ -267,6 +268,9 @@ super_call:
 
 method_call:
   name=identifier_name argument_list;
+
+indirect_call:
+    CALL callargs=argument_list targetargs=argument_list;
 
 instance_call:
   expr_lhs (DOT | COLON) name=identifier_name argument_list;

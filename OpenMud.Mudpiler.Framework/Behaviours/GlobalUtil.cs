@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
@@ -9,6 +11,13 @@ namespace OpenMud.Mudpiler.Framework.Behaviours;
 
 internal class GlobalUtil : IRuntimeTypeBuilder
 {
+    private IDmlTaskScheduler scheduler;
+
+    public GlobalUtil(IDmlTaskScheduler scheduler)
+    {
+        this.scheduler = scheduler;
+    }
+
     public void Build(DatumHandle e, Datum datum, DatumProcCollection procedureCollection)
     {
         procedureCollection.Register(0, new ActionDatumProc("turn", args => turn(args[0], args[1])));
@@ -21,6 +30,8 @@ internal class GlobalUtil : IRuntimeTypeBuilder
             )));
 
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.TEXT, text));
+        procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.INDIRECT_CALL, indirect_call));
+        
     }
 
     public bool AcceptsDatum(string target)
@@ -47,6 +58,66 @@ internal class GlobalUtil : IRuntimeTypeBuilder
             haystackText.IndexOf(needleText, startIdx, searchCount);
 
         return VarEnvObjectReference.CreateImmutable(pos + 1);
+    }
+
+    private EnvObjectReference CallHelper(DatumProcExecutionContext ctx)
+    {
+        try
+        {
+            ctx.Continue();
+        }
+        catch (DeferExecutionException e)
+        {
+            this.scheduler.DeferExecution(ctx, e.LengthMilliseconds);
+        }
+
+        return ctx.Result;
+    }
+
+    public EnvObjectReference indirect_call_external_library(string libName, string procName, ProcArgumentList args, Datum self)
+    {
+        throw new Exception("Interfacing with external libraries is not supported");
+    }
+
+    public EnvObjectReference indirect_call_instance(Datum instance, string procName, ProcArgumentList args, Datum self)
+    {
+        return CallHelper(instance.Invoke(null, procName, null, args));
+    }
+
+    public EnvObjectReference indirect_call_static(Type typeName, ProcArgumentList args, Datum self)
+    {
+        if (!typeName.IsAssignableTo(typeof(DatumProc)))
+            throw new Exception("Not a valid method name.");
+
+        var proc = (DatumProc)Activator.CreateInstance(typeName);
+
+        var ctx = proc.Create();
+        ctx.SetupContext(null, null, self, self.ctx);
+        ctx.ActiveArguments = args;
+
+        return CallHelper(ctx);
+    }
+
+
+    public EnvObjectReference indirect_call(ProcArgumentList args, Datum self)
+    {
+        //First two arguments are allocated for the indirect_call, and the remainder the target.
+        var (callArgs, targetArgs) = args.Split(2);
+
+        if (callArgs.MaxPositionalArgument == 2)
+        {
+            if (callArgs[0].Type == typeof(string) && callArgs[1].Type == typeof(string))
+                return indirect_call_external_library(callArgs[0].Get<string>(), callArgs[1].Get<string>(), targetArgs, self);
+            
+            if (callArgs[0].Type.IsAssignableTo(typeof(Datum)) && callArgs[1].Type == typeof(string))
+                return indirect_call_instance(callArgs[0].Get<Datum>(), callArgs[1].Get<string>(), targetArgs, self);
+
+        } 
+        
+        if (callArgs.MaxPositionalArgument >= 1 && typeof(Type).IsAssignableFrom(callArgs[0].Type))
+            return indirect_call_static(callArgs[0].Get<Type>(), targetArgs, self);
+        
+        throw new Exception("Invalid arguments for an indirect call.");
     }
 
     public EnvObjectReference text(ProcArgumentList args)

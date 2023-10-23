@@ -31,6 +31,14 @@ public readonly struct ProcArgumentList
 
     public EnvObjectReference this[string name] => Get(-1, name);
 
+    public (ProcArgumentList first, ProcArgumentList last) Split(int splitIndex)
+    {
+        var firstCol = arguments.Take(splitIndex).ToArray();
+        var lastCol = arguments.Skip(splitIndex).ToArray();
+
+        return (new ProcArgumentList(firstCol), new ProcArgumentList(lastCol));
+    }
+
     public EnvObjectReference Get(int idx = -1, string? argName = null, bool defaultNull = true)
     {
         if (arguments == null)

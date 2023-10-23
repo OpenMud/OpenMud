@@ -473,10 +473,22 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     public override ExpressionPieceBuilder VisitMethod_call(DmlParser.Method_callContext c)
     {
         var rawArgs = ParseArgumentList(c.argument_list());
-        //var args = SyntaxFactory.SeparatedList(c.argument_list().expr().Select(Visit).Select(SyntaxFactory.Argument));
 
         return CreateCall(c.name.GetText(), rawArgs);
     }
+
+    public override ExpressionPieceBuilder VisitIndirect_call(DmlParser.Indirect_callContext c)
+    {
+        var rawTargetArgs = ParseArgumentList(c.targetargs).ToList();
+        var callArgs = ParseArgumentList(c.callargs).ToList();
+
+        while (callArgs.Count < 2)
+            callArgs.Add((_) => SyntaxFactory.Argument(ExpressionVisitor.CreateNull()));
+
+
+        return CreateCall(RuntimeFrameworkIntrinsic.INDIRECT_CALL, callArgs.Concat(rawTargetArgs));
+    }
+
 
     public override ExpressionPieceBuilder VisitExpr_stmnt_stub(DmlParser.Expr_stmnt_stubContext c)
     {
@@ -710,17 +722,21 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return r;
     }
 
+    public static ExpressionSyntax CreateNull()
+    {
+        return SyntaxFactory.MemberAccessExpression(
+            SyntaxKind.SimpleMemberAccessExpression,
+            SyntaxFactory.IdentifierName(
+                typeof(VarEnvObjectReference).FullName
+            ),
+            SyntaxFactory.Token(SyntaxKind.DotToken),
+            SyntaxFactory.IdentifierName("NULL")
+        );
+    }
+
     public override ExpressionPieceBuilder VisitNull_expr([NotNull] DmlParser.Null_exprContext context)
     {
-        return resolver =>
-            SyntaxFactory.MemberAccessExpression(
-                SyntaxKind.SimpleMemberAccessExpression,
-                SyntaxFactory.IdentifierName(
-                    typeof(VarEnvObjectReference).FullName
-                ),
-                SyntaxFactory.Token(SyntaxKind.DotToken),
-                SyntaxFactory.IdentifierName("NULL")
-            );
+        return resolver => CreateNull();
     }
 
 
