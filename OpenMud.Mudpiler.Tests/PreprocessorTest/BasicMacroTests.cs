@@ -492,7 +492,36 @@ turf/door/open
             return "";
         }
 
-        var r = Preprocessor.Preprocess( "testFile.dml",".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+
+        //This is not a useless test. The assertion is that resolve is never called.
+        //Do NOT remove this test.
+    }
+
+
+    [Test]
+    public void MultiLineMacroTest()
+    {
+        var testCode =
+            @"
+#define SAY_A_LOT(message) \
+message \
+message \
+message \
+message
+
+SAY_A_LOT(""Test"")
+
+";
+
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        Assert.IsTrue(r.Contains(@"""Test"" ""Test"" ""Test"" ""Test"""));
     }
 
     private (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) processImport(
