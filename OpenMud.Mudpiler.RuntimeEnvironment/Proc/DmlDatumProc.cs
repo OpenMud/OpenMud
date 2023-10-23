@@ -63,6 +63,11 @@ public abstract class DmlDatumProcExecutionContext : DatumProcExecutionContext
 public abstract class DmlDatumProc : DatumProc
 {
     public abstract string[] ArgumentNames();
+    public abstract EnvObjectReference[] ArgumentDefaults();
+
+    public override ProcArgumentList DefaultArgumentList() =>
+        new ProcArgumentList(ArgumentNames().Zip(ArgumentDefaults())
+            .Select((a) => new ProcArgument(a.First, a.Second)).ToArray());
 
     protected abstract DmlDatumProcExecutionContext DmlCreate();
 

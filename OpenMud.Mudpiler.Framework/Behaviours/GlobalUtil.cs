@@ -92,8 +92,9 @@ internal class GlobalUtil : IRuntimeTypeBuilder
         var proc = (DatumProc)Activator.CreateInstance(typeName);
 
         var ctx = proc.Create();
+
         ctx.SetupContext(null, null, self, self.ctx);
-        ctx.ActiveArguments = args;
+        ctx.ActiveArguments = proc.DefaultArgumentList().Overlay(args);
 
         return CallHelper(ctx);
     }

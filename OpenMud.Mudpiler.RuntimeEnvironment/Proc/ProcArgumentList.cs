@@ -107,4 +107,31 @@ public readonly struct ProcArgumentList
                 .ToArray()
         );
     }
+
+    public ProcArgumentList Overlay(ProcArgumentList args)
+    {
+        if (arguments == null || arguments.Length == 0)
+            return args;
+
+        var working = arguments!.ToList();
+
+        for (var i = 0; i < args.arguments.Length; i++)
+        {
+            var a = args.arguments[i];
+            var curNameIndex = a.Name == null ? -1 :  working.FindIndex(p => p.Name == a.Name);
+            if (curNameIndex < 0)
+            {
+                if (i >= working.Count)
+                    working.Add(args.arguments[i]);
+                else
+                    working[i] = args.arguments[i];
+            }
+            else
+            {
+                working[curNameIndex] = a;
+            }
+        }
+
+        return new ProcArgumentList(working.ToArray());
+    }
 }
