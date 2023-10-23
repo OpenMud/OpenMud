@@ -82,5 +82,35 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
 
             Assert.IsTrue(r0 == 560);
         }
+
+        [Test]
+        public void testIndirectInvoke_instance_namedargs()
+        {
+            var dmlCode =
+                @$"
+/mob/w
+    var w = 3
+
+    proc
+        t0()
+            w += 1
+
+        t1(q0, q1)
+            return 8 * w + (q0 - q1)
+
+/proc/test0()
+    var/mob/w/t = new()
+    var/mob/w/ti8 = new()
+    t.t0()
+    t.t0()
+    return call(t, ""t1"")(q1=100, q0=1)
+";
+            var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+            var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+            var r0 = (int)system.Global.ExecProc("test0").CompleteOrException();
+
+            Assert.IsTrue(r0 == (8*5) + 1 - 100);
+        }
     }
 }
