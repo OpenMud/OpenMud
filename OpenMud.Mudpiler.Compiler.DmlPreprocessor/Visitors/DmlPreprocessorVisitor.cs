@@ -69,28 +69,32 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         var processedOrigins = new HashSet<int>();
         while (true)
         {
-            var unpacked = source.Unpack();
-            var allowMatch = Blackout.CreateBlackouts(unpacked.Contents, false);
-
-            var nextApplication = resourceRegex
-                .Matches(unpacked.Contents)
+            var nextApplications = resourceRegex
+                .Matches(source.Textual)
                 .OrderBy(m => m.Index)
                 .Where(m => !processedOrigins.Contains(m.Index))
-                .Where(allowMatch.Allow)
-                .FirstOrDefault();
+                .Where(source.AllowReplaceResource)
+                .ToList();
 
-            if (nextApplication == null)
+            if (!nextApplications.Any())
                 break;
 
-            processedOrigins.Add(nextApplication.Index);
-            var path = nextApplication.Value.Trim('\'');
+            int forwardShift = 0;
 
-            var resourcePath = resolveResourceDirectory(ResourceSearchDirectory.ToList(), path);
-            resourcePath = NormalizeResourcePath(Path.GetRelativePath(resourcePathBase, resourcePath));
+            foreach (var a in nextApplications.OrderBy(a => a.Index))
+            {
+                var path = a.Value.Trim('\'');
 
-            var newValue = "'" + resourcePath + "'";
+                var resourcePath = resolveResourceDirectory(ResourceSearchDirectory.ToList(), path);
+                resourcePath = NormalizeResourcePath(Path.GetRelativePath(resourcePathBase, resourcePath));
 
-            source = unpacked.ReplaceAndPack(nextApplication, newValue);
+                var newValue = "'" + resourcePath + "'";
+                var effectiveOrigin = forwardShift + a.Index;
+
+                processedOrigins.Add(effectiveOrigin);
+
+                forwardShift += source.Rewrite(forwardShift + a.Index, a.Length, newValue, true);
+            }
         }
 
         return source;
@@ -107,22 +111,23 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
 
         while (true)
         {
-            var unpacked = source.Unpack();
-            var allowMatch = Blackout.CreateBlackouts(unpacked.Contents);
 
-            var nextApplication = candidates
+            var nextApplications = candidates
                 .SelectMany(x =>
                     x.Value
-                        .Matches(unpacked.Contents)
-                        .Where(allowMatch.Allow)
+                        .Matches(source.Textual)
+                        .Where(source.AllowReplace)
                         .Select(m => Tuple.Create(x.Key, m))
                 )
-                .FirstOrDefault();
+                .ToList();
 
-            if (nextApplication == null)
+            if (!nextApplications.Any())
                 break;
 
-            source = nextApplication.Item1.Apply(unpacked, nextApplication.Item2);
+            foreach (var a in nextApplications.OrderByDescending(a => a.Item2.Index))
+            {
+                a.Item1.Apply(source, a.Item2);
+            }
         }
 
         source = ApplyResourceMacros(source);
@@ -137,7 +142,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         foreach (DmeParser.TextContext text in context.text())
             sb.Add(Visit(text));
 
-        return new SourceFileDocument(sb.SelectMany(s => s.Contents));
+        return new SourceFileDocument(sb);
     }
 
     public override SourceFileDocument VisitText([NotNull] DmeParser.TextContext context)
@@ -158,10 +163,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
 
         if (!_compilied || directive)
         {
-            //var sb = new StringBuilder(result.Length);
-            //foreach (var c in result) sb.Append(c == '\r' || c == '\n' ? c : ' ');
-
-            result = new SourceFileDocument(Enumerable.Empty<SourceFileLine>()); //sb.ToString();
+            result = SourceFileDocument.Empty;
         }
 
         if (_compilied && !directive) result = ApplyMacros(result);

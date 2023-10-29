@@ -2,7 +2,7 @@
 using System.Reflection;
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
-using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
 using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 

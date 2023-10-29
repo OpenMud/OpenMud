@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Antlr4.Runtime;
-using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
 
 namespace OpenMud.Mudpiler.Compiler.Core
 {

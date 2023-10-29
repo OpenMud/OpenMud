@@ -193,6 +193,23 @@ public class CSharpModule : IDreamMakerSymbolResolver
         CreateOrReplaceMember(baseClassName, fieldName, decl);
     }
 
+    private AttributeSyntax? CollectSetting(ModuleMethodDeclarationKey k, string keyName)
+    {
+        if (!settings.TryGetValue(k.Name, out var s) || !s.ContainsKey(keyName))
+            return null;
+
+        var originDefs = methodClassDeclarations
+            .Where(x => x.Key.Name == k.Name)
+            .OrderByDescending(x => x.Key.DeclarationOrder)
+            .Select(k => k.Value.AttributeLists)
+            .SelectMany(x => x.Select(y => y.Attributes))
+            .SelectMany(x => x)
+            .Where(x => SettingsBuilder.IsAttribute(keyName, x.Name))
+            .ToList();
+
+        return originDefs.FirstOrDefault();
+    }
+
     public void DefineMethodConfiguration(string key, Func<AttributeSyntax, AttributeSyntax> decl, int declarationOrder,
         bool replaceExisting = true)
     {
@@ -211,16 +228,19 @@ public class CSharpModule : IDreamMakerSymbolResolver
         if (!settings.ContainsKey(hostPath))
             settings[hostPath] = new Dictionary<string, AttributeSyntax>();
 
-        if (!settings[hostPath].ContainsKey(keyName))
+        var declarationKey = new ModuleMethodDeclarationKey(declarationOrder, hostPath);
+        var currentSetting = CollectSetting(declarationKey, keyName);
+
+        if (currentSetting == null)
         {
-            var defaultImpl = SettingsBuilder.CreateAttribute(keyName);
+            currentSetting = SettingsBuilder.CreateAttribute(keyName);
             DefineClassMethod(
                 hostPath,
                 m =>
                     m.AddAttributeLists(
                         SyntaxFactory.AttributeList(SyntaxFactory.SeparatedList(new[]
                             {
-                                defaultImpl
+                                currentSetting
                             })
                         )
                     ),
@@ -232,13 +252,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
             return;
         }
 
-        var declarationKey = new ModuleMethodDeclarationKey(declarationOrder, hostPath);
-
-        var baseClass = methodDeclarations[declarationKey]; //DefineClass(hostPath, c => c);
-        //methodDeclarations[hostPath];
-        var existing = baseClass.AttributeLists.SelectMany(x => x.Attributes)
-            .Where(x => SettingsBuilder.IsAttribute(keyName, x.Name)).Single();
-        var newImpl = decl(existing);
+        var newImpl = decl(currentSetting);
 
         DefineClassMethod(
             hostPath,
