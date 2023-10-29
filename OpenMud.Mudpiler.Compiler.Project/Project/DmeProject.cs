@@ -2,7 +2,7 @@
 using System.Reflection;
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
-using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
 using OpenMud.Mudpiler.Compiler.Project.Scene;
 using OpenMud.Mudpiler.Core.Scene;
 using OpenMud.Mudpiler.RuntimeEnvironment;
@@ -42,7 +42,9 @@ public class DmePreprocessContext
                 return b;
         }
 
-        throw new Exception("Resource could not be found: " + path);
+        Console.Error.WriteLine("Warning, resource could not be found: " + path);
+
+        return path;
     }
 
     private (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) ProcessImport(

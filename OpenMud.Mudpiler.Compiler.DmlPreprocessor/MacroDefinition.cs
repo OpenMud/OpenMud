@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
 using System.Text.RegularExpressions;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
 
@@ -16,32 +15,8 @@ public class MacroDefinition
         ArgList = argList;
     }
 
-    private string FindArgumentList(string source, Match match, out string[]? sourceArgList)
+    public string[] ParseOutArguments(SourceFileDocument source, string macroMatch, int origin, out int length)
     {
-        sourceArgList = null;
-
-        if (ArgList == null)
-            return source;
-
-        var openBrace = source.IndexOf('(', match.Index);
-
-        if (openBrace < 0 || source.Substring(match.Index, openBrace - match.Index).Trim().Length > 0)
-            return source;
-
-        var closeBrace = source.IndexOf(')', match.Index);
-
-        if (closeBrace < 0)
-            return source;
-
-        sourceArgList = source.Substring(openBrace + 1, closeBrace - openBrace - 1).Split(",");
-
-        return source.Remove(openBrace, closeBrace - openBrace + 1);
-    }
-
-    public string[] ParseOutArguments(string source, string macroMatch, int origin, out int length)
-    {
-        var allowMatch = Blackout.CreateBlackouts(source);
-
         if (source.Substring(origin, macroMatch.Length) != macroMatch)
             throw new Exception("Invalid macro application...");
 
@@ -51,7 +26,8 @@ public class MacroDefinition
         length = macroMatch.Length;
         bool terminated = false;
         int idx = origin + macroMatch.Length;
-        foreach(char c in source.Substring(origin + macroMatch.Length))
+
+        foreach(char c in source.EnumerateFrom(origin + macroMatch.Length))
         {
             if (terminated)
                 break;
@@ -59,7 +35,7 @@ public class MacroDefinition
             length++;
             int currentIdx = idx;
             idx++;
-            if (!allowMatch.Allow(currentIdx))
+            if (!source.AllowReplace(currentIdx))
             {
                 currentArg.Append(c);
                 continue;
@@ -101,16 +77,16 @@ public class MacroDefinition
         return args.ToArray();
     }
 
-    internal SourceFileDocument Apply(UnpackedSourceFileDocument source, Match match)
+    internal void Apply(SourceFileDocument source, Match match)
     {
-        var srcBuffer = source.Contents.Substring(match.Index, match.Length);
+        var srcBuffer = source.Substring(match.Index, match.Length);
         var newText = Text;
 
         int replaceLength = match.Length;
 
         if (ArgList != null)
         {
-            var srcArgList = ParseOutArguments(source.Contents, match.Value, match.Index, out replaceLength);
+            var srcArgList = ParseOutArguments(source, match.Value, match.Index, out replaceLength);
 
             var argMapping = ArgList
                 .Select((x, i) => (x, i))
@@ -136,7 +112,6 @@ public class MacroDefinition
             }
         }
 
-
-        return source.ReplaceAndPack(match.Index, replaceLength, newText);
+        source.Rewrite(match.Index, replaceLength, newText);
     }
 }

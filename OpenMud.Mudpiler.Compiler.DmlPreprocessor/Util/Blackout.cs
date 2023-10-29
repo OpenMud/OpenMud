@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,11 +32,11 @@ namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util
             return allowMatch(index, length);
         }
 
-
-        private static Blackout CreateCommentBlackouts(string source, bool blackoutResources)
+        private static (List<Tuple<int, int>> resourceBlackout, List<Tuple<int, int>> commentBlackout) CreateCommentBlackoutRegions(string source)
         {
-            //Sometimes just writing a parser is simpler than trying to get Antlr to do what you want it to.
-            List<Tuple<int, int>> blackouts = new();
+            List<Tuple<int, int>> commentBlackout = new();
+            List<Tuple<int, int>> resourceBlackout = new();
+
 
             var multilineCommentDepth = 0;
             var isInString = false;
@@ -43,10 +44,16 @@ namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util
             var isInSingleLineComment = false;
 
             var start = 0;
+            var isResourceBlackout = false;
 
             void EndOfBlackout(int idx)
             {
-                blackouts.Add(Tuple.Create(start, idx));
+                if(isResourceBlackout)
+                    resourceBlackout.Add(Tuple.Create(start, idx));
+                else
+                    commentBlackout.Add(Tuple.Create(start, idx));
+
+                isResourceBlackout = false;
                 start = 0;
             }
 
@@ -98,8 +105,7 @@ namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util
 
                     if (acceptAndSkip("'"))
                     {
-                        if (blackoutResources)
-                            EndOfBlackout(i);
+                        EndOfBlackout(i);
                         isInResource = false;
                     }
                 }
@@ -132,24 +138,35 @@ namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util
                     else if (acceptAndSkip("'"))
                     {
                         isInResource = true;
-
-                        if (blackoutResources)
-                            start = startBuffer;
+                        isResourceBlackout = true;
+                        start = startBuffer;
                     }
                 }
             }
 
-            return new Blackout((matchIdx, matchLen) =>
-            {
-                return !Enumerable.Range(matchIdx, matchLen).Any(
-                    idx => blackouts.Any(blk => idx >= blk.Item1 && idx <= blk.Item2)
-                );
-            });
+            return (resourceBlackout, commentBlackout);
         }
 
-        public static Blackout CreateBlackouts(string source, bool blackoutResources = true)
+        public static (List<bool> CommentAndStrings, List<bool> Resources) CreateBitmaps(string source)
         {
-            return CreateCommentBlackouts(source, blackoutResources);
+            //There aren't any decent C# bitset libraries so we are just going to use a list. It will probably perform fine...
+
+            var commentAndStrings = Enumerable.Range(0, source.Length).Select(_ => false).ToList();
+            var resources = Enumerable.Range(0, source.Length).Select(_ => false).ToList();
+
+            var (rsrc, cmt) = CreateCommentBlackoutRegions(source);
+
+            foreach (var r in cmt.SelectMany(r => Enumerable.Range(r.Item1, r.Item2 - r.Item1 + 1)))
+            {
+                commentAndStrings[r] = true;
+            }
+
+            foreach (var r in rsrc.SelectMany(r => Enumerable.Range(r.Item1, r.Item2 - r.Item1 + 1)))
+            {
+                resources[r] = true;
+            }
+
+            return (commentAndStrings, resources);
         }
     }
 }
