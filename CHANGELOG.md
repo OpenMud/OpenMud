@@ -1,3 +1,10 @@
+# [2.6.0](https://github.com/OpenMud/OpenMud/compare/v2.5.1...v2.6.0) (2023-10-29)
+
+
+### Features
+
+* **compiler:** Optimized preprocessing. ([8921c77](https://github.com/OpenMud/OpenMud/commit/8921c77aface739c06c355045200c324650edc2e))
+
 ## [2.5.1](https://github.com/OpenMud/OpenMud/compare/v2.5.0...v2.5.1) (2023-10-23)
 
 
