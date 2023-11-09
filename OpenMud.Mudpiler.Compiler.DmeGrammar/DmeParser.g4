@@ -2,19 +2,61 @@ parser grammar DmeParser; // tiny version
 
 options { tokenVocab=DmeLexer; }
 
-
-
 dmlDocument
-    : text* EOF
+    : text*
     ;
 
 text
-    : code
-    | SHARP directive (NEW_LINE | EOF)
+    : SHARP directive NEW_LINE*
+    | code_block
+    | comment_block
     ;
 
+comment_block
+    : BEGIN_MULTILINE_COMMENT comment_contents* END_MULTILINE_COMMENT
+    | LINE_COMMENT
+    ;
+
+comment_contents
+    : COMMENT
+    | BEGIN_NESTED_MULTILINE_COMMENT comment_contents* END_MULTILINE_COMMENT
+    ;
+
+string
+    : STRING_BEGIN string_contents* STRING_END
+    | MULTILINE_STRING_BEGIN string_contents* MULTILINE_STRING_END;
+
+resource:
+    RESOURCE_BEGIN RESOURCE_CONTENTS* RESOURCE_END;
+
+string_contents
+    : STRING_CONTENTS #string_contents_literal
+    | string_expression #string_contents_expression
+    | BEGIN_STRING_EXPRESSION END_CODE_EXPR #string_contents_placeholder
+    ;
+
+string_expression
+    : BEGIN_STRING_EXPRESSION code_block END_CODE_EXPR
+    ;
+
+code_expr
+    : START_CODE_EXPR code* END_CODE_EXPR
+    ;
+
+code_block: code+;
+
 code
-    : CODE+
+    : code_literal+
+    | START_CODE_EXPR
+    | END_CODE_EXPR
+    | string
+    | resource
+    ;
+
+code_literal
+    : CODE
+    | START_CODE_EXPR
+    | END_CODE_EXPR
     ;
 
 directive

@@ -35,11 +35,6 @@ public class MacroDefinition
             length++;
             int currentIdx = idx;
             idx++;
-            if (!source.AllowReplace(currentIdx))
-            {
-                currentArg.Append(c);
-                continue;
-            }
 
             switch (c)
             {

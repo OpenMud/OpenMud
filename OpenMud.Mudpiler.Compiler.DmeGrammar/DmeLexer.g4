@@ -2,14 +2,47 @@ lexer grammar DmeLexer;
 
 channels { COMMENTS_CHANNEL }
 
-SHARP:                    '#'                                        -> mode(DIRECTIVE_MODE);
-COMMENT:                  '/*' .*? '*/'                              -> type(CODE);
-LINE_COMMENT:             '//' ~[\r\n]*                              -> type(CODE);
-SLASH:                    '/'                                        -> type(CODE);
-CHARACTER_LITERAL:        '\'' (EscapeSequence | ~('\''|'\\')) '\''  -> type(CODE);
-QUOTE_STRING:             '\'' (EscapeSequence | ~('\''|'\\'))* '\'' -> type(CODE);
-STRING:                   StringFragment                             -> type(CODE);
-CODE:                     ~[#'"/]+;
+SHARP:                    '#'     -> mode(DIRECTIVE_MODE);
+STRING_BEGIN:             '"'     -> pushMode(STRING_MODE);
+MULTILINE_STRING_BEGIN:   '{"'     -> pushMode(STRING_MODE);
+RESOURCE_BEGIN:           '\''     -> pushMode(RESOURCE_MODE);
+LINE_COMMENT:             '//' ~[\r\n\f]*;
+BEGIN_MULTILINE_COMMENT:  '/*' -> pushMode(MULTILINE_COMMENT_MODE);        
+CODE_END: [\r\n\f]+ -> type(CODE);
+
+
+CURLY_BRACE_OPEN: '{'  -> type(CODE);
+CURLY_BRACE_CLOSE: '}' -> type(CODE);
+
+START_CODE_EXPR: '[' -> pushMode(DEFAULT_MODE);
+END_CODE_EXPR: ']' -> popMode;
+CODE_DIV: '/' -> type(CODE);
+CODE: ~[\r\n\f[\]"'#/{}]+;
+
+mode MULTILINE_COMMENT_MODE;
+END_MULTILINE_COMMENT: '*/' -> popMode;
+BEGIN_NESTED_MULTILINE_COMMENT: '/*' -> pushMode(MULTILINE_COMMENT_MODE);
+COMMENT_STAR: '*' -> type(COMMENT);
+COMMENT_SLASH: '/' -> type(COMMENT);
+COMMENT: ~[/*]+;
+
+
+mode STRING_MODE;
+STRING_END_ESCAPE: '\\' '"' -> type(STRING_CONTENTS);
+STRING_EXPRESSION_ESCAPE: '\\' '['  -> type(STRING_CONTENTS);
+STRING_EXPRESSION_ESCAPE_ESCAPE: '\\' '\\'  -> type(STRING_CONTENTS);
+STRING_END: '"' -> popMode;
+MULTILINE_STRING_END: '"}' -> popMode;
+STRING_MULTILINE_END_ESCAPE: '}' -> type(STRING_CONTENTS);
+BEGIN_STRING_EXPRESSION: '[' -> pushMode(DEFAULT_MODE);
+STRING_CONTENTS: ~["[\\}]+;
+
+
+mode RESOURCE_MODE;
+RESOURCE_END_ESCAPE: '\\' '\'' -> type(RESOURCE_CONTENTS);
+RESOURCE_ESCAPE_ESCAPE: '\\' '\\' -> type(RESOURCE_CONTENTS);
+RESOURCE_END: '\'' -> popMode;
+RESOURCE_CONTENTS: ~['[\\]+;
 
 mode DIRECTIVE_MODE;
 

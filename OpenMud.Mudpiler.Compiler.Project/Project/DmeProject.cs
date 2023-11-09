@@ -12,16 +12,20 @@ namespace OpenMud.Mudpiler.Compiler.Project.Project;
 public class DmePreprocessContext
 {
     private readonly ISet<string> importedMaps;
+    private readonly ISet<string> importedStyles;
     private readonly string workingDirectory;
 
-    public DmePreprocessContext(string workingDirectory, ISet<string>? maps = null)
+    public DmePreprocessContext(string workingDirectory, ISet<string>? maps = null, ISet<string> styles = null)
     {
         this.workingDirectory = workingDirectory;
 
         importedMaps = maps ?? new HashSet<string>();
+        importedStyles = styles ?? new HashSet<string>();
     }
 
     public IEnumerable<string> ImportedMaps => importedMaps;
+
+    public IEnumerable<string> ImportedStyles => importedStyles;
 
     private SourceFileDocument PreprocessContents(string fullFilePath, string resourceBasePath, IEnumerable<string> resourceDirectories, string contents,
         IImmutableDictionary<string, MacroDefinition>? predef,
@@ -57,6 +61,10 @@ public class DmePreprocessContext
         {
             importedMaps.Add(fileName);
             return (dict, SourceFileDocument.Empty);
+        } else if (fileName.ToLower().EndsWith(".dms"))
+        {
+            importedStyles.Add(fileName);
+            return (dict, SourceFileDocument.Empty);
         }
 
         var r = PreprocessFile(fileName, resourceDirectories, dict, out var resultant);
@@ -71,8 +79,7 @@ public class DmePreprocessContext
 
         dmeFile = Path.GetFullPath(dmeFile);
 
-        return new DmePreprocessContext(Path.GetDirectoryName(dmeFile) ?? workingDirectory,
-                importedMaps)
+        return new DmePreprocessContext(Path.GetDirectoryName(dmeFile) ?? workingDirectory, importedMaps, importedStyles)
             .PreprocessContents(dmeFile, rsrcPath, resourceDirectories, File.ReadAllText(dmeFile), predef, out resultantMacro);
     }
 
@@ -83,7 +90,7 @@ public class DmePreprocessContext
 
         dmeFile = Path.GetFullPath(dmeFile);
 
-        return new DmePreprocessContext(rsrcPath, importedMaps)
+        return new DmePreprocessContext(rsrcPath, importedMaps, importedStyles)
             .PreprocessContents(dmeFile, rsrcPath, resourceDirectories ?? Enumerable.Empty<string>(), File.ReadAllText(dmeFile),
                 predef, out var _);
     }

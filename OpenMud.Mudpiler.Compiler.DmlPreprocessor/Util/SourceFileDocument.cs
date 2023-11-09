@@ -12,6 +12,7 @@ public class SourceFileDocument
     public readonly int IntegerValue;
     private readonly StringBuilder Contents = new();
     private string? textualCache = null;
+    private readonly DocumentCharacterMasking masking;
 
     public string Textual
     {
@@ -24,42 +25,43 @@ public class SourceFileDocument
         }
     }
 
-    private readonly DocumentCharacterMasking masking;
-
-    public SourceFileDocument(IEnumerable<SourceFileDocument> src)
+    public SourceFileDocument(IEnumerable<SourceFileDocument> src, string delimeter = "\r\n")
     {
         StateFlag = PreprocessorStateFlag.Text;
         IntegerValue = 1;
 
         LineData = new List<SourceFileLine>();
         Contents = new StringBuilder();
-
+        masking = new DocumentCharacterMasking();
+        bool leadingLine = true;
         foreach (var doc in src)
         {
             int origin = Contents.Length;
-            Contents.Append(doc.Contents);
-            LineData.AddRange(doc.LineData.Select(l => l.Offset(origin)));
 
-            Contents.Append("\r\n");
+            masking.Append(doc.masking);
+            Contents.Append(doc.Contents);
+            var sourceLineData = doc.LineData.Select(l => l.Offset(origin));
+
+            if (!leadingLine)
+                sourceLineData = sourceLineData.Skip(1);
+
+            LineData.AddRange(sourceLineData);
+
+            leadingLine = delimeter == "\r\n";
+
+            Contents.Append(delimeter);
+            masking.Append(delimeter.Length, false);
         }
 
-        masking = new DocumentCharacterMasking(Contents.ToString());
     }
 
-    private SourceFileDocument(IEnumerable<SourceFileLine> lineInfo, string contents)
+    private SourceFileDocument(IEnumerable<SourceFileLine> lineInfo, string contents, bool isMasked = false)
     {
         Contents = new StringBuilder(contents);
         StateFlag = PreprocessorStateFlag.Text;
         IntegerValue = 1;
         LineData = lineInfo.ToList();
-        masking = new DocumentCharacterMasking(Contents.ToString());
-
-
-        foreach (var l in LineData)
-        {
-            if (l.Index >= Contents.Length)
-                throw new Exception("HMMM");
-        }
+        masking = new DocumentCharacterMasking(Contents.Length, isMasked);
     }
 
     private SourceFileDocument(PreprocessorStateFlag flag)
@@ -68,7 +70,7 @@ public class SourceFileDocument
         LineData = new();
         IntegerValue = flag != PreprocessorStateFlag.False ? 1 : 0;
         Contents = new StringBuilder();
-        masking = new DocumentCharacterMasking(Contents.ToString());
+        masking = new DocumentCharacterMasking(Contents.Length, false);
     }
 
     private SourceFileDocument(int value)
@@ -77,7 +79,7 @@ public class SourceFileDocument
         LineData = new();
         IntegerValue = value;
         Contents = new StringBuilder();
-        masking = new DocumentCharacterMasking(Contents.ToString());
+        masking = new DocumentCharacterMasking(Contents.Length, false);
     }
 
     public static SourceFileDocument CreateStatus(bool status)
@@ -129,21 +131,7 @@ public class SourceFileDocument
         return int.TryParse(Contents.ToString(), out i);
     }
 
-    public bool AllowReplace(Match m, bool allowReplaceResource)
-    {
-        return AllowReplace(m.Index, m.Length, allowReplaceResource);
-    }
-
-    public bool AllowReplaceResource(Match m) => AllowReplace(m, true);
-
-    public bool AllowReplace(Match m) => AllowReplace(m, false);
-
-    public bool AllowReplace(int targetOrigin, int targetLength, bool allowResource)
-    {
-        return masking.Accept(targetOrigin, targetLength, allowResource);
-    }
-
-    public int Rewrite(int origin, int removeLength, string insert, bool isResourceWrite = false, bool isStringCommentWrite = false)
+    public int Rewrite(int origin, int removeLength, string insert, bool isBlackedOut = false)
     {
         textualCache = null;
 
@@ -188,12 +176,12 @@ public class SourceFileDocument
         for (var i = sourceLineIndex + newContentLineLengths.Count; i < LineData.Count; i++)
             LineData[i] = LineData[i].Offset(deltaOffset);
 
-        masking.Replace(origin, removeLength, insert.Length, isStringCommentWrite, isResourceWrite);
+        masking.Replace(origin, removeLength, insert.Length, isBlackedOut);
 
         return deltaOffset;
     }
 
-    public static SourceFileDocument Create(string fileName, int origin, string contents)
+    public static SourceFileDocument Create(string fileName, int origin, string contents, bool masked)
     {
         //Is origin used? How should it be used?
         contents = Regex.Replace(contents, "(?<!\r)\n", "\r\n");
@@ -213,7 +201,7 @@ public class SourceFileDocument
             idx++;
         }
 
-        return new SourceFileDocument(lineInfo, contents);
+        return new SourceFileDocument(lineInfo, contents, masked);
     }
 
     public string AsPlainText(bool injectLineDirective = true)
@@ -244,9 +232,12 @@ public class SourceFileDocument
 
     public IEnumerable<char> EnumerateFrom(int v)
     {
-        for (var i = v; i <= Contents.Length; i++)
+        for (var i = v; i < Contents.Length; i++)
             yield return Contents[i];
     }
 
-    public bool AllowReplace(int currentIdx) => AllowReplace(currentIdx, 1, false);
+    public bool AllowReplace(int currentIdx, int length)
+    {
+        return masking.Accept(currentIdx, length);
+    }
 }

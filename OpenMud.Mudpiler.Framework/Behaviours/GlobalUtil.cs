@@ -31,7 +31,8 @@ internal class GlobalUtil : IRuntimeTypeBuilder
 
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.TEXT, text));
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.INDIRECT_CALL, indirect_call));
-        
+        procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.ADDTEXT, addtext));
+
     }
 
     public bool AcceptsDatum(string target)
@@ -146,7 +147,8 @@ internal class GlobalUtil : IRuntimeTypeBuilder
             {
                 escaped = true;
                 continue;
-            } else if (c == '[' && next == ']')
+            }
+            else if (c == '[' && next == ']')
             {
                 var subStr = subIdx >= formatArgs.Length ? "" : formatArgs[subIdx++];
                 r.Append(subStr);
@@ -155,6 +157,18 @@ internal class GlobalUtil : IRuntimeTypeBuilder
             else
                 r.Append(c);
         }
+
+        return VarEnvObjectReference.CreateImmutable(r.ToString());
+    }
+
+    public EnvObjectReference addtext(ProcArgumentList args)
+    {
+        var pieces = args.GetArgumentList(); 
+
+        var r = new StringBuilder();
+
+        foreach (var p in pieces)
+            r.Append(DmlEnv.AsText(p));
 
         return VarEnvObjectReference.CreateImmutable(r.ToString());
     }

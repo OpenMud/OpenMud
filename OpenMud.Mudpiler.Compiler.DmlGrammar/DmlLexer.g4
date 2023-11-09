@@ -140,7 +140,7 @@ RESOURCE_LITERAL
  ;
 
 STRING_LITERAL
- : '"' ('\\"'|.)*? '"'
+ : '"' ('\\"'|'\\\\'|.)*? '"'
  ;
 
 DECIMAL_INTEGER

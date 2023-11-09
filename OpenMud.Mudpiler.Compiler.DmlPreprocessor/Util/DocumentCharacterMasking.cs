@@ -2,30 +2,38 @@
 
 public class DocumentCharacterMasking
 {
-    private readonly List<bool> commentsAndStrings;
-    private readonly List<bool> resources;
+    private readonly List<bool> maskedOut;
 
-    public DocumentCharacterMasking(string document)
+    public DocumentCharacterMasking(int size, bool isMaseked)
     {
-        var (srcCommentsAndStrings, srcResources) = Blackout.CreateBitmaps(document);
-
-        commentsAndStrings = new List<bool>(srcCommentsAndStrings);
-        resources = new List<bool>(srcResources);
+        maskedOut = new List<bool>();
+        Append(size, isMaseked);
     }
 
-    public void Insert(int start, int length, bool isCommentOrString = false, bool isResource = false)
+    public DocumentCharacterMasking()
     {
-        Replace(start, 0, length, isCommentOrString, isResource);
+        maskedOut = new List<bool>();
+    }
+
+    public void Append(DocumentCharacterMasking m)
+    {
+        maskedOut.AddRange(m.MaskedOut);
+    }
+
+    public void Append(int length, bool masked = false)
+    {
+        var insert = Enumerable.Range(0, length).Select(_ => masked);
+
+        maskedOut.AddRange(insert);
     }
 
     public bool Accept(int start, int length, bool allowResource = false)
     {
         return Enumerable.Range(start, length)
-            .All(i => !commentsAndStrings[i] && (allowResource || !resources[i]));
+            .All(i => !maskedOut[i]);
     }
 
-    public void Replace(int start, int replaceLength, int insertLength, bool isCommentOrString = false,
-        bool isResource = false)
+    public void Replace(int start, int replaceLength, int insertLength, bool isMasekdOut = false)
     {
         int delta = insertLength - replaceLength;
 
@@ -33,38 +41,26 @@ public class DocumentCharacterMasking
         {
             if (delta > 0)
             {
-                commentsAndStrings.Insert(start, false);
-                resources.Insert(start, false);
+                maskedOut.Insert(start, false);
             }
             else
             {
-                commentsAndStrings.RemoveAt(start);
-                resources.RemoveAt(start);
+                maskedOut.RemoveAt(start);
             }
         }
 
         for (var i = 0; i < insertLength; i++)
         {
-            commentsAndStrings[start + i] = isCommentOrString;
-            resources[start + i] = isResource;
+            maskedOut[start + i] = isMasekdOut;
         }
     }
 
-    public IEnumerable<bool> CommentsAndStrings
+    public IEnumerable<bool> MaskedOut
     {
         get
         {
-            for (var i = 0; i < commentsAndStrings.Count; i++)
-                yield return commentsAndStrings[i];
-        }
-    }
-
-    public IEnumerable<bool> Resources
-    {
-        get
-        {
-            for (var i = 0; i < resources.Count; i++)
-                yield return resources[i];
+            for (var i = 0; i < maskedOut.Count; i++)
+                yield return maskedOut[i];
         }
     }
 }

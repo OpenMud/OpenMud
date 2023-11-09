@@ -1,13 +1,9 @@
 ﻿using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
 
 namespace OpenMud.Mudpiler.Tests.EnvironmentTests
 {
@@ -43,12 +39,12 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
 
                 return v.ToString();
             }));
-
-            var dmlCode =
-                @$"
+            var testCode =
+            @$"
 /proc/test0()
     return {data.Item1}({operandsEncoded})
 ";
+            var dmlCode = Preprocessor.Preprocess("testFile.dml", ".", testCode, null, null, EnvironmentConstants.BUILD_MACROS);
             var assembly = MsBuildDmlCompiler.Compile(dmlCode);
             var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
 

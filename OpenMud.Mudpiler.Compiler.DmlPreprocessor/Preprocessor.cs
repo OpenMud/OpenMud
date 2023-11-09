@@ -14,7 +14,7 @@ public class ErrorListener : IAntlrErrorListener<int>, IAntlrErrorListener<IToke
     public void SyntaxError([NotNull] IRecognizer recognizer, [Nullable] int offendingSymbol, int line,
         int charPositionInLine, [NotNull] string msg, [Nullable] RecognitionException e)
     {
-        Errors.Add(e.Message);
+        Errors.Add($"{line}:{charPositionInLine} {msg}");
     }
 
     public void SyntaxError([NotNull] IRecognizer recognizer, [Nullable] IToken offendingSymbol, int line,
@@ -27,11 +27,21 @@ public class ErrorListener : IAntlrErrorListener<int>, IAntlrErrorListener<IToke
 public class Preprocessor
 {
     public static string Preprocess(string fileName, string resourcePathBase, string text,
-        ResolveResourceDirectory resolveResourceDirectory, ProcessImport processImport,
+        ResolveResourceDirectory? resolveResourceDirectory, ProcessImport? processImport,
         IImmutableDictionary<string, MacroDefinition>? predefined = null)
     {
-        return Preprocess(fileName, resourcePathBase, Enumerable.Empty<string>(), text, resolveResourceDirectory, processImport,
+        return Preprocess(fileName, resourcePathBase, Enumerable.Empty<string>(), text, resolveResourceDirectory ?? nullResolveDirectory, processImport ?? nullResolveImport,
             out var _, predefined);
+    }
+
+    private static (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) nullResolveImport(IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib, string fileName)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static string nullResolveDirectory(List<string> knownFileDirs, string path)
+    {
+        throw new NotImplementedException();
     }
 
     public static SourceFileDocument PreprocessAsDocument(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,

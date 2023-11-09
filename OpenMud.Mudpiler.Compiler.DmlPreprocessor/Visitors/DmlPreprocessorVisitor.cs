@@ -5,6 +5,7 @@ using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using OpenMud.Mudpiler.Compiler.DmeGrammar;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
 
@@ -64,40 +65,14 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         return path;
     }
 
-    private SourceFileDocument ApplyResourceMacros(SourceFileDocument source)
+    private string ApplyResourceMacros(string source)
     {
-        var processedOrigins = new HashSet<int>();
-        while (true)
-        {
-            var nextApplications = resourceRegex
-                .Matches(source.Textual)
-                .OrderBy(m => m.Index)
-                .Where(m => !processedOrigins.Contains(m.Index))
-                .Where(source.AllowReplaceResource)
-                .ToList();
+        var path = source.Trim('\'');
 
-            if (!nextApplications.Any())
-                break;
+        var resourcePath = resolveResourceDirectory(ResourceSearchDirectory.ToList(), path);
+        resourcePath = NormalizeResourcePath(Path.GetRelativePath(resourcePathBase, resourcePath));
 
-            int forwardShift = 0;
-
-            foreach (var a in nextApplications.OrderBy(a => a.Index))
-            {
-                var path = a.Value.Trim('\'');
-
-                var resourcePath = resolveResourceDirectory(ResourceSearchDirectory.ToList(), path);
-                resourcePath = NormalizeResourcePath(Path.GetRelativePath(resourcePathBase, resourcePath));
-
-                var newValue = "'" + resourcePath + "'";
-                var effectiveOrigin = forwardShift + a.Index;
-
-                processedOrigins.Add(effectiveOrigin);
-
-                forwardShift += source.Rewrite(forwardShift + a.Index, a.Length, newValue, true);
-            }
-        }
-
-        return source;
+        return "'" + resourcePath + "'";
     }
 
 
@@ -116,7 +91,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
                 .SelectMany(x =>
                     x.Value
                         .Matches(source.Textual)
-                        .Where(source.AllowReplace)
+                        .Where(m => source.AllowReplace(m.Index, m.Length))
                         .Select(m => Tuple.Create(x.Key, m))
                 )
                 .ToList();
@@ -129,8 +104,6 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
                 a.Item1.Apply(source, a.Item2);
             }
         }
-
-        source = ApplyResourceMacros(source);
 
         return source;
     }
@@ -147,7 +120,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
 
     public override SourceFileDocument VisitText([NotNull] DmeParser.TextContext context)
     {
-        var result = SourceFileDocument.Create(fileName, context.Start.Line, _tokensStream.GetText(context));
+        var result = SourceFileDocument.Create(fileName, context.Start.Line, _tokensStream.GetText(context), false);
 
         var directive = false;
 
@@ -166,12 +139,123 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
             result = SourceFileDocument.Empty;
         }
 
-        if (_compilied && !directive) result = ApplyMacros(result);
+        if (_compilied && !directive)
+        {
+            //In this case, it is not a macro and we are compiling it.
+            var cb = context.code_block();
 
+            if (cb == null)
+                result = SourceFileDocument.Empty;
+            else
+                result = Visit(cb);
+        }
 
         return result;
     }
 
+    public override SourceFileDocument VisitCode_block([NotNull] DmeParser.Code_blockContext context)
+    {
+        //Apply macros here
+        var r = new SourceFileDocument(context.code().Select(Visit), "");
+
+        return ApplyMacros(r);
+    }
+
+    public override SourceFileDocument VisitCode([NotNull] DmeParser.CodeContext context)
+    {
+
+        if (context.@string() != null)
+        {
+            return Visit(context.@string());
+        }
+
+        if (context.resource() != null)
+        {
+            var src = context.resource();
+            var resourceText = ApplyResourceMacros(src.GetText());
+            return SourceFileDocument.Create(fileName, src.Start.Line, resourceText, true);
+        }
+
+        var code = context.code_literal();
+        if (code != null) {
+            var pieces = code.Select(t =>
+                SourceFileDocument.Create(fileName, t.Start.Line, t.GetText(), false)
+            );
+
+            var document = new SourceFileDocument(pieces, "");
+
+            return document;
+        }
+
+        throw new Exception("Unknown code type");
+    }
+
+    public override SourceFileDocument VisitString_contents_placeholder([NotNull] DmeParser.String_contents_placeholderContext context)
+    {
+        return SourceFileDocument.Create(fileName, context.Start.Line, "\"[]\"", true);
+    }
+
+    public override SourceFileDocument VisitString_expression([NotNull] DmeParser.String_expressionContext context)
+    {
+        return Visit(context.code_block());
+    }
+
+    private SourceFileDocument CreateStringConcat(int line, List<SourceFileDocument> contents)
+    {
+        if (contents.Count == 0)
+            return SourceFileDocument.Create(fileName, line, $"\"\"", true);
+
+        if (contents.Count > 1)
+        {
+            var components = new List<SourceFileDocument>();
+            var start = SourceFileDocument.Create(fileName, line, $"addtext(", true);
+
+            components.Add(start);
+            for (var i = 0; i < contents.Count; i++)
+            {
+                components.Add(contents[i]);
+
+                if (i != contents.Count - 1)
+                {
+                    var delim = SourceFileDocument.Create(fileName, line, $",", true);
+                    components.Add(delim);
+                }
+            }
+
+            var end = SourceFileDocument.Create(fileName, line, $")", true);
+            components.Add(end);
+
+            return new SourceFileDocument(components, "");
+        }
+
+        return contents.Single();
+    }
+
+    public override SourceFileDocument VisitString_contents_literal([NotNull] DmeParser.String_contents_literalContext context)
+    {
+        var contents = context.GetText();
+        var contentLines = Regex.Split(contents, "\r\n|\r|\n");
+
+        //add newline text inbetween
+        for(var i = 0; i < contentLines.Length - 2; i++)
+            contentLines[i] = contentLines[i] + "\\r\\n";
+
+        return CreateStringConcat(
+            context.Start.Line,
+            contentLines
+            .Where(x => x.Length > 0)
+            .Select(c => 
+                SourceFileDocument.Create(fileName, context.Start.Line, "\"" + c + "\"", true)
+            ).ToList()
+        );
+    }
+
+    public override SourceFileDocument VisitString([NotNull] DmeParser.StringContext context)
+    {
+        var contents = context.string_contents().Select(Visit).ToList();
+
+        return CreateStringConcat(context.Start.Line, contents);
+    }
 
     public override SourceFileDocument VisitPreprocessorImport([NotNull] DmeParser.PreprocessorImportContext context)
     {
@@ -304,14 +388,14 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
     {
         if (context.TRUE() != null || context.FALSE() != null)
             return SourceFileDocument.CreateStatus(context.TRUE() != null);
-        return SourceFileDocument.Create(fileName, context.Start.Line, context.GetText());
+        return SourceFileDocument.Create(fileName, context.Start.Line, context.GetText(), false);
     }
 
     public override SourceFileDocument VisitPreprocessorConditionalSymbol(
         [NotNull] DmeParser.PreprocessorConditionalSymbolContext context)
     {
         if (ConditionalSymbols.TryGetValue(context.CONDITIONAL_SYMBOL().GetText(), out var symbol))
-            return SourceFileDocument.Create(fileName, context.start.Line, symbol.Text);
+            return SourceFileDocument.Create(fileName, context.start.Line, symbol.Text, false);
 
         return SourceFileDocument.CreateStatus(false);
     }
