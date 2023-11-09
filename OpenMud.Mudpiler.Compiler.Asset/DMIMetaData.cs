@@ -23,8 +23,7 @@ public struct DMIMetaData
     {
         Rectangle GetBounds(DMIMetaData md, int idx)
         {
-            var xFrames = imageWidth / md.width;
-            var yFrames = imageHeight / md.height;
+            var xFrames = (int)Math.Ceiling((float)imageWidth / md.width);
 
             var xPos = idx % xFrames * md.width;
             var yPos = idx / xFrames * md.height;
