@@ -596,6 +596,7 @@ this should not be replaced bob
         var testCode = @"
 /proc/test()
     return {""this is a
+[10 + 10]
 multiline
 string
 ""}
@@ -613,8 +614,61 @@ string
         var instance = (string)system.Global.ExecProc("test").CompleteOrException();
 
         //Path is normalized in preprocessor, so it should always come out looking like this...
-        Assert.IsTrue(instance == "this is a\r\nmultiline\r\nstring");
+        Assert.IsTrue(instance == "this is a\r\n20\r\nmultiline\r\nstring\r\n");
+    }
 
+    [Test]
+    public void TestMultilineStringWithNestedString()
+    {
+
+        var testCode = @"
+/proc/test()
+    return {""this is a
+""multiline""
+string
+""}
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+
+        //Path is normalized in preprocessor, so it should always come out looking like this...
+        Assert.IsTrue(instance == "this is a\r\n\"multiline\"\r\nstring\r\n");
+    }
+
+    [Test]
+    public void TestMultilineStringWithNestedEscapedString()
+    {
+
+        var testCode = @"
+/proc/test()
+    return {""this is a
+\""multiline\""
+string
+""}
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+
+        //Path is normalized in preprocessor, so it should always come out looking like this...
+        Assert.IsTrue(instance == "this is a\r\n\"multiline\"\r\nstring\r\n");
     }
 
     private (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) processImport(

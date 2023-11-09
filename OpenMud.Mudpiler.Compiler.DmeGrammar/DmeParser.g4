@@ -32,11 +32,16 @@ resource:
 string_contents
     : STRING_CONTENTS #string_contents_literal
     | string_expression #string_contents_expression
-    | BEGIN_STRING_EXPRESSION END_CODE_EXPR #string_contents_placeholder
+    | string_expression_begin END_CODE_EXPR #string_contents_placeholder
     ;
 
 string_expression
-    : BEGIN_STRING_EXPRESSION code_block END_CODE_EXPR
+    : string_expression_begin code_block END_CODE_EXPR
+    ;
+
+string_expression_begin
+    : BEGIN_STRING_EXPRESSION
+    | BEGIN_ML_STRING_EXPRESSION
     ;
 
 code_expr

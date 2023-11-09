@@ -200,6 +200,30 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         return Visit(context.code_block());
     }
 
+    private string EscapeString(string str)
+    {
+        var r = new StringBuilder();
+        bool escaped = false;
+
+        foreach(var c in str)
+        {
+            if (c == '\\' && !escaped)
+            {
+                escaped = true;
+                r.Append(c);
+                continue;
+            }
+
+            if (c == '"' && !escaped)
+                r.Append('\\');
+
+            r.Append(c);
+            escaped = false;
+        }
+
+        return r.ToString();
+    }
+
     private SourceFileDocument CreateStringConcat(int line, List<SourceFileDocument> contents)
     {
         if (contents.Count == 0)
@@ -234,10 +258,10 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
     public override SourceFileDocument VisitString_contents_literal([NotNull] DmeParser.String_contents_literalContext context)
     {
         var contents = context.GetText();
-        var contentLines = Regex.Split(contents, "\r\n|\r|\n");
+        var contentLines = Regex.Split(contents, "\r\n|\r|\n").Select(EscapeString).ToArray();
 
         //add newline text inbetween
-        for(var i = 0; i < contentLines.Length - 2; i++)
+        for(var i = 0; i < contentLines.Length - 1; i++)
             contentLines[i] = contentLines[i] + "\\r\\n";
 
         return CreateStringConcat(
