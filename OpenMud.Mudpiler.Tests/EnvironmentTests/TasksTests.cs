@@ -207,6 +207,44 @@ public class TasksTests
     }
 
 
+
+
+    [Test]
+    public void IfSpawnCompositionTest()
+    {
+        var dmlCode =
+            @"
+/proc/task_test(n)
+    if(n==0) spawn(10)
+        world << ""Hello from Spawn!""
+        world << ""Hello again from Spawn!""
+";
+        var assembly = Assembly.LoadFile(MsBuildDmlCompiler.Compile(dmlCode));
+        var g = new TestGame(new NullSceneBuilder(5, 5), assembly);
+
+        var ctx = g.Environment.Global.ExecProc("task_test", 0);
+
+
+        Stabalize(g, 1.5f);
+
+        Assert.IsTrue(
+            g.WorldMessages.ToList()
+                .SequenceEqual(new[]
+                {
+                    "Hello from Spawn!",
+                    "Hello again from Spawn!"
+                })
+        );
+
+        g.WorldMessages.Clear();
+
+        ctx = g.Environment.Global.ExecProc("task_test", 1);
+        Stabalize(g, 1.5f);
+
+        Assert.IsTrue(g.WorldMessages.Count == 0);
+    }
+
+
     [Test]
     public void SpawnStateIsolationTest()
     {

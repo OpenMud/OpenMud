@@ -2,6 +2,8 @@
 
 public readonly struct SourceFileLineAddress
 {
+    public static readonly SourceFileLineAddress DEFAULT = new SourceFileLineAddress(1, "DEFAULT");
+
     public readonly int Line;
     public readonly string FileName;
 

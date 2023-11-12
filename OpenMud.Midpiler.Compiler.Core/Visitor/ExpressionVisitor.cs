@@ -500,6 +500,7 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     {
         return s.Substring(1, s.Length - 2)
             .Replace("\\\"", "\"")
+            .Replace("\\\'", "'")
             .Replace("\\r", "\r")
             .Replace("\\n", "\n")
             .Replace("\\\\", "\\");
@@ -545,6 +546,8 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     public override ExpressionPieceBuilder VisitExpr_resource_identifier(
         [NotNull] DmlParser.Expr_resource_identifierContext context)
     {
+
+        var escapedString = ParseEscapeString(context.GetText());
         return resolver =>
             SyntaxFactory.InvocationExpression(
                 SyntaxFactory.ParseName("ctx.LoadResource"),
@@ -555,7 +558,7 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
                             SyntaxFactory.Argument(
                                 SyntaxFactory.LiteralExpression(
                                     SyntaxKind.StringLiteralExpression,
-                                    SyntaxFactory.Literal(context.GetText().Trim('\''))
+                                    SyntaxFactory.Literal(escapedString)
                                 )
                             )
                         }

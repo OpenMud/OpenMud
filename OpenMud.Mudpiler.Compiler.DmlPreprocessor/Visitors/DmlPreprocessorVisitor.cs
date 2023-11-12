@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Antlr4.Runtime;
@@ -9,12 +10,12 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
 
-public delegate (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) ProcessImport(
+public delegate (IImmutableDictionary<string, MacroDefinition> macros, IImmutableSourceFileDocument importBody) ProcessImport(
     IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib, string fileName);
 
 public delegate string ResolveResourceDirectory(List<string> knownFileDirs, string path);
 
-internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
+internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFileDocument>
 {
     private static readonly Regex resourceRegex = new(@"'[^'\r\n]*'");
     private readonly string fileName;
@@ -27,6 +28,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
     private readonly CommonTokenStream _tokensStream;
 
     private Dictionary<string, MacroDefinition> ConditionalSymbols = new();
+    private Dictionary<string, Regex> MacroRegexCache = new();
 
     public DmlPreprocessorVisitor(string fileName, string resourcePathBase, IEnumerable<string> resourceDirectory,
         CommonTokenStream commonTokenStream, ResolveResourceDirectory resolveResourceDirectory,
@@ -65,40 +67,58 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         return path;
     }
 
+    private static string ParseEscapedResource(string s)
+    {
+        return s.Substring(1, s.Length - 2)
+            .Replace("\\\'", "'");
+    }
+
+    private static string EscapeResourceString(string s)
+    {
+        return s.Replace("'", "\\\'");
+    }
+
     private string ApplyResourceMacros(string source)
     {
-        var path = source.Trim('\'');
+        var path = ParseEscapedResource(source);
 
         var resourcePath = resolveResourceDirectory(ResourceSearchDirectory.ToList(), path);
         resourcePath = NormalizeResourcePath(Path.GetRelativePath(resourcePathBase, resourcePath));
 
-        return "'" + resourcePath + "'";
+        return "'" + EscapeResourceString(resourcePath) + "'";
     }
 
+    private Regex GetMacroRegex(string source)
+    {
+        if (MacroRegexCache.TryGetValue(source, out var r))
+            return r;
 
+        var newRegex = new Regex(@"\b" + Regex.Escape(source) + @"\b");
 
-    private SourceFileDocument ApplyMacros(SourceFileDocument source)
+        MacroRegexCache[source] = newRegex;
+
+        return newRegex;
+    }
+
+    private IImmutableSourceFileDocument ApplyMacros(SourceFileDocument source)
     {
         var candidates = ConditionalSymbols.ToDictionary(
             x => x.Value,
-            x => new Regex(@"\b" + Regex.Escape(x.Key) + @"\b")
+            x => GetMacroRegex(x.Key)
         );
 
-        while (true)
+        var textual = source.CreateString();
+        var nextApplications = candidates
+            .SelectMany(x =>
+                x.Value
+                    .Matches(textual)
+                    .Where(m => source.AllowReplace(m.Index, m.Length))
+                    .Select(m => Tuple.Create(x.Key, m))
+            )
+            .ToList();
+
+        if (nextApplications.Any())
         {
-
-            var nextApplications = candidates
-                .SelectMany(x =>
-                    x.Value
-                        .Matches(source.Textual)
-                        .Where(m => source.AllowReplace(m.Index, m.Length))
-                        .Select(m => Tuple.Create(x.Key, m))
-                )
-                .ToList();
-
-            if (!nextApplications.Any())
-                break;
-
             foreach (var a in nextApplications.OrderByDescending(a => a.Item2.Index))
             {
                 a.Item1.Apply(source, a.Item2);
@@ -108,19 +128,19 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         return source;
     }
 
-    public override SourceFileDocument VisitDmlDocument([NotNull] DmeParser.DmlDocumentContext context)
+    public override IImmutableSourceFileDocument VisitDmlDocument([NotNull] DmeParser.DmlDocumentContext context)
     {
-        var sb = new List<SourceFileDocument>();
+        var sb = new List<IImmutableSourceFileDocument>();
 
         foreach (DmeParser.TextContext text in context.text())
             sb.Add(Visit(text));
 
-        return new SourceFileDocument(sb);
+        return new ConcatSourceFileDocument(sb, "");
     }
 
-    public override SourceFileDocument VisitText([NotNull] DmeParser.TextContext context)
+    public override IImmutableSourceFileDocument VisitText([NotNull] DmeParser.TextContext context)
     {
-        var result = SourceFileDocument.Create(fileName, context.Start.Line, _tokensStream.GetText(context), false);
+        IImmutableSourceFileDocument result = SourceFileDocument.Create(fileName, context.Start.Line, _tokensStream.GetText(context), false);
 
         var directive = false;
 
@@ -128,7 +148,12 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         {
             if (context.directive().GetText().StartsWith("include") ||
                 context.directive().GetText().StartsWith("import"))
-                return Visit(context.directive());// + "\r\n";
+            {
+                if (!_compilied)
+                    return new EmptySourceFileDocument();
+
+                return Visit(context.directive());
+            }
 
             _compilied = Visit(context.directive()).AsLogical();
             directive = true;
@@ -136,7 +161,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
 
         if (!_compilied || directive)
         {
-            result = SourceFileDocument.Empty;
+            result = SourceFileDocument.Create(fileName, context.Start.Line, "\r\n", false);
         }
 
         if (_compilied && !directive)
@@ -145,7 +170,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
             var cb = context.code_block();
 
             if (cb == null)
-                result = SourceFileDocument.Empty;
+                result = new EmptySourceFileDocument();
             else
                 result = Visit(cb);
         }
@@ -153,17 +178,18 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         return result;
     }
 
-    public override SourceFileDocument VisitCode_block([NotNull] DmeParser.Code_blockContext context)
+    public override IImmutableSourceFileDocument VisitCode_block([NotNull] DmeParser.Code_blockContext context)
     {
-        //Apply macros here
-        var r = new SourceFileDocument(context.code().Select(Visit), "");
+        var r = context.code().Select(Visit).ToList();
 
-        return ApplyMacros(r);
+        if (r.Count == 0)
+            return new EmptySourceFileDocument();
+
+        return ApplyMacros(new SourceFileDocument(context.code().Select(Visit), ""));
     }
 
-    public override SourceFileDocument VisitCode([NotNull] DmeParser.CodeContext context)
+    public override IImmutableSourceFileDocument VisitCode([NotNull] DmeParser.CodeContext context)
     {
-
         if (context.@string() != null)
         {
             return Visit(context.@string());
@@ -182,7 +208,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
                 SourceFileDocument.Create(fileName, t.Start.Line, t.GetText(), false)
             );
 
-            var document = new SourceFileDocument(pieces, "");
+            var document = new ConcatSourceFileDocument(pieces, "");
 
             return document;
         }
@@ -190,12 +216,12 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         throw new Exception("Unknown code type");
     }
 
-    public override SourceFileDocument VisitString_contents_placeholder([NotNull] DmeParser.String_contents_placeholderContext context)
+    public override IImmutableSourceFileDocument VisitString_contents_placeholder([NotNull] DmeParser.String_contents_placeholderContext context)
     {
         return SourceFileDocument.Create(fileName, context.Start.Line, "\"[]\"", true);
     }
 
-    public override SourceFileDocument VisitString_expression([NotNull] DmeParser.String_expressionContext context)
+    public override IImmutableSourceFileDocument VisitString_expression([NotNull] DmeParser.String_expressionContext context)
     {
         return Visit(context.code_block());
     }
@@ -224,14 +250,14 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         return r.ToString();
     }
 
-    private SourceFileDocument CreateStringConcat(int line, List<SourceFileDocument> contents)
+    private IImmutableSourceFileDocument CreateStringConcat(int line, List<IImmutableSourceFileDocument> contents)
     {
         if (contents.Count == 0)
             return SourceFileDocument.Create(fileName, line, $"\"\"", true);
 
         if (contents.Count > 1)
         {
-            var components = new List<SourceFileDocument>();
+            var components = new List<IImmutableSourceFileDocument>();
             var start = SourceFileDocument.Create(fileName, line, $"addtext(", true);
 
             components.Add(start);
@@ -249,13 +275,13 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
             var end = SourceFileDocument.Create(fileName, line, $")", true);
             components.Add(end);
 
-            return new SourceFileDocument(components, "");
+            return new ConcatSourceFileDocument(components, "");
         }
 
         return contents.Single();
     }
 
-    public override SourceFileDocument VisitString_contents_literal([NotNull] DmeParser.String_contents_literalContext context)
+    public override IImmutableSourceFileDocument VisitString_contents_literal([NotNull] DmeParser.String_contents_literalContext context)
     {
         var contents = context.GetText();
         var contentLines = Regex.Split(contents, "\r\n|\r|\n").Select(EscapeString).ToArray();
@@ -269,19 +295,19 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
             contentLines
             .Where(x => x.Length > 0)
             .Select(c => 
-                SourceFileDocument.Create(fileName, context.Start.Line, "\"" + c + "\"", true)
+                (IImmutableSourceFileDocument)SourceFileDocument.Create(fileName, context.Start.Line, "\"" + c + "\"", true)
             ).ToList()
         );
     }
 
-    public override SourceFileDocument VisitString([NotNull] DmeParser.StringContext context)
+    public override IImmutableSourceFileDocument VisitString([NotNull] DmeParser.StringContext context)
     {
         var contents = context.string_contents().Select(Visit).ToList();
 
         return CreateStringConcat(context.Start.Line, contents);
     }
 
-    public override SourceFileDocument VisitPreprocessorImport([NotNull] DmeParser.PreprocessorImportContext context)
+    public override IImmutableSourceFileDocument VisitPreprocessorImport([NotNull] DmeParser.PreprocessorImportContext context)
     {
         var fileImport = context.directive_text().GetText().Trim();
 
@@ -301,7 +327,16 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
 
         ConditionalSymbols = newSymbols.ToDictionary(x => x.Key, x => x.Value);
 
-        return importBody;
+        if (importBody != null)
+        {
+            importBody = new ConcatSourceFileDocument(new IImmutableSourceFileDocument[]
+            {
+                importBody,
+                SourceFileDocument.Create("generated", 1, "\r\n", false)
+            },"");
+            //importBody.Append("\r\n");
+        }
+        return importBody ?? new EmptySourceFileDocument();
     }
 
     public override SourceFileDocument VisitPreprocessorConditional([NotNull] DmeParser.PreprocessorConditionalContext context)
@@ -424,7 +459,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<SourceFileDocument>
         return SourceFileDocument.CreateStatus(false);
     }
 
-    public override SourceFileDocument VisitPreprocessorParenthesis([NotNull] DmeParser.PreprocessorParenthesisContext context)
+    public override IImmutableSourceFileDocument VisitPreprocessorParenthesis([NotNull] DmeParser.PreprocessorParenthesisContext context)
     {
         return Visit(context.preprocessor_expression());
     }

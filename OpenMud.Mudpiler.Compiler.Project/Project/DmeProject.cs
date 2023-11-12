@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Reflection;
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
@@ -13,21 +14,25 @@ public class DmePreprocessContext
 {
     private readonly ISet<string> importedMaps;
     private readonly ISet<string> importedStyles;
+    private readonly ISet<string> importedInterface;
     private readonly string workingDirectory;
 
-    public DmePreprocessContext(string workingDirectory, ISet<string>? maps = null, ISet<string> styles = null)
+    public DmePreprocessContext(string workingDirectory, ISet<string>? maps = null, ISet<string>? styles = null, ISet<string>? interfaces = null)
     {
         this.workingDirectory = workingDirectory;
 
         importedMaps = maps ?? new HashSet<string>();
         importedStyles = styles ?? new HashSet<string>();
+        importedInterface = interfaces ?? new HashSet<string>();
     }
 
     public IEnumerable<string> ImportedMaps => importedMaps;
 
     public IEnumerable<string> ImportedStyles => importedStyles;
 
-    private SourceFileDocument PreprocessContents(string fullFilePath, string resourceBasePath, IEnumerable<string> resourceDirectories, string contents,
+    public IEnumerable<string> ImportedInterfaces => importedInterface;
+
+    private IImmutableSourceFileDocument PreprocessContents(string fullFilePath, string resourceBasePath, IEnumerable<string> resourceDirectories, string contents,
         IImmutableDictionary<string, MacroDefinition>? predef,
         out IImmutableDictionary<string, MacroDefinition> resultantMacro)
     {
@@ -51,7 +56,7 @@ public class DmePreprocessContext
         return path;
     }
 
-    private (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) ProcessImport(
+    private (IImmutableDictionary<string, MacroDefinition> macros, IImmutableSourceFileDocument importBody) ProcessImport(
         IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib,
         string fileName)
     {
@@ -60,18 +65,24 @@ public class DmePreprocessContext
         if (fileName.ToLower().EndsWith(".dmm"))
         {
             importedMaps.Add(fileName);
-            return (dict, SourceFileDocument.Empty);
-        } else if (fileName.ToLower().EndsWith(".dms"))
+            return (dict, new EmptySourceFileDocument());
+        }
+        else if (fileName.ToLower().EndsWith(".dms"))
         {
             importedStyles.Add(fileName);
-            return (dict, SourceFileDocument.Empty);
+            return (dict, new EmptySourceFileDocument());
+        }
+        else if (fileName.ToLower().EndsWith(".dmf"))
+        {
+            importedInterface.Add(fileName);
+            return (dict, new EmptySourceFileDocument());
         }
 
         var r = PreprocessFile(fileName, resourceDirectories, dict, out var resultant);
         return (resultant, r);
     }
 
-    public SourceFileDocument PreprocessFile(string dmeFile, IEnumerable<string> resourceDirectories,
+    public IImmutableSourceFileDocument PreprocessFile(string dmeFile, IEnumerable<string> resourceDirectories,
         IImmutableDictionary<string, MacroDefinition>? predef,
         out IImmutableDictionary<string, MacroDefinition> resultantMacro)
     {
@@ -79,18 +90,18 @@ public class DmePreprocessContext
 
         dmeFile = Path.GetFullPath(dmeFile);
 
-        return new DmePreprocessContext(Path.GetDirectoryName(dmeFile) ?? workingDirectory, importedMaps, importedStyles)
+        return new DmePreprocessContext(Path.GetDirectoryName(dmeFile) ?? workingDirectory, importedMaps, importedStyles, importedInterface)
             .PreprocessContents(dmeFile, rsrcPath, resourceDirectories, File.ReadAllText(dmeFile), predef, out resultantMacro);
     }
 
-    public SourceFileDocument PreprocessFile(string dmeFile, IImmutableDictionary<string, MacroDefinition>? predef = null,
+    public IImmutableSourceFileDocument PreprocessFile(string dmeFile, IImmutableDictionary<string, MacroDefinition>? predef = null,
         IEnumerable<string> resourceDirectories = null)
     {
         var rsrcPath = Path.Combine(workingDirectory, Path.GetDirectoryName(dmeFile) ?? "./");
 
         dmeFile = Path.GetFullPath(dmeFile);
 
-        return new DmePreprocessContext(rsrcPath, importedMaps, importedStyles)
+        return new DmePreprocessContext(rsrcPath, importedMaps, importedStyles, importedInterface)
             .PreprocessContents(dmeFile, rsrcPath, resourceDirectories ?? Enumerable.Empty<string>(), File.ReadAllText(dmeFile),
                 predef, out var _);
     }
@@ -145,7 +156,8 @@ public class DmeProject
 
 
     public static void Compile(string path, string outputDirectory,
-        IImmutableDictionary<string, MacroDefinition>? buildMacros = null, bool disposeIntermediateCompile = true)
+        IImmutableDictionary<string, MacroDefinition>? buildMacros = null, bool disposeIntermediateCompile = true, bool generateSourceMap=true,
+        bool globOnly = false)
     {
         var absEnvPath = Path.GetFullPath(path);
         var environmentFiles = Directory.GetFiles(absEnvPath, "*.dme");
@@ -155,16 +167,25 @@ public class DmeProject
 
         var preprocessorCtx = new DmePreprocessContext(absEnvPath);
 
-        var sourceFile = preprocessorCtx.PreprocessFile(environmentFiles[0], buildMacros).AsPlainText();
+        var sourceFile = preprocessorCtx.PreprocessFile(environmentFiles[0], buildMacros).AsPlainText(generateSourceMap);
 
         Directory.CreateDirectory(outputDirectory);
 
         File.WriteAllText(Path.Join(outputDirectory, "srcGlob.txt"), sourceFile);
 
-        var asmBinPath = Path.Join(outputDirectory, "DmlProject.dll");
-        MsBuildDmlCompiler.Compile(sourceFile, asmBinPath, disposeIntermediateCompile);
+        if (!globOnly)
+        {
+            var asmBinPath = Path.Join(outputDirectory, "DmlProject.dll");
+            MsBuildDmlCompiler.Compile(sourceFile, asmBinPath, disposeIntermediateCompile);
+        }
 
         foreach(var map in preprocessorCtx.ImportedMaps)
             File.Copy(map, Path.Join(outputDirectory, Path.GetFileName(map)), true);
+    }
+
+    public static void CompileGlob(string globFile, string binDir, bool disposeIntermediateCompile=true)
+    {
+        var asmBinPath = Path.Join(binDir, "DmlProject.dll");
+        MsBuildDmlCompiler.Compile(File.ReadAllText(globFile), asmBinPath, disposeIntermediateCompile);
     }
 }

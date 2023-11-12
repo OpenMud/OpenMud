@@ -23,8 +23,8 @@ comment_contents
     ;
 
 string
-    : STRING_BEGIN string_contents* STRING_END
-    | MULTILINE_STRING_BEGIN string_contents* MULTILINE_STRING_END;
+    : STRING_BEGIN (STRING_NEXT_LINE? string_contents)* STRING_END
+    | MULTILINE_STRING_BEGIN (STRING_NEXT_LINE? string_contents)* MULTILINE_STRING_END;
 
 resource:
     RESOURCE_BEGIN RESOURCE_CONTENTS* RESOURCE_END;

@@ -136,7 +136,7 @@ NAME
  ;
 
 RESOURCE_LITERAL
- : '\'' .*? '\''
+ : '\'' ('\\"'|'\\\''|'\\\\'|.)*? '\''
  ;
 
 STRING_LITERAL

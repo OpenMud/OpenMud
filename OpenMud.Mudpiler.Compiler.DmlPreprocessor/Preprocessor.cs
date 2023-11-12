@@ -34,7 +34,7 @@ public class Preprocessor
             out var _, predefined);
     }
 
-    private static (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) nullResolveImport(IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib, string fileName)
+    private static (IImmutableDictionary<string, MacroDefinition> macros, IImmutableSourceFileDocument importBody) nullResolveImport(IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib, string fileName)
     {
         throw new NotImplementedException();
     }
@@ -44,7 +44,7 @@ public class Preprocessor
         throw new NotImplementedException();
     }
 
-    public static SourceFileDocument PreprocessAsDocument(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
+    public static IImmutableSourceFileDocument PreprocessAsDocument(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
         ResolveResourceDirectory resolveResourceDirectory, ProcessImport processImport,
         out IImmutableDictionary<string, MacroDefinition> resultantDefinitions,
         IImmutableDictionary<string, MacroDefinition>? predefined = null)

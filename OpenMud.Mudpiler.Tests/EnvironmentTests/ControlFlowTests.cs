@@ -35,6 +35,30 @@ var/num/test_input = 10
         Assert.IsTrue(5 == (int)system.Global.ExecProc("test_if").CompleteOrException());
     }
 
+
+
+    [Test]
+    public void TestSingleLineIfStatementControlFlow()
+    {
+        var dmlCode =
+            @"
+proc/test_if()
+    if(test_input == 0) return 5
+
+    return 10
+
+var/num/test_input = 10
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        Assert.IsTrue(10 == (int)system.Global.ExecProc("test_if").CompleteOrException());
+
+        system.Global["test_input"] = 0;
+
+        Assert.IsTrue(5 == (int)system.Global.ExecProc("test_if").CompleteOrException());
+    }
+
     [Test]
     public void TestForListControlFlowWithTypeFilter()
     {

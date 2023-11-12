@@ -150,10 +150,10 @@ public class LexerWithIndentInjector : DmlLexer
                     : // skip the trailing inconsistent dedent or the trailing unexpected indent (or the trailing indent)
                     return; // We're on a blank line or before a comment or before the EOF, skip the NEWLINE token
                 default:
+                    var curIndentLength = GetIndentationLength(curToken.Text);
+                    
                     pendingTokens.AddLast(curToken); // insert the current NEWLINE token
-                    InsertIndentDedentTokens(
-                        GetIndentationLength(curToken
-                            .Text)); //*** https://docs.python.org/3/reference/lexical_analysis.html#indentation
+                    InsertIndentDedentTokens(curIndentLength); //*** https://docs.python.org/3/reference/lexical_analysis.html#indentation
                     break;
             }
         }
@@ -163,7 +163,6 @@ public class LexerWithIndentInjector : DmlLexer
     {
         InsertTrailingTokens(lastPendingTokenType); // indentLengths stack will be null!
         pendingTokens.AddLast(curToken); // insert the current EOF token
-        CheckSpaceAndTabIndentation();
     }
 
     private void InsertLeadingTokens(int type, int startIndex)
@@ -182,7 +181,7 @@ public class LexerWithIndentInjector : DmlLexer
 
     private void InsertIndentDedentTokens(int curIndentLength)
     {
-        var prevIndentLength = indentLengths.First.Value;
+        var prevIndentLength = indentLengths.First?.Value;
         if (curIndentLength > prevIndentLength)
         {
             // insert an INDENT token
@@ -275,12 +274,6 @@ public class LexerWithIndentInjector : DmlLexer
             }
 
         return count;
-    }
-
-    private void CheckSpaceAndTabIndentation()
-    {
-        if (wasSpaceIndentation && wasTabIndentation) throw new Exception("Mixture of spaces and tabs in document!");
-        //this.errors.Add("ERROR!!!! MICTURE of SPACE and TABS were used for indentation.");
     }
 
     public List<string> GetWarnings()

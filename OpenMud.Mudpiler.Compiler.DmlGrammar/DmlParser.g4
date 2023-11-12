@@ -12,6 +12,7 @@ dml_module:
     | object_copyInto_override_definition
     | object_unopasn_override_definition
     | object_function_definition
+    | variable_set_declaration
     | variable_declaration
     | object_tree_definition
     )* EOF;
@@ -75,6 +76,13 @@ variable_declaration
   : VAR FWD_SLASH implicit_typed_variable_declaration
   | VAR implicit_untyped_variable_declaration
   ;
+
+variable_set_declaration
+  : VAR (path_prefix=object_tree_path_expr)? FWD_SLASH? varset_suite=variable_set_suite
+  ;
+
+variable_set_suite
+  : NEWLINE (INDENT (implicit_variable_declaration NEWLINE)+ DEDENT);
 
 expr_lhs
   : lhs=identifier_name                    #expr_lhs_variable
@@ -159,7 +167,10 @@ argument_list_item: (arg_name=identifier_name ASSIGNMENT)? expr ;
 argument_list: OPEN_PARENS (argument_list_item (COMMA argument_list_item)*)? CLOSE_PARENS ;
 //Code Blocks
 
-stmt: simple_stmt | compound_stmt;
+stmt
+  : variable_set_declaration
+  | simple_stmt
+  | compound_stmt;
 
 simple_stmt: small_stmt NEWLINE;
 
@@ -330,6 +341,7 @@ do_while_stmnt: DO suite DEDENT WHILE OPEN_PARENS expr CLOSE_PARENS NEWLINE INDE
 while_stmt: WHILE OPEN_PARENS expr CLOSE_PARENS suite;
 suite
   : simple_stmt #suite_single_stmt
+  | compound_stmt #suite_compound_stmt
   | NEWLINE INDENT stmt+ DEDENT #suite_multi_stmt
   | NEWLINE #suite_empty;
 
