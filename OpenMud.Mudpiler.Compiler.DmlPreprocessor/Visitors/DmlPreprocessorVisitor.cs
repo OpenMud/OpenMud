@@ -216,11 +216,6 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
         throw new Exception("Unknown code type");
     }
 
-    public override IImmutableSourceFileDocument VisitString_contents_placeholder([NotNull] DmeParser.String_contents_placeholderContext context)
-    {
-        return SourceFileDocument.Create(fileName, context.Start.Line, "\"[]\"", true);
-    }
-
     public override IImmutableSourceFileDocument VisitString_expression([NotNull] DmeParser.String_expressionContext context)
     {
         return Visit(context.code_block());
@@ -281,23 +276,17 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
         return contents.Single();
     }
 
-    public override IImmutableSourceFileDocument VisitString_contents_literal([NotNull] DmeParser.String_contents_literalContext context)
+    public override IImmutableSourceFileDocument VisitString_contents_constant([NotNull] DmeParser.String_contents_constantContext context)
     {
         var contents = context.GetText();
         var contentLines = Regex.Split(contents, "\r\n|\r|\n").Select(EscapeString).ToArray();
 
         //add newline text inbetween
-        for(var i = 0; i < contentLines.Length - 1; i++)
+        for (var i = 0; i < contentLines.Length - 1; i++)
             contentLines[i] = contentLines[i] + "\\r\\n";
 
-        return CreateStringConcat(
-            context.Start.Line,
-            contentLines
-            .Where(x => x.Length > 0)
-            .Select(c => 
-                (IImmutableSourceFileDocument)SourceFileDocument.Create(fileName, context.Start.Line, "\"" + c + "\"", true)
-            ).ToList()
-        );
+        var netString = string.Join("", contentLines);
+        return SourceFileDocument.Create(fileName, context.Start.Line, "\"" + netString + "\"", true);
     }
 
     public override IImmutableSourceFileDocument VisitString([NotNull] DmeParser.StringContext context)
@@ -334,7 +323,6 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
                 importBody,
                 SourceFileDocument.Create("generated", 1, "\r\n", false)
             },"");
-            //importBody.Append("\r\n");
         }
         return importBody ?? new EmptySourceFileDocument();
     }

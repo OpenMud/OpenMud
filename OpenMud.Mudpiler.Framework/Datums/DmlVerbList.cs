@@ -298,7 +298,6 @@ public class VerbListCollection : IList<DmlListItem>
     {
         var e = EncodeFrom(d, false, false, name ?? d.Name, description);
 
-        //var e = new VerbListCollectionEntry(false, new VerbMetadata(d.Name, name ?? d.Name, null, description, VerbSrc.Default), new VerbDatumProc(d));
         internalVerbCollection.Add(e);
     }
 

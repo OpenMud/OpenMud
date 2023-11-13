@@ -29,10 +29,14 @@ string
 resource:
     RESOURCE_BEGIN RESOURCE_CONTENTS* RESOURCE_END;
 
+string_contents_constant
+    : STRING_CONTENTS+
+    | string_expression_begin END_CODE_EXPR
+    ;
+
 string_contents
-    : STRING_CONTENTS #string_contents_literal
+    : string_contents_constant #string_contents_const
     | string_expression #string_contents_expression
-    | string_expression_begin END_CODE_EXPR #string_contents_placeholder
     ;
 
 string_expression
