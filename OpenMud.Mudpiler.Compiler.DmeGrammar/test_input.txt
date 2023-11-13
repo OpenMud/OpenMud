@@ -1,5 +1,0 @@
-/proc/test()
-    /* this is a comment
-and I am hoping that the identation
-is actually being
-preserved       .*/return 10
