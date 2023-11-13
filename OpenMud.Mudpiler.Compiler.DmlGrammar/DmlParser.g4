@@ -388,5 +388,6 @@ expr
  | left=expr op=cmp_op right=expr #expr_cmp_binary
  | left=expr op=bit_op right=expr #expr_bit_binary
  | left=expr op=logic_op right=expr #expr_logic_binary
+ | left=expr AS right=identifier_name #expr_primitive_cast
  | DOT #expr_prereturn
 ;

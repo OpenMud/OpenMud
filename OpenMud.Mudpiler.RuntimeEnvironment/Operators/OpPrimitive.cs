@@ -236,4 +236,12 @@ public sealed class OpPrimitive : IOpSolver
 
         return new VarEnvObjectReference(res, true);
     }
+
+    public DatumProcExecutionContext PrimitiveCast(EnvObjectReference subject, EnvObjectReference type)
+    {
+        return new PreparedDatumProcContext(() =>
+        {
+            return DmlEnv.Cast(subject, type);
+        });
+    }
 }

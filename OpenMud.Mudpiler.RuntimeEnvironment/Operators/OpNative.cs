@@ -112,4 +112,9 @@ public sealed class OpNative : IOpSolver
 
         return new VarEnvObjectReference(res, true);
     }
+
+    public DatumProcExecutionContext PrimitiveCast(EnvObjectReference subject, EnvObjectReference type)
+    {
+        throw new DmlOperationNotImplemented();
+    }
 }

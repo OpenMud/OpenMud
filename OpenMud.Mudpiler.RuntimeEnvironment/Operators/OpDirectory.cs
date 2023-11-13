@@ -123,4 +123,11 @@ public class OpDirectory : IOpSolver
 
         return solver;
     }
+
+    public DatumProcExecutionContext PrimitiveCast(EnvObjectReference subject, EnvObjectReference type)
+    {
+        var solver = GetSubjectSolver(subject);
+
+        return solver.PrimitiveCast(subject, type);
+    }
 }

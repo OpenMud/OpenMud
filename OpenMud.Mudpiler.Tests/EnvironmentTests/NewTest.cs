@@ -89,7 +89,6 @@ proc/test_newop()
         Assert.IsTrue(stick["desc"] == "This is no ordinary stick!");
     }
 
-
     [Test]
     public void ExampleNewWithoutArgList()
     {

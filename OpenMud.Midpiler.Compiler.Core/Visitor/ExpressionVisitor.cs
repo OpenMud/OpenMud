@@ -265,6 +265,23 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return resolver => CreateUn(op, subject(resolver));
     }
 
+    public static ExpressionSyntax CreatePrimitiveCast(ExpressionSyntax subject, string primitivetypeName)
+    {
+        var typeName = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(primitivetypeName));
+        return SyntaxFactory.InvocationExpression(
+                SyntaxFactory.ParseName("ctx.op.PrimitiveCast"),
+                SyntaxFactory.ArgumentList(
+                    SyntaxFactory.SeparatedList(new[]
+                    {
+                        SyntaxFactory.Argument(subject),
+                        SyntaxFactory.Argument(typeName),
+                    })
+                )
+            )
+            .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
+            .WithAdditionalAnnotations(BuilderAnnotations.DmlNativeDeferred);
+    }
+
     public static ExpressionSyntax CreateUnAsn(string op, ExpressionSyntax subject, ExpressionSyntax source,
         bool isPreOp = true)
     {
@@ -279,8 +296,8 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
                         SyntaxFactory.Argument(SyntaxFactory.ParseExpression(dmlOp)),
                         SyntaxFactory
                             .Argument(
-                                source) //SyntaxFactory.Argument(null, SyntaxFactory.Token(SyntaxKind.OutKeyword), subject(resolver))
-                    }) //.Select(SyntaxFactory.Argument))
+                                source)
+                    })
                 )
             )
             .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
@@ -328,6 +345,11 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
                 Visit(c.src)
             )
         );
+    }
+
+    public override ExpressionPieceBuilder VisitExpr_primitive_cast([NotNull] DmlParser.Expr_primitive_castContext context)
+    {
+        return (r) => CreatePrimitiveCast(Visit(context.left)(r), context.identifier_name().GetText());
     }
 
     public override ExpressionPieceBuilder VisitExpr_unary_post([NotNull] DmlParser.Expr_unary_postContext c)

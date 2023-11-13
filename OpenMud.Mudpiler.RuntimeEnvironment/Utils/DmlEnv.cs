@@ -95,6 +95,8 @@ public static class DmlEnv
             return (bool)subject ? 1 : 0;
         if (IsNumericType(subject))
             return (int)subject;
+        if (typeof(string).IsEquivalentTo(subject.GetType()) && int.TryParse((string)subject, out var num))
+            return num;
         throw new Exception("Unable to interpret as numeric.");
     }
 
@@ -208,5 +210,27 @@ public static class DmlEnv
         }
 
         return EnvironmentConstants.SOUTH;
+    }
+
+    public static EnvObjectReference Cast(EnvObjectReference subject, EnvObjectReference type)
+    {
+        var typeName = type.Get<string>();
+        object r = null;
+
+        var t = subject.IsNull ? null : subject.Target;
+        switch (typeName)
+        {
+            case "text":
+                r = DmlEnv.AsText(t);
+                break;
+            case "num":
+                r = DmlEnv.AsNumeric(t);
+                break;
+            default:
+                t = null;
+                break;
+        }
+
+        return VarEnvObjectReference.CreateImmutable(r);
     }
 }
