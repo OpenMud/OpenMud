@@ -40,10 +40,10 @@ class BuildOptions
 
 
 
-[Verb("build-glob", HelpText = "Build the game into a client/server module.")]
+[Verb("build-glob", HelpText = "Build the logic for a preprocessor output glob file. Useful if you want to break preprocessing and compilation into separate steps.")]
 class BuildGlobOptions
 {
-    [Option("glob", Required = true, HelpText = "Path to project directory")]
+    [Option("glob", Required = true, HelpText = "Path to glob file. Binaries will be placed adjacently.")]
     public string? Glob { get; set; }
 }
 
