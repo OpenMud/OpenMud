@@ -378,6 +378,7 @@ expr
  | expr (DOT | COLON) identifier_name #expr_property
  | literal=NUMBER  #expr_int_literal
  | literal=DECIMAL #expr_dec_literal
+ | literal=SCINOTATION_NUMBER #expr_dec_scientific_literal
  | OPEN_PARENS inner=expr CLOSE_PARENS #expr_grouped
  | expr INTERR expr COLON expr #expr_turnary
  | expr_complex #expr_stmnt_stub

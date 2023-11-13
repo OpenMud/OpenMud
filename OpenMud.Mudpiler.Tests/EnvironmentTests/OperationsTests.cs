@@ -301,4 +301,28 @@ proc
         var mob = system.CreateAtomic("/mob");
         Assert.IsTrue((int)mob.ExecProc("test0").CompleteOrException() == 1);
     }
+
+
+
+    [Test]
+    public void ScientificNotationTest()
+    {
+        var dmlCode =
+            @"
+/mob
+    var
+        test_value = 1e31
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var mob = system.CreateAtomic("/mob");
+
+        var testVal = (double)mob["test_value"];
+        var expected = 1E31;
+
+        Assert.IsTrue(testVal - expected < 0.0001f);
+    }
+
+
 }

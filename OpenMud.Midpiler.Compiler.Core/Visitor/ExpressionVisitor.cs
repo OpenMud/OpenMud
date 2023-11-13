@@ -379,6 +379,12 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
             SyntaxFactory.Literal(double.Parse(c.literal.Text)));
     }
 
+    public override ExpressionPieceBuilder VisitExpr_dec_scientific_literal([NotNull] DmlParser.Expr_dec_scientific_literalContext c)
+    {
+        return resolver => SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression,
+            SyntaxFactory.Literal(double.Parse(c.literal.Text)));
+    }
+
     public override ExpressionPieceBuilder VisitExpr_unary(DmlParser.Expr_unaryContext c)
     {
         return CreateUn(c.un_op().GetText(), Visit(c.inner));

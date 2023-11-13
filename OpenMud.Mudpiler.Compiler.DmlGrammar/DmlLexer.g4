@@ -148,6 +148,10 @@ DECIMAL_INTEGER
  | '0'+
  ;
 
+SCINOTATION_NUMBER
+ : NON_ZERO_DIGIT DIGIT* 'e' DIGIT*
+ ;
+
 BlockComment 
     : '/*' (BlockComment | .)*? '*/' -> skip
     ;
