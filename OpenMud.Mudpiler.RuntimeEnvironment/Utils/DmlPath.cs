@@ -113,12 +113,13 @@ public static class DmlPath
         return s;
     }
 
-    public static string NormalizeClassName(string name)
+    //Root name might be /GLOBAL for resolving scope, but when resolving type, it will be null
+    public static string NormalizeClassName(string name, bool resolvingType = false)
     {
         var n = name.TrimEnd('/');
 
         if (n.Length == 0)
-            return NormalizeClassName(GLOBAL_PATH);
+            return resolvingType ? "/" : NormalizeClassName(GLOBAL_PATH);
 
         var isRooted = name.StartsWith("/");
 
@@ -129,6 +130,9 @@ public static class DmlPath
 
         return simplified;
     }
+
+    public static string NormalizeTypeName(string typeName) =>
+        NormalizeClassName(typeName, true);
 
     public static bool IsRoot(string baseClass)
     {

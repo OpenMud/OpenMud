@@ -789,6 +789,38 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return target;
     }
 
+    public ExpressionSyntax CreateAssocListLiteral(IEnumerable<Tuple<ExpressionSyntax, ExpressionSyntax>> initializer)
+    {
+        var flattenedArgList = initializer.SelectMany(x => new[] { x.Item1, x.Item2 }).ToList();
+
+        var target = SyntaxFactory.InvocationExpression(
+                SyntaxFactory.ParseName("ctx.AssocListLiteral"),
+                SyntaxFactory.ArgumentList(
+                    SyntaxFactory.SeparatedList(
+                        flattenedArgList.Select(SyntaxFactory.Argument)
+                    )
+                ).WithAdditionalAnnotations(BuilderAnnotations.CreateManagedArgsAnnotation(0))
+            )
+            .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke);
+
+        return target;
+    }
+
+    public override ExpressionPieceBuilder VisitExpr_assoc_list_literal([NotNull] DmlParser.Expr_assoc_list_literalContext context)
+    {
+        var kvPairs = context
+            .assoc_list_expr()
+            .assoc_list_expr_kv_pair()
+            .Select(x => 
+                Tuple.Create(
+                    Visit(x.key),
+                    Visit(x.value)
+                )
+            );
+
+        return resolver => CreateAssocListLiteral(kvPairs.Select(x => Tuple.Create(x.Item1(resolver), x.Item2(resolver))));
+    }
+
     public override ExpressionPieceBuilder VisitExpr_list_literal([NotNull] DmlParser.Expr_list_literalContext c)
     {
         var rawElements = c.list_expr() == null

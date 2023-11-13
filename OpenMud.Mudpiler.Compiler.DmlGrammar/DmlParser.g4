@@ -357,6 +357,12 @@ un_op_asn: ( OP_INC | OP_DEC );
 list_expr:
   LIST OPEN_PARENS (expr (COMMA expr)*)? CLOSE_PARENS;
 
+assoc_list_expr_kv_pair:
+  key=expr ASSIGNMENT value=expr;
+
+assoc_list_expr:
+  LIST OPEN_PARENS (assoc_list_expr_kv_pair (COMMA assoc_list_expr_kv_pair)*) CLOSE_PARENS;
+
 null_expr: NULL;
 
 expr
@@ -365,6 +371,7 @@ expr
  | ISTYPE OPEN_PARENS varname=expr_lhs (COMMA typename=expr)? CLOSE_PARENS #expr_istype_property
  | object_tree_path_expr # expr_type
  | l=expr OPEN_BRACKET r=expr CLOSE_BRACKET #expr_index
+ | assoc_list_expr #expr_assoc_list_literal
  | list_expr #expr_list_literal
  | unop=un_op inner=expr #expr_unary
  | expr_lhs #expr_lhs_stub

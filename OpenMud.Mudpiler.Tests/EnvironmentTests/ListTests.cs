@@ -407,17 +407,17 @@ public class ListTests
     var h = g + 5
 
     if(a.len != 0 || b.len != 1 || c.len != 2 || d.len != 3 || e.len != 4 || f.len != 5 || g.len != 6 || h.len != 7)
-        return 0
+        return 2
 
     if(h[1] != 5 || h[2] != 4)
-        return 0
+        return 3
 
     return 1
 ";
         var assembly = MsBuildDmlCompiler.Compile(dmlCode);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
-
-        Assert.IsTrue((int)system.Global.ExecProc("test0").CompleteOrException() == 1);
+        var r = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue(r == 1);
     }
 
 
