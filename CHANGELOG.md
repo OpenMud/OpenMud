@@ -1,3 +1,18 @@
+# [2.7.0](https://github.com/OpenMud/OpenMud/compare/v2.6.0...v2.7.0) (2023-11-13)
+
+
+### Bug Fixes
+
+* **compiler:** Better handling for variatons to asset file format. ([587026d](https://github.com/OpenMud/OpenMud/commit/587026d129c0412b48525149a8d2e9c1c1f2d3d2))
+* **compiler:** Resolved issue with preprocessor transforming literal/constant strings into complex expressions that weren't supported by compiler in the specific context (namely, field initializer escape sequences were resulting in addtext expressions.) ([675d6da](https://github.com/OpenMud/OpenMud/commit/675d6dad6aba720942e4b769b5431f04df897e37))
+* **compiler:** Support embedded (and unescaped) single/double quote character in multiline strings. ([d59a7f8](https://github.com/OpenMud/OpenMud/commit/d59a7f834086dcb9a2b285fe40d7348203027ab5))
+
+
+### Features
+
+* **compiler:** Optimized preprocessing, added support for complex string colacing, multiline string etc. ([4316e85](https://github.com/OpenMud/OpenMud/commit/4316e851976d3dadf030c6ce4c68818e7fbe3741))
+* **compiler:** Proper handling of text macros. ([1db6f66](https://github.com/OpenMud/OpenMud/commit/1db6f66e6b53e6b50de59ca2d2efe3a0fdad7697))
+
 # [2.6.0](https://github.com/OpenMud/OpenMud/compare/v2.5.1...v2.6.0) (2023-10-29)
 
 
