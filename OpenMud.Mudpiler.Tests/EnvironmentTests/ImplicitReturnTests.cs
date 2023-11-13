@@ -107,7 +107,7 @@ internal class ImplicitReturnTests
 
         var r = (DatumHandle)system.Global.ExecProc("test_uniquelist").CompleteOrException();
 
-        var l = r.Unwrap<DmlList>().Host.Select(DmlEnv.AsNumeric).ToList();
+        var l = r.Unwrap<DmlList>().Host.Select(e => DmlEnv.AsNumeric(e.Key)).ToList();
 
         Assert.IsTrue(l.SequenceEqual(new[]
         {

@@ -15,7 +15,10 @@ public class SimpleTypeSolver : ITypeSolver
 
     public Type Lookup(string name, int maxDeclarationOrder = int.MaxValue)
     {
-        var normalName = DmlPath.NormalizeClassName(name);
+        var normalName = DmlPath.NormalizeTypeName(name);
+
+        if (normalName == "/")
+            return typeof(object);
 
         return typeLibrary.Where(x =>
                 x.Key.Item1 <= maxDeclarationOrder && x.Key.Item2 == normalName

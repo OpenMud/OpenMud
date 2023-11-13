@@ -1,7 +1,9 @@
-﻿using OpenMud.Mudpiler.RuntimeEnvironment;
+﻿using Antlr4.Runtime.Atn;
+using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
+using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
@@ -78,6 +80,11 @@ public class ListBasic : IRuntimeTypeBuilder
                 args => Assign(host, args[0], args[1])
             )
         );
+
+        host.RegistedProcedures.Register(0, new ActionDatumProc("Associate",
+                args => Associate(host, args[0], args[1], args[2])
+            )
+        );
     }
 
     private static EnvObjectReference New(DmlList host, ProcArgumentList size)
@@ -90,23 +97,26 @@ public class ListBasic : IRuntimeTypeBuilder
         {
             var sub = size.GetArgumentList().Skip(1).ToList();
             for (var i = 0; i < (int)size[0].Target; i++)
-                host.Host.Add(VarEnvObjectReference.CreateImmutable(host.Instantiate(sub.ToArray())));
+                host.Host.Add(new DmlListItem(VarEnvObjectReference.CreateImmutable(host.Instantiate(sub.ToArray()))));
         }
         else
         {
             for (var i = 0; i < (int)size[0].Target; i++)
-                host.Host.Add(null);
+                host.Host.Add(new DmlListItem(VarEnvObjectReference.NULL));
         }
 
         return VarEnvObjectReference.Wrap(host);
     }
 
-    private static EnvObjectReference[] Flatten(EnvObjectReference[] args)
+    private static DmlListItem[] Flatten(EnvObjectReference[] args) =>
+        Flatten(args.Select(a => new DmlListItem(a)).ToArray());
+
+    private static DmlListItem[] Flatten(DmlListItem[] args)
     {
-        List<EnvObjectReference> f = new();
+        List<DmlListItem> f = new();
 
         foreach (var a in args)
-            if (a.Target is DmlList l)
+            if (a.Key.Target is DmlList l)
                 f.AddRange(l.Host);
             else
                 f.Add(a);
@@ -120,7 +130,7 @@ public class ListBasic : IRuntimeTypeBuilder
         host.Host.Clear();
 
         foreach (var a in args.GetArgumentList())
-            host.Host.Add(a);
+            host.Host.Add(new DmlListItem(a));
 
         return VarEnvObjectReference.CreateImmutable(host);
     }
@@ -133,7 +143,7 @@ public class ListBasic : IRuntimeTypeBuilder
 
         for (var i = first; i < last && i < host.Host.Count + 1; i++)
         {
-            var isNeedle = (bool)host.ctx.op.Binary(DmlBinary.Equals, host.Host[i - 1], needleRef).CompleteOrException()
+            var isNeedle = (bool)host.ctx.op.Binary(DmlBinary.Equals, host.Host[i - 1].Key, needleRef).CompleteOrException()
                 .Target;
 
             if (isNeedle)
@@ -151,7 +161,7 @@ public class ListBasic : IRuntimeTypeBuilder
         var newList = host.Instantiate();
 
         for (var i = first; i < last && i < host.Host.Count + 1; i++)
-            newList.Add(host.Host[i - 1]);
+            newList.Add(host.Host[i - 1].Key);
 
         return VarEnvObjectReference.CreateImmutable(newList);
     }
@@ -173,7 +183,7 @@ public class ListBasic : IRuntimeTypeBuilder
     {
         host.ContainsCacheDirty = true;
 
-        foreach (var a in Flatten(data))
+        foreach (var a in Flatten(data).ToArray())
             host.Host.Add(a);
 
         return VarEnvObjectReference.NULL;
@@ -182,7 +192,7 @@ public class ListBasic : IRuntimeTypeBuilder
     private static EnvObjectReference Concat(DmlList host, params EnvObjectReference[] data)
     {
         var n = host.Instantiate();
-        n.Emplace(host.Host.ToArray());
+        n.AssociativeEmplace(host.Host.ToArray());
         n.Add(data);
 
         return VarEnvObjectReference.CreateImmutable(n);
@@ -191,7 +201,7 @@ public class ListBasic : IRuntimeTypeBuilder
     private static EnvObjectReference Except(DmlList host, params EnvObjectReference[] data)
     {
         var n = host.Instantiate();
-        n.Emplace(host.Host.ToArray());
+        n.AssociativeEmplace(host.Host.ToArray());
         n.Remove(data);
 
         return VarEnvObjectReference.CreateImmutable(n);
@@ -202,12 +212,14 @@ public class ListBasic : IRuntimeTypeBuilder
         host.ContainsCacheDirty = true;
         var removed = false;
         for (var i = host.Host.Count - 1; i >= 0; i--)
-            if (host.ctx.op.Binary(DmlBinary.Equals, host.Host[i], o).CompleteOrException().Get<bool>())
+        {
+            if (host.ctx.op.Binary(DmlBinary.Equals, host.Host[i].Key, o).CompleteOrException().Get<bool>())
             {
                 host.Host.RemoveAt(i);
                 removed = true;
                 break;
             }
+        }
 
         return VarEnvObjectReference.CreateImmutable(removed);
     }
@@ -217,7 +229,7 @@ public class ListBasic : IRuntimeTypeBuilder
         host.ContainsCacheDirty = true;
         var removed = false;
         foreach (var item in Flatten(data))
-            removed |= RemoveSingleItem(host, item).Get<bool>();
+            removed |= RemoveSingleItem(host, item.Key).Get<bool>();
 
         return VarEnvObjectReference.CreateImmutable(removed ? 1 : 0);
     }
@@ -242,10 +254,10 @@ public class ListBasic : IRuntimeTypeBuilder
     {
         foreach (var e in host.Host.ToList())
         {
-            var i = e.Target as Atom;
+            var i = e.Key.Target as Atom;
 
             if (i != null)
-                host.ctx.op.Binary(DmlBinary.BitShiftLeft, e, message);
+                host.ctx.op.Binary(DmlBinary.BitShiftLeft, e.Key, message);
         }
 
         return VarEnvObjectReference.NULL;
@@ -263,9 +275,20 @@ public class ListBasic : IRuntimeTypeBuilder
 
     private static EnvObjectReference IndexOperator(DmlList host, EnvObjectReference rawIdx)
     {
-        var idx = rawIdx.Get<int>() - 1;
+        int idx;
+        var isKeyedIndex = !DmlEnv.IsNumericType(rawIdx.Target);
 
-        return new VarEnvObjectReference(host.Host[idx]);
+        if (isKeyedIndex)
+            idx = Find(host, rawIdx, VarEnvObjectReference.NULL, VarEnvObjectReference.NULL).Get<int>() - 1;
+        else
+            idx = rawIdx.Get<int>() - 1;
+
+        if (idx < 0)
+            return VarEnvObjectReference.NULL;
+
+        var itm = host.Host[idx];
+
+        return new VarEnvObjectReference(isKeyedIndex ? itm.Value : itm.Key);
     }
 
     private static EnvObjectReference ContainsOperator(DmlList host, EnvObjectReference subject)
@@ -273,26 +296,51 @@ public class ListBasic : IRuntimeTypeBuilder
         if (host.ContainsCacheDirty)
         {
             host.ContainsCacheDirty = false;
-            host.ContainsCache = host.Host.Select(VarEnvObjectReference.CreateImmutable).ToHashSet();
+            host.ContainsCache = host.Host.Select(h => h.Key).Select(VarEnvObjectReference.CreateImmutable).ToHashSet();
         }
 
         return VarEnvObjectReference.CreateImmutable(host.ContainsCache.Contains(subject));
     }
 
-    private static dynamic Assign(DmlList host, EnvObjectReference rawIdx, EnvObjectReference asn)
+    private static EnvObjectReference Assign(DmlList host, EnvObjectReference rawIdx, EnvObjectReference asn)
     {
+        if (rawIdx.IsNull)
+            throw new Exception("Invalid index");
+
+        if (!DmlEnv.IsNumericType(rawIdx.Target))
+            return VarEnvObjectReference.CreateImmutable(host.Associate(rawIdx, asn));
+
         host.ContainsCacheDirty = true;
         //Lists in DreamMaker are 1 based
         var idx = rawIdx.Get<int>() - 1;
 
-        host.Host[idx] = asn;
+        host.Host[idx] = new DmlListItem(asn);
 
-        return VarEnvObjectReference.CreateImmutable(host.Host[idx]);
+        return VarEnvObjectReference.CreateImmutable(host.Host[idx].Key);
+    }
+
+    private static EnvObjectReference Associate(DmlList host, EnvObjectReference keyIdx, EnvObjectReference asn, EnvObjectReference resolveCollision)
+    {
+        host.ContainsCacheDirty = true;
+        //Lists in DreamMaker are 1 based
+        var collisions = resolveCollision.TryGetOrDefault<bool>(false);
+        var itm = new DmlListItem(keyIdx, asn);
+
+        var idx = -1;
+        if (collisions)
+            idx = Find(host, keyIdx, VarEnvObjectReference.NULL, VarEnvObjectReference.NULL).Get<int>() - 1;
+        
+        if (idx < 0)
+            host.Host.Add(itm);
+        else
+            host.Host[idx] = itm;
+        
+        return VarEnvObjectReference.CreateImmutable(itm.Key);
     }
 
     private static IEnumerator<EnvObjectReference> GetEnumerator(DmlList host)
     {
-        var listClone = host.Host.Select(VarEnvObjectReference.CreateImmutable).ToList();
+        var listClone = host.Host.Select(h => h.Key).Select(VarEnvObjectReference.CreateImmutable).ToList();
         return Enumerable.Range(0, listClone.Count).Select(i => VarEnvObjectReference.CreateImmutable(listClone[i]))
             .GetEnumerator();
     }

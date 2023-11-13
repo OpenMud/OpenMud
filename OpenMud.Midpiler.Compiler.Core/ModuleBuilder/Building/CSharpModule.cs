@@ -138,8 +138,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
         return DefineClass(path, c => c);
     }
 
-    public void DefineClassField(string fullPath, string typeHint,
-        Func<FieldDeclarationSyntax, FieldDeclarationSyntax> decl)
+    public void DefineClassField(string fullPath, string typeHint, Func<FieldDeclarationSyntax, FieldDeclarationSyntax> decl)
     {
         if (fullPath == null || fullPath.Length == 0)
             throw new Exception("Field name cannot be blank or null...");

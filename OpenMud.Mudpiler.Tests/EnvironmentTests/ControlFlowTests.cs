@@ -35,6 +35,30 @@ var/num/test_input = 10
         Assert.IsTrue(5 == (int)system.Global.ExecProc("test_if").CompleteOrException());
     }
 
+
+
+    [Test]
+    public void TestSingleLineIfStatementControlFlow()
+    {
+        var dmlCode =
+            @"
+proc/test_if()
+    if(test_input == 0) return 5
+
+    return 10
+
+var/num/test_input = 10
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        Assert.IsTrue(10 == (int)system.Global.ExecProc("test_if").CompleteOrException());
+
+        system.Global["test_input"] = 0;
+
+        Assert.IsTrue(5 == (int)system.Global.ExecProc("test_if").CompleteOrException());
+    }
+
     [Test]
     public void TestForListControlFlowWithTypeFilter()
     {
@@ -96,6 +120,40 @@ var/num/test_input = 10
         lst.ExecProc("Add", system.CreateAtomic("/mob/rat"));
         lst.ExecProc("Add", system.CreateAtomic("/mob/rat"));
         lst.ExecProc("Add", system.CreateAtomic("/mob"));
+        lst.ExecProc("Add", system.CreateAtomic("/mob/rat"));
+        lst.ExecProc("Add", custRat);
+
+        var r = system.Global.ExecProc("test_iter", lst).CompleteOrException();
+
+        Assert.IsTrue((int)r == 65);
+    }
+
+
+    [Test]
+    public void TestForListControlFlowWithoutTypeFilterRecycleVar()
+    {
+        var dmlCode =
+            @"
+/mob/rat
+    var w = 5
+
+/proc/test_iter(col)
+    var i = 0
+    var/r
+    for(r in col)
+        i += r.w
+
+    return i
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var lst = (DatumHandle)system.CreateDatum("/list");
+
+        var custRat = system.CreateAtomic("/mob/rat");
+        custRat["w"] = 50;
+
+        lst.ExecProc("Add", system.CreateAtomic("/mob/rat"));
+        lst.ExecProc("Add", system.CreateAtomic("/mob/rat"));
         lst.ExecProc("Add", system.CreateAtomic("/mob/rat"));
         lst.ExecProc("Add", custRat);
 

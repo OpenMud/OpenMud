@@ -36,6 +36,14 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         return Util.IdentifierName(VARGEN_PREFIX + vargenIndex++);
     }
 
+    public static StatementSyntax GroupStatements(StatementSyntax[] s)
+    {
+        if (s.Length == 1)
+            return s.Single();
+
+        return SyntaxFactory.Block(s);
+    }
+
     public override CodePieceBuilder VisitSpawn_stmt([NotNull] DmlParser.Spawn_stmtContext context)
     {
         return builder =>
@@ -45,16 +53,18 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 SyntaxFactory.Argument(EXPR.Visit(context.delay)(builder))
             });
 
-            return SyntaxFactory.IfStatement(
-                spawnCall,
-                SyntaxFactory.Block(
-                    SyntaxFactory.List(new []
-                    {
-                        Visit(context.suite())(builder),
-                        SyntaxFactory.ReturnStatement()
-                    })
+            return new StatementSyntax[] {
+                SyntaxFactory.IfStatement(
+                    spawnCall,
+                    SyntaxFactory.Block(
+                        SyntaxFactory.List(
+                            Visit(context.suite())(builder).Append(
+                                SyntaxFactory.ReturnStatement()
+                            )
+                        )
+                    )
                 )
-            );
+            };
         };
     }
 
@@ -69,17 +79,28 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
         return resolver =>
         {
-            var lastBuilt = last == null ? null : last(resolver);
+            var lastBuilt = last == null ? null : GroupStatements(last(resolver));
 
             for (var i = chains.Count - 1; i >= 0; i--)
+            {
                 if (last == null)
-                    lastBuilt = SyntaxFactory.IfStatement(ExpressionVisitor.Logical(chains[i].Item1)(resolver),
-                        chains[i].Item2(resolver));
+                {
+                    lastBuilt = SyntaxFactory.IfStatement(
+                        ExpressionVisitor.Logical(chains[i].Item1)(resolver),
+                        GroupStatements(chains[i].Item2(resolver))
+                    );
+                }
                 else
-                    lastBuilt = SyntaxFactory.IfStatement(ExpressionVisitor.Logical(chains[i].Item1)(resolver),
-                        chains[i].Item2(resolver), SyntaxFactory.ElseClause(lastBuilt));
+                {
+                    lastBuilt = SyntaxFactory.IfStatement(
+                        ExpressionVisitor.Logical(chains[i].Item1)(resolver),
+                        GroupStatements(chains[i].Item2(resolver)),
+                        SyntaxFactory.ElseClause(lastBuilt)
+                    );
+                }
+            }
 
-            return lastBuilt;
+            return new[] { lastBuilt };
         };
     }
 
@@ -92,7 +113,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         return resolver =>
         {
             var iteratorSupportName = GenerateSupportVariable();
-            var body = Visit(context.suite())(resolver);
+            var body = GroupStatements(Visit(context.suite())(resolver));
 
             var assignIterToVar = SyntaxFactory.ExpressionStatement(
                 EXPR.CreateAssignment(
@@ -118,7 +139,9 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 )
             );
 
-            return CreateForEach(iteratorSupportName, EXPR.Visit(context.expr())(resolver), body);
+            return new[] {
+                CreateForEach(iteratorSupportName, EXPR.Visit(context.expr())(resolver), body)
+            };
         };
     }
 
@@ -233,7 +256,9 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 )
             );
 
-            return CreateForEach(identifierName, enumAtomicTypes, Visit(context.suite())(resolver));
+            return new[] {
+                CreateForEach(identifierName, enumAtomicTypes, GroupStatements(Visit(context.suite())(resolver)))
+            };
         };
     }
 
@@ -242,7 +267,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         var declDetails = ParseVariableDeclaration(context.variable_declaration());
         return resolver =>
         {
-            var body = Visit(context.suite())(resolver);
+            var body = GroupStatements(Visit(context.suite())(resolver));
 
             if (declDetails.objectType != null)
             {
@@ -262,8 +287,13 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 body = SyntaxFactory.Block(filterIfStmnt);
             }
 
-            return CreateForEach(Util.IdentifierName(declDetails.variableName), EXPR.Visit(context.expr())(resolver),
-                body);
+            return new[] {
+                CreateForEach(
+                    Util.IdentifierName(declDetails.variableName),
+                    EXPR.Visit(context.expr())(resolver),
+                    body
+                )
+            };
         };
     }
 
@@ -271,7 +301,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
     {
         return resolver =>
         {
-            var r = Visit(c.simple_stmt())(resolver);
+            var r = Visit(c.simple_stmt())(resolver).Single();
 
             var addr = mapping.Lookup(c.start.Line);
 
@@ -281,20 +311,47 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line));
             }
 
-            return SyntaxFactory.Block(new[]
+            return new[] {
+                SyntaxFactory.Block(new[]
+                {
+                    r
+                })
+            };
+        };
+    }
+
+    public override CodePieceBuilder VisitSuite_compound_stmt([NotNull] DmlParser.Suite_compound_stmtContext c)
+    {
+        return resolver =>
+        {
+            var r = Visit(c.compound_stmt())(resolver).Single();
+
+            var addr = mapping.Lookup(c.start.Line);
+
+            if (addr.HasValue)
             {
-                r
-            });
+                r = r.WithAdditionalAnnotations(
+                    BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line));
+            }
+
+            return new[] {
+                SyntaxFactory.Block(new[]
+                {
+                    r
+                })
+            };
         };
     }
 
     public override CodePieceBuilder VisitSuite_multi_stmt(DmlParser.Suite_multi_stmtContext c)
     {
-        return resolver => SyntaxFactory.Block(
-            c.stmt()
+        return resolver =>
+        {
+            var block = SyntaxFactory.Block(
+                c.stmt()
                 .Select(s => Tuple.Create(s, Visit(s)))
                 .Where(x => x.Item2 != null)
-                .Select(s =>
+                .SelectMany(s =>
                     {
                         var r = s.Item2(resolver);
 
@@ -302,28 +359,36 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
                         if (addr.HasValue)
                         {
-                            r = r.WithAdditionalAnnotations(
-                                BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line));
+                            r = r.Select(
+                                w => 
+                                    w.WithAdditionalAnnotations(
+                                        BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line)
+                                    )
+                                ).ToArray();
                         }
 
                         return r;
                     }
-                ));
+                )
+            );
+
+            return new[] { block };
+        };
     }
 
     public override CodePieceBuilder VisitSuite_empty([NotNull] DmlParser.Suite_emptyContext context)
     {
-        return resolver => SyntaxFactory.Block();
+        return resolver => new[] { SyntaxFactory.Block() };
     }
 
     public override CodePieceBuilder VisitExpr_complex(DmlParser.Expr_complexContext c)
     {
-        return resolver => SyntaxFactory.ExpressionStatement(EXPR.Visit(c.children.Single())(resolver));
+        return resolver => new[] { SyntaxFactory.ExpressionStatement(EXPR.Visit(c.children.Single())(resolver)) };
     }
 
     public override CodePieceBuilder VisitExpr_bit_binary([NotNull] DmlParser.Expr_bit_binaryContext c)
     {
-        return resolver => SyntaxFactory.ExpressionStatement(EXPR.Visit(c)(resolver));
+        return resolver => new[] { SyntaxFactory.ExpressionStatement(EXPR.Visit(c)(resolver)) };
     }
 
     public override CodePieceBuilder VisitSimple_stmt(DmlParser.Simple_stmtContext context)
@@ -334,15 +399,16 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
     public override CodePieceBuilder VisitReturn_stmt(DmlParser.Return_stmtContext context)
     {
         if (context.ret == null)
-            return resolver => SyntaxFactory.ReturnStatement();
+            return resolver => new[] { SyntaxFactory.ReturnStatement() };
 
-        return resolver => SyntaxFactory.ReturnStatement(EXPR.Visit(context.ret)(resolver));
+        return resolver => new[] { SyntaxFactory.ReturnStatement(EXPR.Visit(context.ret)(resolver)) };
     }
 
     public override CodePieceBuilder VisitPrereturn_assignment([NotNull] DmlParser.Prereturn_assignmentContext context)
     {
         return resolver =>
-            SyntaxFactory.ExpressionStatement(
+        {
+            var r = SyntaxFactory.ExpressionStatement(
                     SyntaxFactory.InvocationExpression(
                         SyntaxFactory.ParseName("this.SetImplicitReturn"),
                         SyntaxFactory.ArgumentList(
@@ -354,6 +420,9 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     )
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
+
+            return new[] { r };
+        };
     }
 
     public override CodePieceBuilder VisitPrereturn_augmentation(DmlParser.Prereturn_augmentationContext c)
@@ -366,7 +435,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 EXPR.Visit(c.src)(resolver)
             );
 
-            return SyntaxFactory.ExpressionStatement(
+            var r = SyntaxFactory.ExpressionStatement(
                     SyntaxFactory.InvocationExpression(
                         SyntaxFactory.ParseName("this.SetImplicitReturn"),
                         SyntaxFactory.ArgumentList(
@@ -378,6 +447,8 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     )
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
+
+            return new[] { r }; 
         };
     }
 
@@ -407,32 +478,35 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 newExpr
             );
 
-            return SyntaxFactory.ExpressionStatement(asn);
+            return new[] { SyntaxFactory.ExpressionStatement(asn) };
         };
     }
 
     public VariableDeclarationMetadata ParseVariableDeclaration(
-        DmlParser.Implicit_typed_variable_declarationContext ctx
+        DmlParser.Implicit_typed_variable_declarationContext ctx,
+        string? typePrefix = null
     )
     {
-        return ParseVariableDeclaration(ctx.object_type, ctx.primitive_type, ctx.name, ctx.array, ctx.assignment);
+        return ParseVariableDeclaration(ctx.object_type, ctx.primitive_type, ctx.name, ctx.array, ctx.assignment, typePrefix);
     }
 
     public VariableDeclarationMetadata ParseVariableDeclaration(
-        DmlParser.Implicit_untyped_variable_declarationContext ctx
+        DmlParser.Implicit_untyped_variable_declarationContext ctx,
+        string? typePrefix = null
     )
     {
-        return ParseVariableDeclaration(null, ctx.primitive_type, ctx.name, ctx.array, ctx.assignment);
+        return ParseVariableDeclaration(null, ctx.primitive_type, ctx.name, ctx.array, ctx.assignment, typePrefix);
     }
 
     public VariableDeclarationMetadata ParseVariableDeclaration(
-        DmlParser.Variable_declarationContext ctx
+        DmlParser.Variable_declarationContext ctx,
+        string? typePrefix = null
     )
     {
         if (ctx.implicit_typed_variable_declaration() != null)
-            return ParseVariableDeclaration(ctx.implicit_typed_variable_declaration());
+            return ParseVariableDeclaration(ctx.implicit_typed_variable_declaration(), typePrefix);
 
-        return ParseVariableDeclaration(ctx.implicit_untyped_variable_declaration());
+        return ParseVariableDeclaration(ctx.implicit_untyped_variable_declaration(), typePrefix);
     }
 
     public VariableDeclarationMetadata ParseVariableDeclaration(
@@ -440,13 +514,14 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         DmlParser.Identifier_nameContext primitiveType,
         DmlParser.Identifier_nameContext name,
         DmlParser.Array_decl_listContext? array,
-        DmlParser.ExprContext? assignment
+        DmlParser.ExprContext? assignment,
+        string objectTypePrefix = null
     )
     {
         TypeSyntax typeDesc;
 
         //It is ambiguous here if the type is a modifier or type name. So we extract them accordingly.
-        string objType = null;
+        string? objType = null;
         string variableName = name.GetText();
 
         bool isListType = array != null;
@@ -459,8 +534,20 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         }
         else if (objectType != null)
         {
+            objType = objectType.GetText();
+            /*
             var modifiers = DmlPath.ExtractTailModifiers(DmlPath.Concat(objectType.GetText(), name.GetText()),
                 out var remainder, false);
+            objType = remainder.Length > 0 ? DmlPath.RootClassName(remainder) : null;
+            variableName = DmlPath.NameWithModifiers(modifiers, name.GetText());*/
+        }
+
+        if(objectTypePrefix != null)
+            objType = objectTypePrefix + (objType ?? "");
+
+        if (objType != null)
+        {
+            var modifiers = DmlPath.ExtractTailModifiers(DmlPath.Concat(objType, name.GetText()), out var remainder, false);
             objType = remainder.Length > 0 ? DmlPath.RootClassName(remainder) : null;
             variableName = DmlPath.NameWithModifiers(modifiers, name.GetText());
         }
@@ -508,7 +595,8 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
     public CodePieceBuilder CreateCodePieceBuilder(VariableDeclarationMetadata metaData)
     {
         return resolver =>
-            SyntaxFactory.LocalDeclarationStatement(
+        {
+            var decl = SyntaxFactory.LocalDeclarationStatement(
                 SyntaxFactory.VariableDeclaration(
                     metaData.varType,
                     SyntaxFactory.SeparatedList(new[]
@@ -525,6 +613,9 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     })
                 )
             );
+
+            return new[] { decl };
+        };
     }
 
     public override CodePieceBuilder VisitImplicit_typed_variable_declaration(
@@ -543,19 +634,48 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         return CreateCodePieceBuilder(r);
     }
 
+    public override CodePieceBuilder VisitVariable_set_declaration([NotNull] DmlParser.Variable_set_declarationContext context)
+    {
+        var prefix = context.path_prefix?.GetText();
+        var decls = context.varset_suite.implicit_variable_declaration();
+        var typedDecl = decls
+            .Select(p => p.implicit_typed_variable_declaration())
+            .Where(p => p != null)
+            .Select(p => ParseVariableDeclaration(p, prefix));
+
+        var untypedDecl = decls
+                    .Select(p => p.implicit_untyped_variable_declaration())
+                    .Where(p => p != null)
+                    .Select(p => ParseVariableDeclaration(p, prefix));
+
+        return b =>
+        {
+            return typedDecl
+                    .Concat(untypedDecl)
+                    .Select(CreateCodePieceBuilder)
+                    .SelectMany(i => i(b))
+                    .ToArray();
+        };
+    }
+
     public override CodePieceBuilder VisitDel_statement([NotNull] DmlParser.Del_statementContext context)
     {
-        return resolver => SyntaxFactory.ExpressionStatement(
-            SyntaxFactory.InvocationExpression(
-                SyntaxFactory.ParseName("ctx.Destroy"),
-                SyntaxFactory.ArgumentList(
-                    SyntaxFactory.SeparatedList(new[]
-                    {
-                        SyntaxFactory.Argument(EXPR.Visit(context.expr())(resolver))
-                    })
+        return resolver =>
+        {
+            var r = SyntaxFactory.ExpressionStatement(
+                SyntaxFactory.InvocationExpression(
+                    SyntaxFactory.ParseName("ctx.Destroy"),
+                    SyntaxFactory.ArgumentList(
+                        SyntaxFactory.SeparatedList(new[]
+                        {
+                            SyntaxFactory.Argument(EXPR.Visit(context.expr())(resolver))
+                        })
+                    )
                 )
-            )
-        );
+            );
+
+            return new[] { r };
+        };
     }
 
     private ExpressionPieceBuilder ProcessSwitchExpr(IdentifierNameSyntax exprVar, DmlParser.ExprContext r)
@@ -658,9 +778,15 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
             var statementExprs = context.switch_case().Select(c => ProcessSwitchCase(exprEvalPlaceholder, c)).ToList();
 
-            return SyntaxFactory.Block(initPlaceholder,
-                GenerateSwitchIfStatement(statementExprs,
-                    context.else_suite == null ? null : Visit(context.else_suite))(r));
+            return new[] {
+                SyntaxFactory.Block(
+                    initPlaceholder,
+                    GroupStatements(GenerateSwitchIfStatement(
+                        statementExprs,
+                        context.else_suite == null ? null : Visit(context.else_suite)
+                    )(r))
+                )
+            };
         };
     }
 
@@ -669,7 +795,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
     {
         return b =>
         {
-            var ifElseIfChain = exprList.Select(i => SyntaxFactory.IfStatement(i.Item1(b), i.Item2(b))).Reverse()
+            var ifElseIfChain = exprList.Select(i => SyntaxFactory.IfStatement(i.Item1(b), GroupStatements(i.Item2(b)))).Reverse()
                 .ToList();
 
             if (ifElseIfChain.Count == 0)
@@ -680,7 +806,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
             if (elseClause != null)
             {
-                ifElseIfBlock = elseClause(b);
+                ifElseIfBlock = GroupStatements(elseClause(b));
             }
             else
             {
@@ -695,7 +821,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     SyntaxFactory.ElseClause(ifElseIfBlock)
                 );
 
-            return ifElseIfBlock;
+            return new[] { ifElseIfBlock };
         };
     }
 }

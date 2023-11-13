@@ -1,5 +1,9 @@
-﻿using OpenMud.Mudpiler.Compiler.Core;
+﻿using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+using OpenMud.Mudpiler.Compiler.Core;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
 using OpenMud.Mudpiler.Core.Scene;
+using OpenMud.Mudpiler.RuntimeEnvironment;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,11 +24,12 @@ namespace OpenMud.Mudpiler.Tests.EcsTest
         [Test]
         public void FormattedWorldEchoTest()
         {
-            var dmlCode =
+            var testCode =
                 @$"
 /proc/speakto_test(a, b)
     world << ""Hello [a], [b + 10]""
 ";
+            var dmlCode = Preprocessor.Preprocess("testFile.dml", ".", testCode, null, null, EnvironmentConstants.BUILD_MACROS);
             var assembly = Assembly.LoadFile(MsBuildDmlCompiler.Compile(dmlCode));
             var g = new TestGame(new NullSceneBuilder(5, 5), assembly);
 
@@ -40,12 +45,15 @@ namespace OpenMud.Mudpiler.Tests.EcsTest
         [Test]
         public void FormattedWorldEchoArrayIndexTest()
         {
-            var dmlCode =
-                @$"
+            var testCode =
+            @$"
 /proc/speakto_test()
     var q = list(1,2,3,4,5)
     world << ""Hello [q[2] + 110]""
+
 ";
+
+            var dmlCode = Preprocessor.Preprocess("testFile.dml", ".", testCode, null, null, EnvironmentConstants.BUILD_MACROS);
             var assembly = Assembly.LoadFile(MsBuildDmlCompiler.Compile(dmlCode));
             var g = new TestGame(new NullSceneBuilder(5, 5), assembly);
 

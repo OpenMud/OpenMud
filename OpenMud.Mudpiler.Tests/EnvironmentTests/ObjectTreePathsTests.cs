@@ -103,4 +103,53 @@ area
 
         Assert.IsTrue(system.CreateAtomic("/area/test").ExecProc("Bump").CompleteOrException() == null);
     }
+
+
+
+
+    [Test]
+    public void GlobalVarSetDeclaration()
+    {
+        /*
+         * Removal: The item is removed. If the same value exists twice, the one at the end of the list is removed first.
+         */
+
+        var dmlCode =
+            @"
+var/
+    w = 10
+    q = 20
+
+/proc/test0()
+
+    return w + q
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue((int)system.Global.ExecProc("test0").CompleteOrException() == 30);
+    }
+
+    [Test]
+    public void LocalVarSetDeclaration()
+    {
+        /*
+         * Removal: The item is removed. If the same value exists twice, the one at the end of the list is removed first.
+         */
+
+        var dmlCode =
+            @"
+
+/proc/test0()
+    var
+        w = 10
+        q = 20
+
+    return w + q
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue((int)system.Global.ExecProc("test0").CompleteOrException() == 30);
+    }
 }

@@ -1,8 +1,10 @@
 ﻿using System.Collections.Immutable;
 using System.Reflection;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
+using OpenMud.Mudpiler.Compiler.Project.Project;
 using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 
@@ -48,11 +50,43 @@ world
             "testfile.dml",
             ".",
             Enumerable.Empty<string>(),
-            testCode, 
+            testCode,
             NullResourceResolver,
             processImport,
             out _).AsPlainText(false);
         Assert.IsTrue(r.Trim() == "world");
+    }
+
+
+    [Test]
+    public void TestIfDefIndent()
+    {
+        var testCode =
+            @"
+/proc/test()
+    if(0 == 0)
+        var x = 11
+        #ifdef xyz
+        x = x + 1
+        #endif
+        return x
+    return 8
+";
+
+        var r = Preprocessor.PreprocessAsDocument(
+            "testfile.dml",
+            ".",
+            Enumerable.Empty<string>(),
+            testCode,
+            NullResourceResolver,
+            processImport,
+            out _).AsPlainText(false);
+
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == 11);
     }
 
     [Test]
@@ -247,6 +281,34 @@ world
         Assert.IsTrue(words == "hello world");
     }
 
+
+
+    [Test]
+    public void TestFileImportDoesntTriggerWhenExcluded()
+    {
+        var testCode =
+            @"
+#ifdef xyx
+#include ""hello.dm""
+not
+#endif
+hello world
+";
+
+        (IImmutableDictionary<string, MacroDefinition> macros, IImmutableSourceFileDocument importBody) resolveImport(IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib, string fileName)
+        {
+            throw new Exception("Should not be eexecuting any import directives.");
+        }
+
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, resolveImport,
+            out var resultant)
+            .AsPlainText(false);
+        var words = string.Join(" ",
+            r.Split(new[] { ' ', '\t', '\r', '\n' },
+                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+        Assert.IsTrue(words == "hello world");
+    }
+
     [Test]
     public void TestLibFileImport()
     {
@@ -334,6 +396,27 @@ test(1,2,3)
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
         Assert.IsTrue(words == "1 + 2 + 3");
+    }
+
+    [Test]
+    public void TestMacroTemplating2()
+    {
+        var testCode =
+            @"
+#define DEBUG_OUT(x) addtext(""DBGOUT: "", x)
+
+/proc/test()
+    return DEBUG_OUT("":( forceUpdate"")
+";
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
+
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == "DBGOUT: :( forceUpdate");
     }
 
     [Test]
@@ -427,6 +510,37 @@ turf/door/open
 
         //Path is normalized in preprocessor, so it should always come out looking like this...
         Assert.IsTrue(icon == "icons2\\open_door.dmi");
+    }
+
+
+    [Test]
+    public void ResourceWithEscapeSequence()
+    {
+        var testCode =
+            @"
+turf/door/open
+	icon = 'sound/vox/wizard\'s.ogg'
+";
+
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.IsTrue(possible.Count == 0);
+
+            return rsrc;
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var name = "/turf/door/open";
+        var instance = system.CreateAtomic(name);
+
+        var icon = (string)instance["icon"];
+
+        //Path is normalized in preprocessor, so it should always come out looking like this...
+        Assert.IsTrue(icon == @"sound\vox\wizard's.ogg");
     }
 
     [Test]
@@ -524,7 +638,292 @@ SAY_A_LOT(""Test"")
         Assert.IsTrue(r.Contains(@"""Test"" ""Test"" ""Test"" ""Test"""));
     }
 
-    private (IImmutableDictionary<string, MacroDefinition> macros, SourceFileDocument importBody) processImport(
+    [Test]
+    public void StringProcessingTest()
+    {
+        var testCode = @"
+/proc/test()
+    world << ""<span style=\""color:red\"">Cannot create a HUD with no name![prob(5) ? "" It's not a horse!"" : null]</span>"" // c:
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+
+        //Just testing that this doesn't cause a crash
+    }
+
+    [Test]
+    public void TestMacroDefInString()
+    {
+
+        var testCode = @"
+x = ""#define bob 10""
+this should not be replaced bob
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        Assert.IsTrue(r.Contains(@"""#define bob 10"));
+        Assert.IsTrue(r.Contains("this should not be replaced bob"));
+    }
+
+
+
+    [Test]
+    public void TestStringCoalacing()
+    {
+
+        var testCode = @"
+/proc/test()
+    var x = 86
+    return ""this is a \\[10 + 10] string with [10 + ""several sub [ x + 6 ]""] expressions\[\""this is not an expression]""
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+
+        //Path is normalized in preprocessor, so it should always come out looking like this...
+        Assert.IsTrue(instance == @"this is a \20 string with 10several sub 92 expressions\[""this is not an expression]");
+    }
+
+    [Test]
+    public void TestMultilineStringCoalacing()
+    {
+
+        var testCode = @"
+/proc/test()
+    return {""this is a
+[10 + 10]
+multiline
+string
+""}
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+
+        //Path is normalized in preprocessor, so it should always come out looking like this...
+        Assert.IsTrue(instance == "this is a\r\n20\r\nmultiline\r\nstring\r\n");
+    }
+
+    [Test]
+    public void TestMultilineStringWithNestedString()
+    {
+
+        var testCode = @"
+/proc/test()
+    return {""this is a
+""multiline""
+string
+""}
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+
+        //Path is normalized in preprocessor, so it should always come out looking like this...
+        Assert.IsTrue(instance == "this is a\r\n\"multiline\"\r\nstring\r\n");
+    }
+
+    [Test]
+    public void TestMultilineStringWithNestedEscapedString()
+    {
+
+        var testCode = @"
+/proc/test()
+    return {""this is a
+\""multiline\""
+string
+""}
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+
+        //Path is normalized in preprocessor, so it should always come out looking like this...
+        Assert.IsTrue(instance == "this is a\r\n\"multiline\"\r\nstring\r\n");
+    }
+
+    [Test]
+    public void UsingMacroWithNameCollision()
+    {
+        var testCode = @"
+#define isrestrictedz(z) ((z) == 2 || (z) == 4)
+isrestrictedz(O.z)
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+
+        Assert.IsTrue(r.Contains("((O.z) == 2 || (O.z) == 4)"));
+    }
+
+    [Test]
+    public void LineDelimString()
+    {
+        var testCode = @"
+/proc/test()
+    return ""this is a string\
+ and it is multiline""
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == "this is a string and it is multiline");
+    }
+
+    [Test]
+    public void LineDelimString2()
+    {
+        var testCode = @"
+/proc/test()
+    return ""\
+this is multiline""
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == "this is multiline");
+    }
+
+    [Test]
+    public void MultiLineDelimString()
+    {
+        var testCode = @"
+/proc/test()
+    return {""this is a string\
+ and it is multiline""}
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == "this is a string and it is multiline");
+    }
+
+
+    [Test]
+    public void MultilineCommentPreserveIndentation()
+    {
+        var testCode = @"
+
+/proc/test()
+    var w = new/mob/tm()
+    return w.test()
+
+/mob/tm
+    /proc/test()
+        /* this is a comment
+    and I am hoping that the identation
+    is actually being
+    preserved       .*/if(0 == 0)
+            if(0 == 0)
+                return 10
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == 10);
+    }
+
+    [Test]
+    public void MultiLineDelimString2()
+    {
+        var testCode = @"
+/proc/test()
+    return {""\
+this is multiline""}
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == "this is multiline");
+    }
+
+    private (IImmutableDictionary<string, MacroDefinition> macros, IImmutableSourceFileDocument importBody) processImport(
         IImmutableDictionary<string, MacroDefinition> dict, List<string> resourceDirectories, bool isLib,
         string fileName)
     {

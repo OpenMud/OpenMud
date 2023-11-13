@@ -72,7 +72,7 @@ public class VerbListCollectionEntry
     }
 }
 
-public class VerbListCollection : IList<EnvObjectReference>
+public class VerbListCollection : IList<DmlListItem>
 {
     private DatumExecutionContext ctx;
 
@@ -91,19 +91,19 @@ public class VerbListCollection : IList<EnvObjectReference>
         .Select(v => v.metadata)
         .Distinct().ToArray();
 
-    public EnvObjectReference this[int index]
+    public DmlListItem this[int index]
     {
-        get => Decode(internalVerbCollection[index]);
-        set => internalVerbCollection[index] = Encode(value);
+        get => new DmlListItem(Decode(internalVerbCollection[index]));
+        set => internalVerbCollection[index] = Encode(value.Key);
     }
 
     public int Count => internalVerbCollection.Count;
 
     public bool IsReadOnly => false;
 
-    public void Add(EnvObjectReference item)
+    public void Add(DmlListItem item)
     {
-        var encoded = Encode(item);
+        var encoded = Encode(item.Key);
 
         internalVerbCollection.Add(encoded);
     }
@@ -113,36 +113,36 @@ public class VerbListCollection : IList<EnvObjectReference>
         internalVerbCollection.Clear();
     }
 
-    public bool Contains(EnvObjectReference item)
+    public bool Contains(DmlListItem item)
     {
-        return internalVerbCollection.Contains(Encode(item));
+        return internalVerbCollection.Contains(Encode(item.Key));
     }
 
-    public void CopyTo(EnvObjectReference[] array, int arrayIndex)
+    public void CopyTo(DmlListItem[] array, int arrayIndex)
     {
         throw new NotImplementedException();
     }
 
-    public IEnumerator<EnvObjectReference> GetEnumerator()
+    public IEnumerator<DmlListItem> GetEnumerator()
     {
         throw new NotImplementedException();
     }
 
-    public int IndexOf(EnvObjectReference item)
+    public int IndexOf(DmlListItem item)
     {
-        return internalVerbCollection.IndexOf(Encode(item));
+        return internalVerbCollection.IndexOf(Encode(item.Key));
     }
 
-    public void Insert(int index, EnvObjectReference item)
+    public void Insert(int index, DmlListItem item)
     {
-        var encoded = Encode(item);
+        var encoded = Encode(item.Key);
 
         internalVerbCollection.Insert(index, encoded);
     }
 
-    public bool Remove(EnvObjectReference item)
+    public bool Remove(DmlListItem item)
     {
-        var encoded = Encode(item);
+        var encoded = Encode(item.Key);
 
         if (!internalVerbCollection.Remove(encoded))
             return false;
@@ -298,7 +298,6 @@ public class VerbListCollection : IList<EnvObjectReference>
     {
         var e = EncodeFrom(d, false, false, name ?? d.Name, description);
 
-        //var e = new VerbListCollectionEntry(false, new VerbMetadata(d.Name, name ?? d.Name, null, description, VerbSrc.Default), new VerbDatumProc(d));
         internalVerbCollection.Add(e);
     }
 
@@ -311,7 +310,7 @@ public class VerbListCollection : IList<EnvObjectReference>
 public class DmlVerbList : AbstractDmlVerbList
 {
     private readonly VerbListCollection verbList = new();
-    public override IList<EnvObjectReference> Host => verbList;
+    public override IList<DmlListItem> Host => verbList;
 
     public override VerbMetadata[] AvailableVerbs => verbList.AvailableVerbs;
 

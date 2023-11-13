@@ -201,7 +201,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
             method =
                 method
-                    .WithBody(warpWithBlock(CODE.Visit(body)(resolver)))
+                    .WithBody(warpWithBlock(CodeSuiteVisitor.GroupStatements(CODE.Visit(body)(resolver))))
                     .WithReturnType(SyntaxFactory.ParseTypeName("dynamic"))
                     .WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(
                         parameters.Select(p => CreateParameter(p, resolver))
@@ -287,11 +287,34 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
             context.object_function_definition().Cast<ParserRuleContext>()
                 .Concat(context.object_tree_definition())
                 .Concat(context.variable_declaration())
+                .Concat(context.variable_set_declaration())
                 .OrderBy(x => x.Start.Line);
 
         return new CompositeClassPieceBuilder(
             parseOrder.Select(Visit)
         );
+    }
+
+    public override IModulePieceBuilder VisitVariable_set_declaration([NotNull] DmlParser.Variable_set_declarationContext context)
+    {
+
+        var prefix = context.path_prefix?.GetText();
+        var decls = context.varset_suite.implicit_variable_declaration();
+        var typedDecl = decls
+            .Select(p => p.implicit_typed_variable_declaration())
+            .Where(p => p != null)
+            .Select(p => CODE.ParseVariableDeclaration(p, prefix));
+
+        var untypedDecl = decls
+                    .Select(p => p.implicit_untyped_variable_declaration())
+                    .Where(p => p != null)
+                    .Select(p => CODE.ParseVariableDeclaration(p, prefix));
+
+        var builders = typedDecl
+            .Concat(untypedDecl)
+            .Select(CreateBuilder);
+        
+        return new CompositeClassPieceBuilder(builders);
     }
 
     public override IModulePieceBuilder VisitObject_tree_suite(DmlParser.Object_tree_suiteContext context)

@@ -7,14 +7,14 @@ namespace OpenMud.Mudpiler.Framework.Datums;
 
 public sealed class DmlExclusiveContentsList : DmlList
 {
-    private readonly ObservableCollection<EnvObjectReference> host = new();
+    private readonly ObservableCollection<DmlListItem> host = new();
 
     public DmlExclusiveContentsList()
     {
         host.CollectionChanged += HostChanged;
     }
 
-    public override IList<EnvObjectReference> Host => host;
+    public override IList<DmlListItem> Host => host;
 
     public override Action? Changed { get; set; }
 
@@ -27,7 +27,7 @@ public sealed class DmlExclusiveContentsList : DmlList
         }
 
         var containers =
-            ctx.FindContainers<DmlExclusiveContentsList>(e.NewItems.Cast<EnvObjectReference>().Distinct().ToArray());
+            ctx.FindContainers<DmlExclusiveContentsList>(e.NewItems.Cast<DmlListItem>().Select(x => x.Key).Distinct().ToArray());
 
         foreach (var (c, items) in containers)
         {
@@ -37,10 +37,12 @@ public sealed class DmlExclusiveContentsList : DmlList
             c.Remove(items);
         }
 
-        foreach (var obj in e.NewItems)
-            if (obj is EnvObjectReference atmRef && atmRef.TryGet<Atom>(out var atm))
+        foreach (var itm in e.NewItems)
+        {
+            var atmRef = ((DmlListItem)itm).Key;
+            if (!atmRef.IsNull && atmRef.TryGet<Atom>(out var atm))
                 atm.Container.Assign(VarEnvObjectReference.CreateImmutable(this));
-
+        }
         Changed?.Invoke();
     }
 }

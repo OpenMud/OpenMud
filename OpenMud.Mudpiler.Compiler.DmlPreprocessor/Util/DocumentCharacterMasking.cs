@@ -1,31 +1,84 @@
 ﻿namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
 
-public class DocumentCharacterMasking
+public interface IImmutableDocumentCharacterMasking
 {
-    private readonly List<bool> commentsAndStrings;
-    private readonly List<bool> resources;
+    IEnumerable<bool> MaskedOut { get; }
+    public int Length { get; }
+    bool Accept(int start, int length);
+}
 
-    public DocumentCharacterMasking(string document)
+public class ConcatDocumentCharacterMasking : IImmutableDocumentCharacterMasking
+{
+    private IImmutableDocumentCharacterMasking[] maskings;
+    public IEnumerable<bool> MaskedOut => maskings.Select(x => x.MaskedOut).Aggregate((a, b) => a.Concat(b));
+    public int Length => maskings.Select(x => x.Length).Aggregate((a, b) => a + b);
+
+    public ConcatDocumentCharacterMasking(IEnumerable<IImmutableDocumentCharacterMasking> src)
     {
-        var (srcCommentsAndStrings, srcResources) = Blackout.CreateBitmaps(document);
-
-        commentsAndStrings = new List<bool>(srcCommentsAndStrings);
-        resources = new List<bool>(srcResources);
+        maskings = src.ToArray();
     }
 
-    public void Insert(int start, int length, bool isCommentOrString = false, bool isResource = false)
+    public bool Accept(int start, int length)
     {
-        Replace(start, 0, length, isCommentOrString, isResource);
+        var maskingOffset = 0;
+        int readLen = length;
+        foreach (var m in maskings) {
+            if (readLen <= 0)
+                break;
+
+            int relativeOffset = start - maskingOffset;
+            var contains = relativeOffset < m.Length;
+            maskingOffset += m.Length;
+
+            if (!contains)
+                continue;
+
+            var readable = Math.Min(m.Length - relativeOffset, readLen);
+            readLen -= readable;
+
+            if (!m.Accept(relativeOffset, readable))
+                return false;
+        }
+
+        return true;
+    }
+}
+
+public class DocumentCharacterMasking : IImmutableDocumentCharacterMasking
+{
+    private readonly List<bool> maskedOut;
+    public int Length => maskedOut.Count;
+
+    public DocumentCharacterMasking(int size, bool isMaseked)
+    {
+        maskedOut = new List<bool>(size);
+        Append(size, isMaseked);
     }
 
-    public bool Accept(int start, int length, bool allowResource = false)
+    public DocumentCharacterMasking()
+    {
+        maskedOut = new List<bool>();
+    }
+
+    public void Append(IImmutableDocumentCharacterMasking m)
+    {
+        maskedOut.AddRange(m.MaskedOut);
+    }
+
+    public void Append(int length, bool masked = false)
+    {
+        var insert = Enumerable.Range(0, length).Select(_ => masked);
+        maskedOut.Capacity = maskedOut.Count + length;
+        maskedOut.AddRange(insert);
+    }
+
+    public bool Accept(int start, int length)
     {
         return Enumerable.Range(start, length)
-            .All(i => !commentsAndStrings[i] && (allowResource || !resources[i]));
+            .All(i => !maskedOut[i]);
     }
 
-    public void Replace(int start, int replaceLength, int insertLength, bool isCommentOrString = false,
-        bool isResource = false)
+    public void Replace(int start, int replaceLength, int insertLength, bool isMasekdOut = false)
     {
         int delta = insertLength - replaceLength;
 
@@ -33,38 +86,26 @@ public class DocumentCharacterMasking
         {
             if (delta > 0)
             {
-                commentsAndStrings.Insert(start, false);
-                resources.Insert(start, false);
+                maskedOut.Insert(start, false);
             }
             else
             {
-                commentsAndStrings.RemoveAt(start);
-                resources.RemoveAt(start);
+                maskedOut.RemoveAt(start);
             }
         }
 
         for (var i = 0; i < insertLength; i++)
         {
-            commentsAndStrings[start + i] = isCommentOrString;
-            resources[start + i] = isResource;
+            maskedOut[start + i] = isMasekdOut;
         }
     }
 
-    public IEnumerable<bool> CommentsAndStrings
+    public IEnumerable<bool> MaskedOut
     {
         get
         {
-            for (var i = 0; i < commentsAndStrings.Count; i++)
-                yield return commentsAndStrings[i];
-        }
-    }
-
-    public IEnumerable<bool> Resources
-    {
-        get
-        {
-            for (var i = 0; i < resources.Count; i++)
-                yield return resources[i];
+            for (var i = 0; i < maskedOut.Count; i++)
+                yield return maskedOut[i];
         }
     }
 }

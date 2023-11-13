@@ -29,6 +29,22 @@ class BuildOptions
     [Option("logic", Required = false, Default = false, HelpText = "Build and compile the logic / maps associated to the game.")]
     public bool Logic { get; set; }
 
+    [Option("glob", Required = false, Default = false, HelpText = "Preprocess only. Skip code compile process")]
+    public bool Glob { get; set; }
+
+
+    [Option("skip-source-map", Required = false, Default = false, HelpText = "Do not embed DML Source maps.")]
+    public bool SkipSourceMap { get; set; }
+
+}
+
+
+
+[Verb("build-glob", HelpText = "Build the logic for a preprocessor output glob file. Useful if you want to break preprocessing and compilation into separate steps.")]
+class BuildGlobOptions
+{
+    [Option("glob", Required = true, HelpText = "Path to glob file. Binaries will be placed adjacently.")]
+    public string? Glob { get; set; }
 }
 
 [Verb("run", HelpText = "Run the game server & optionally the client as well.")]
@@ -94,11 +110,12 @@ class Program
     public static readonly string SCAFFOLDING_REPO = "https://github.com/OpenMud/scaffold.git";
 
     static int Main(string[] args) =>
-        Parser.Default.ParseArguments<CreateOptions, RunOptions, BuildOptions>(args)
+        Parser.Default.ParseArguments<CreateOptions, RunOptions, BuildOptions, BuildGlobOptions>(args)
             .MapResult(
                 (CreateOptions options) => DoCreate(options),
                 (RunOptions options) => DoRun(options),
                 (BuildOptions options) => DoBuild(options),
+                (BuildGlobOptions options) => DoBuildGlob(options),
                 errors => 1);
 
     private static bool BuildAssets(BuildOptions opts)
@@ -147,6 +164,23 @@ class Program
         }
 
         return true;
+    }
+
+    private static int DoBuildGlob(BuildGlobOptions opts)
+    {
+        var globFile = opts.Glob;
+        var binDir = Path.GetDirectoryName(globFile);
+
+        if (!Directory.Exists(binDir) || !File.Exists(globFile))
+        {
+            Console.Error.WriteLine("Glob file does not exist");
+
+            return 1;
+        }
+
+        DmeProject.CompileGlob(globFile, binDir);
+
+        return 0;
     }
 
     private static int DoBuild(BuildOptions opts)
@@ -231,7 +265,7 @@ class Program
 
         Directory.CreateDirectory(binDir);
 
-        DmeProject.Compile(game, binDir, EnvironmentConstants.BUILD_MACROS);
+        DmeProject.Compile(game, binDir, EnvironmentConstants.BUILD_MACROS, generateSourceMap: !opts.SkipSourceMap, globOnly: opts.Glob);
 
         return true;
     }

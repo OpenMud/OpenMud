@@ -82,6 +82,25 @@ public class DatumExecutionContext
         return l;
     }
 
+    public dynamic AssocListLiteral(ProcArgumentList args)
+    {
+        var argList = args.GetArgumentList();
+
+        if (argList.Length % 2 != 0)
+            throw new Exception("Must pass an even number of consecutive pairs of key & value items.");
+
+        var kvPairs = argList
+            .Select((x, i) => new { Index = i, Value = x })
+            .GroupBy(x => x.Index / 2)
+            .Select(x => new DmlListItem(x.First().Value, x.Last().Value))
+            .ToList();
+
+        var l = instantiator(typeSolver.Lookup("/list"));
+        l.Get<DmlList>().AssociativeEmplace(kvPairs, resolveKeyCollision: true);
+
+        return l;
+    }
+
     public void Destroy(EnvObjectReference target)
     {
         destructor(target);

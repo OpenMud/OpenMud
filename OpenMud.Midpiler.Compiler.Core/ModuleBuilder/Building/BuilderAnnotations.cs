@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
@@ -70,7 +71,12 @@ public static class BuilderAnnotations
 
     public static SyntaxAnnotation CreateTypeHints(string typeHint)
     {
-        return new SyntaxAnnotation("varTypeHint", DmlPath.RootClassName(typeHint));
+        var clsName = DmlPath.RootClassName(typeHint);
+
+        if (clsName == DmlPath.GLOBAL_PATH)
+            clsName = "";
+
+        return new SyntaxAnnotation("varTypeHint", clsName);
     }
 
     public static SyntaxAnnotation CreateIsTypeWithoutType(string testVar)

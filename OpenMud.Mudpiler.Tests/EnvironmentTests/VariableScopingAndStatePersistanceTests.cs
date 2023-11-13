@@ -23,7 +23,6 @@ var/num/dest_global  = -1
         );
     }
 
-
     [Test]
     public void TestGlobalLocalNamespaceResolution()
     {

@@ -243,7 +243,7 @@ public class MsBuildDmlCompiler
         public void SyntaxError([NotNull] IRecognizer recognizer, [Nullable] IToken offendingSymbol, int line,
             int charPositionInLine, [NotNull] string msg, [Nullable] RecognitionException e)
         {
-            Errors.Add($"{line}:{charPositionInLine} {offendingSymbol}");
+            Errors.Add($"{line}:{charPositionInLine} FOUND SYMBOL: {offendingSymbol}; {msg}");
         }
     }
 }

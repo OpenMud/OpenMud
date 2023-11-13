@@ -35,7 +35,9 @@ public class MacroDefinition
             length++;
             int currentIdx = idx;
             idx++;
-            if (!source.AllowReplace(currentIdx))
+
+
+            if (source.IsBlackout(currentIdx))
             {
                 currentArg.Append(c);
                 continue;
@@ -94,19 +96,17 @@ public class MacroDefinition
                     x => new Regex(@"\b" + Regex.Escape(x.x) + @"\b"),
                     x => srcArgList == null || srcArgList.Length <= x.i ? "" : srcArgList[x.i]);
 
-            while (true)
-            {
-                var nextApplication = argMapping
+            var applications = argMapping
                     .SelectMany(x =>
                         x.Key
                             .Matches(newText)
                             .Select(m => Tuple.Create(x.Value, m))
                     )
-                    .FirstOrDefault();
+                    .OrderByDescending(x => x.Item2.Index)
+                    .ToList();
 
-                if (nextApplication == null)
-                    break;
-
+            foreach (var nextApplication in applications)
+            {
                 newText = newText.Remove(nextApplication.Item2.Index, nextApplication.Item2.Length);
                 newText = newText.Insert(nextApplication.Item2.Index, nextApplication.Item1);
             }

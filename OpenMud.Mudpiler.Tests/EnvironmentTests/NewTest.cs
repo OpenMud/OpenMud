@@ -89,6 +89,27 @@ proc/test_newop()
         Assert.IsTrue(stick["desc"] == "This is no ordinary stick!");
     }
 
+
+    [Test]
+    public void ExampleNewWithoutArgList()
+    {
+        var dmlCode =
+            @"
+obj/stick
+proc/test_newop()
+    var/obj/stick/S = new
+    S.desc = ""This is no ordinary stick!""
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        system.Global.ExecProc("test_newop");
+
+        var stick = system.Actors.Where(x => x.Type.IsEquivalentTo(system.TypeSolver.Lookup("/obj/stick"))).Single();
+
+        Assert.IsTrue(stick["desc"] == "This is no ordinary stick!");
+    }
+
     [Test]
     public void NewWithEvalType()
     {

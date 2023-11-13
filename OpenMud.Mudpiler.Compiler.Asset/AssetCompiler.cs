@@ -8,7 +8,34 @@ public static class AssetCompiler
 {
     private static DMIMetaData ParseMetaData(Image image)
     {
-        var metaDataText = image.Metadata.GetFormatMetadata(PngFormat.Instance).TextData.Select(n => n.Value).Single();
+        var metaDataText = image.Metadata.GetFormatMetadata(PngFormat.Instance)
+            .TextData
+            .Select(n => n.Value)
+            .Where(x => x.StartsWith("# BEGIN DMI"))
+            .FirstOrDefault();
+
+        if (metaDataText == null)
+        {
+            Console.Error.WriteLine("Warning, could not find metadata, assuming static image.");
+            var md = new DMIMetaData();
+            md.width = image.Width;
+            md.height = image.Height;
+
+            md.states = new[]
+            {
+                new DMIState()
+                {
+                    delays = new float[] {1},
+                    directions = 1,
+                    frames = 1,
+                    name = "default",
+                    rewind = 0
+                }
+            };
+
+            return md;
+        }
+
         var statements = metaDataText.Split('\n', '\r').Select(x => x.Trim())
             .Where(x => x.Length > 0 && x.First() != '#').ToList();
 
@@ -123,6 +150,8 @@ public static class AssetCompiler
 
         foreach (var s in dmiSourceFiles)
         {
+            Console.Error.WriteLine($"Processing asset: {s}");
+
             var relativeFullPath = Path.GetRelativePath(src, s);
             var relativeFileName = relativeFullPath;
 
@@ -134,14 +163,19 @@ public static class AssetCompiler
 
             var dest_png = Path.Join(dst, $".\\{relativeFileName}.png");
             var resource_name = Path.GetFileName(relativeFileName);
-            using (var image = Image.Load(s))
+            try
             {
+                using var image = Image.Load(s);
                 var metaData =
                     ParseMetaData(
                         image); // image.Metadata.GetFormatMetadata(PngFormat.Instance).TextData.Select(n => n.Value);
                 var animations = BuildAseprite(image, metaData, dest_png, resource_name);
 
                 animationsDirectory[relativeFullPath] = animations;
+            }
+            catch (UnknownImageFormatException)
+            {
+                Console.Error.WriteLine($"Warning, unsupported file format. Skipping.");
             }
         }
 
