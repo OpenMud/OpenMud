@@ -64,6 +64,7 @@ public class VerbTests
         var asm = system.CreateAtomic("/mob/test");
 
         var verbs = asm.DiscoverVerbs(asm, "a").ToHashSet();
+
         Assert.IsTrue(verbs.Count == 2);
         Assert.IsTrue(verbs.Contains("testa_a"));
         Assert.IsTrue(verbs.Contains("testa_b"));
