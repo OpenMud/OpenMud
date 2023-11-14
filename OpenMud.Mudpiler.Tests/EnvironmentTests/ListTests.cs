@@ -705,6 +705,64 @@ public class ListTests
         Assert.IsTrue((int)system.Global.ExecProc("test0").CompleteOrException() == 1);
     }
 
+    [Test]
+    public void ListElementPostIncrementTest()
+    {
+        var dmlCode =
+            @"
+/proc/test0()
+    var/list/a = list(3)
+    
+    var w = a[1]++ - 4
+    a[1]++
+
+    return a[1] * w
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue(r == -5);
+    }
+
+    [Test]
+    public void ListElementPreIncrementTest()
+    {
+        var dmlCode =
+            @"
+/proc/test0()
+    var/list/a = list(7)
+    
+    var w = ++a[1] - 10
+    a[1]++
+    a[1]++
+
+    return a[1] * w
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue(r == -20);
+    }
+
+    [Test]
+    public void MultiDimListElementPreIncrementTest()
+    {
+        var dmlCode =
+            @"
+/proc/test0()
+    var/list/a = list(list(7))
+    
+    var w = ++a[1][1] - 10
+    a[1][1]++
+    a[1][1]++
+
+    return a[1][1] * w
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue(r == -20);
+    }
 
     [Test]
     public void TestExclusiveHolderList()

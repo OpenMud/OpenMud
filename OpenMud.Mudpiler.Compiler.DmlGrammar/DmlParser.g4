@@ -238,8 +238,10 @@ array_augmented_assignment: dest=array_expr_lhs asn_idx=concrete_array_decl op=a
   src=expr;
 
 unop_asn_expr
-  : unop=un_op_asn inner=expr_lhs #expr_unary_pre
-  | inner=expr_lhs unop=un_op_asn #expr_unary_post
+  : inner=expr_lhs unop=un_op_asn #expr_unary_post
+  | unop=un_op_asn dest=array_expr_lhs asn_idx=concrete_array_decl #array_expr_unary_pre
+  | unop=un_op_asn inner=expr_lhs #expr_unary_pre
+  | dest=array_expr_lhs asn_idx=concrete_array_decl unop=un_op_asn #array_expr_unary_post
   ;
 
 expr_complex

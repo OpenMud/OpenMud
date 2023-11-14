@@ -323,6 +323,4 @@ proc
 
         Assert.IsTrue(testVal - expected < 0.0001f);
     }
-
-
 }

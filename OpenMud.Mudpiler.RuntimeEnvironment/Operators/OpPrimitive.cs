@@ -111,7 +111,8 @@ public sealed class OpPrimitive : IOpSolver
                     throw new DmlOperationNotImplemented();
             }
 
-            subjectRef.Assign(new VarEnvObjectReference(buffer));
+            if(subjectRef.IsAssignable)
+                subjectRef.Assign(new VarEnvObjectReference(buffer));
 
             return new VarEnvObjectReference(ret, true);
         });
