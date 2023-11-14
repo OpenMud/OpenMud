@@ -95,8 +95,8 @@ array_expr_lhs
 //Object Tree Definitions
 object_tree_definition
   : VAR (FWD_SLASH modifier=identifier_name)? vars_inner=object_tree_var_suite
-  | scope=declaration_object_tree_path inner=object_tree_suite
-  | scope=declaration_object_tree_path
+  | scope=declaration_object_tree_path FWD_SLASH? inner=object_tree_suite
+  | scope=declaration_object_tree_path FWD_SLASH?
   ;
 
 object_tree_stmt

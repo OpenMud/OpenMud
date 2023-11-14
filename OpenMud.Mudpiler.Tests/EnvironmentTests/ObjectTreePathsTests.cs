@@ -55,6 +55,33 @@ turf
     }
 
     [Test]
+    public void SingleLineObjDeclarationWithHangingForwardSlashTest()
+    {
+        var dmlCode =
+            @"
+/obj/test/
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        Assert.IsTrue(null != system.CreateAtomic("/obj/test"));
+    }
+
+    [Test]
+    public void ObjDeclarationWithHangingForwardSlashTest()
+    {
+        var dmlCode =
+            @"
+/obj/test/
+    var
+        t = 10
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var o = system.CreateAtomic("/obj/test");
+        Assert.IsTrue((int)o["t"] == 10);
+    }
+
+    [Test]
     public void EmptyObjDeclarationTest()
     {
         var dmlCode =
