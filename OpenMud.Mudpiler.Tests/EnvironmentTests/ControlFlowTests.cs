@@ -285,4 +285,49 @@ var/num/test_input = 10
         Assert.IsTrue((int)system.Global.ExecProc("testproc", 68).CompleteOrException() == 1111);
         Assert.IsTrue((int)system.Global.ExecProc("testproc", 100).CompleteOrException() == 1111);
     }
+
+    [Test]
+    public void TestContinueStatement()
+    {
+        var dmlCode =
+            @"
+/proc/test_iter()
+    var testset = list(5,8,6,7,9,2,1,3)
+    var total = 0
+    for(var/r in testset)
+        if(r <= 6)
+            continue
+        
+        total += r
+
+    return total
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test_iter").CompleteOrException();
+        Assert.IsTrue(r == 24);
+    }
+
+
+
+    [Test]
+    public void TestBreakStatement()
+    {
+        var dmlCode =
+            @"
+/proc/test_iter()
+    var testset = list(5,8,6,7,9,2,1,3)
+    var total = 0
+    for(var/r in testset)
+        total += r
+        if(r == 2)
+            break
+
+    return total
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test_iter").CompleteOrException();
+        Assert.IsTrue(r == 37);
+    }
 }

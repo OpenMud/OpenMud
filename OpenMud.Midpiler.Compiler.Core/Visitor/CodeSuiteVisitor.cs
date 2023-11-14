@@ -170,8 +170,12 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 {
                     SyntaxFactory.VariableDeclarator(stepperVarRef.Identifier)
                         .WithInitializer(SyntaxFactory.EqualsValueClause(
-                            SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression,
-                                SyntaxFactory.Literal(1))))
+                            SyntaxFactory.LiteralExpression(
+                                SyntaxKind.NumericLiteralExpression,
+                                SyntaxFactory.Literal(1)
+                            )
+                        )
+                    )
                 })
             )
         );
@@ -225,7 +229,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 })
             )
         );
-
+        
         return SyntaxFactory.Block(
             SyntaxFactory.List(new StatementSyntax[]
             {
@@ -234,6 +238,16 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 drivingLoop
             })
         );
+    }
+
+    public override CodePieceBuilder VisitBreak_stmt([NotNull] DmlParser.Break_stmtContext context)
+    {
+        return (r) => new[] { SyntaxFactory.BreakStatement() };
+    }
+
+    public override CodePieceBuilder VisitContinue_stmt([NotNull] DmlParser.Continue_stmtContext context)
+    {
+        return (r) => new[] { SyntaxFactory.ContinueStatement() };
     }
 
     public override CodePieceBuilder VisitForlist_list_in([NotNull] DmlParser.Forlist_list_inContext context)
