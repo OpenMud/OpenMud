@@ -13,7 +13,8 @@ public static class SettingsBuilder
         { "category", typeof(VerbCategory).FullName },
         { "src", typeof(VerbSrc).FullName },
         { "desc", typeof(VerbDescription).FullName },
-        { "background", typeof(BackgroundProcessing).FullName }
+        { "background", typeof(BackgroundProcessing).FullName },
+        { "hidden", typeof(Hidden).FullName }
     };
 
     public static AttributeSyntax CreateVerb()
