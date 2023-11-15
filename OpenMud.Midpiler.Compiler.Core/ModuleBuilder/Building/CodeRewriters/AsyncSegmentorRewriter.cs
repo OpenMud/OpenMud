@@ -69,6 +69,7 @@ internal class ReplaceTopLevelInvoction : CSharpSyntaxRewriter
         var depsArgumentType =
             SyntaxFactory.ArrayType(SyntaxFactory.ParseTypeName(typeof(DmlDeferredEvaluation).FullName),
                 SyntaxFactory.List(new[] { SyntaxFactory.ArrayRankSpecifier() }));
+
         var depsArgument =
             SyntaxFactory.ArrayCreationExpression(
                 depsArgumentType,

@@ -64,9 +64,4 @@ public class OpNullSolver : IOpSolver
     {
         return primitiveSolver.UnaryAssignment(op, new VarEnvObjectReference(0, true));
     }
-
-    public DatumProcExecutionContext PrimitiveCast(EnvObjectReference subject, EnvObjectReference type)
-    {
-        throw new DmlOperationNotImplemented();
-    }
 }

@@ -265,21 +265,16 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return resolver => CreateUn(op, subject(resolver));
     }
 
-    public static ExpressionSyntax CreatePrimitiveCast(ExpressionSyntax subject, string primitivetypeName)
+    public ExpressionSyntax CreatePrimitiveAssertType(ExpressionSyntax subject, string[] primitivetypeNames)
     {
-        var typeName = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(primitivetypeName));
-        return SyntaxFactory.InvocationExpression(
-                SyntaxFactory.ParseName("ctx.op.PrimitiveCast"),
-                SyntaxFactory.ArgumentList(
-                    SyntaxFactory.SeparatedList(new[]
-                    {
-                        SyntaxFactory.Argument(subject),
-                        SyntaxFactory.Argument(typeName),
-                    })
-                )
-            )
-            .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
-            .WithAdditionalAnnotations(BuilderAnnotations.DmlNativeDeferred);
+        var typeNames = primitivetypeNames.Select(t =>
+            (ExpressionSyntax)SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(t))
+        ).ToList();
+
+        return CreateCall("assert_primitive", new[] {
+            SyntaxFactory.Argument(subject),
+            SyntaxFactory.Argument(CreateListLiteral(typeNames))
+        });
     }
 
     public static ExpressionSyntax CreateUnAsn(string op, ExpressionSyntax subject, ExpressionSyntax source,
@@ -418,9 +413,9 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         };
     }
 
-    public override ExpressionPieceBuilder VisitExpr_primitive_cast([NotNull] DmlParser.Expr_primitive_castContext context)
+    public override ExpressionPieceBuilder VisitExpr_primitive_assert_type([NotNull] DmlParser.Expr_primitive_assert_typeContext context)
     {
-        return (r) => CreatePrimitiveCast(Visit(context.left)(r), context.identifier_name().GetText());
+        return (r) => CreatePrimitiveAssertType(Visit(context.left)(r), context.identifier_name().Select(i => i.GetText()).ToArray());
     }
 
     public override ExpressionPieceBuilder VisitExpr_unary_post([NotNull] DmlParser.Expr_unary_postContext c)

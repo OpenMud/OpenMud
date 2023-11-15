@@ -15,6 +15,4 @@ public interface IOpSolver
 
     DatumProcExecutionContext Ternery(DmlTernery op, EnvObjectReference subject, EnvObjectReference op0,
         EnvObjectReference op1);
-
-    DatumProcExecutionContext PrimitiveCast(EnvObjectReference subject, EnvObjectReference type);
 }

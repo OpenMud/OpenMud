@@ -2,7 +2,9 @@
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Settings;
+using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
@@ -27,6 +29,20 @@ internal class GlobalTyping : IRuntimeTypeBuilder
         procedureCollection.Register(0, new ActionDatumProc("istype", (args, datum) => istype(args[0], args[1])));
         procedureCollection.Register(0, new ActionDatumProc("indirect_istype", (args, datum) => indirect_istype(args[0], args[1])));
         procedureCollection.Register(0, new ActionDatumProc("ismob", (args, datum) => ismob(args[0])));
+        procedureCollection.Register(0, new ActionDatumProc("assert_primitive", (args, datum) => assert_primitive(args[0], args[1])));
+    }
+
+    private EnvObjectReference assert_primitive(EnvObjectReference subject, EnvObjectReference typeList)
+    {
+        var types = typeList.Get<DmlList>().Host.Select(v => DmlEnv.AsText(v.Key)).Where(t => t != null).ToList();
+
+        foreach (var t in types)
+        {
+            if (DmlEnv.TestPrimitiveType(subject, t!))
+                return subject;
+        }
+
+        throw new DmlRuntimeAssertionError("Primtiive type assertion failed.");
     }
 
     public bool AcceptsDatum(string target)

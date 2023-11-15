@@ -128,9 +128,4 @@ public class OpObject : IOpSolver
             return new VarEnvObjectReference(subject, true);
         });
     }
-
-    public DatumProcExecutionContext PrimitiveCast(EnvObjectReference subject, EnvObjectReference type)
-    {
-        throw new DmlOperationNotImplemented();
-    }
 }

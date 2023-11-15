@@ -212,25 +212,19 @@ public static class DmlEnv
         return EnvironmentConstants.SOUTH;
     }
 
-    public static EnvObjectReference Cast(EnvObjectReference subject, EnvObjectReference type)
+    public static bool TestPrimitiveType(EnvObjectReference subject, string typeName)
     {
-        var typeName = type.Get<string>();
-        object r = null;
-
         var t = subject.IsNull ? null : subject.Target;
         switch (typeName)
         {
             case "text":
-                r = DmlEnv.AsText(t);
-                break;
+                return t is string;
             case "num":
-                r = DmlEnv.AsNumeric(t);
-                break;
+                return IsNumericType(t);
+            case "null":
+                return t == null;
             default:
-                t = null;
-                break;
+                throw new Exception("Unknown primitive type name: " + typeName);
         }
-
-        return VarEnvObjectReference.CreateImmutable(r);
     }
 }
