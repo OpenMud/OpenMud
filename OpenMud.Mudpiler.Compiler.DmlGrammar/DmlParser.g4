@@ -372,7 +372,7 @@ expr
  | ISTYPE OPEN_PARENS varname=identifier_name (COMMA typename=expr)? CLOSE_PARENS #expr_istype_local
  | ISTYPE OPEN_PARENS varname=expr (COMMA typename=expr) CLOSE_PARENS #expr_istype_property
  | ISTYPE OPEN_PARENS varname=expr DOT identifier_name CLOSE_PARENS #expr_implicit_istype_property
- | object_tree_path_expr # expr_type
+ | object_tree_path_expr FWD_SLASH? # expr_type
  | l=expr OPEN_BRACKET r=expr CLOSE_BRACKET #expr_index
  | assoc_list_expr #expr_assoc_list_literal
  | list_expr #expr_list_literal

@@ -308,8 +308,6 @@ var/num/test_input = 10
         Assert.IsTrue(r == 24);
     }
 
-
-
     [Test]
     public void TestBreakStatement()
     {
@@ -329,5 +327,41 @@ var/num/test_input = 10
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
         var r = (int)system.Global.ExecProc("test_iter").CompleteOrException();
         Assert.IsTrue(r == 37);
+    }
+
+    [Test]
+    public void TestIfSingleReturnStatementOneline()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    var w = 8
+
+    if(w == 8) return 1
+
+    return 0
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(r == 1);
+    }
+
+    [Test]
+    public void TestIfSingleReturnStatementOnelineWithNoValue()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    var w = 8
+    . = 1
+    if(w == 8) return
+
+    . = 0
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(r == 1);
     }
 }

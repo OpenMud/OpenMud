@@ -151,8 +151,10 @@ internal class GlobalTyping : IRuntimeTypeBuilder
         var r = instantiator(typeSolver.Lookup("/list")).Get<DmlList>();
 
         foreach (var a in typeList)
-        foreach (var t in typeSolver.SubClasses(a))
-            r.Add(VarEnvObjectReference.CreateImmutable(t));
+        {
+            foreach (var t in typeSolver.SubClasses(a))
+                r.Add(VarEnvObjectReference.CreateImmutable(t));
+        }
 
         return VarEnvObjectReference.CreateImmutable(r);
     }

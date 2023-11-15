@@ -39,6 +39,24 @@ public class IsTypeTestCase
         Assert.IsFalse((bool)system.Global.ExecProc("test2", new object[] { null }).CompleteOrException());
         Assert.IsTrue((bool)system.Global.ExecProc("test2", testMob2).CompleteOrException());
     }
+    [Test]
+    public void SimpleIsTypeImplicitWithHangingForwardSlashTest()
+    {
+        var dmlCode =
+            @"
+/mob/testMob
+/proc/test2(var/mob/n)
+    return istype(n, /mob/testMob/)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var testMob = system.CreateAtomic("/mob");
+        var testMob2 = system.CreateAtomic("/mob/testMob");
+
+        Assert.IsFalse((bool)system.Global.ExecProc("test2", testMob).CompleteOrException());
+        Assert.IsFalse((bool)system.Global.ExecProc("test2", new object[] { null }).CompleteOrException());
+        Assert.IsTrue((bool)system.Global.ExecProc("test2", testMob2).CompleteOrException());
+    }
 
 
     [Test]
