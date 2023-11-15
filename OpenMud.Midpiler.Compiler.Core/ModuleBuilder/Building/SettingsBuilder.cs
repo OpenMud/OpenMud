@@ -14,7 +14,8 @@ public static class SettingsBuilder
         { "src", typeof(VerbSrc).FullName },
         { "desc", typeof(VerbDescription).FullName },
         { "background", typeof(BackgroundProcessing).FullName },
-        { "hidden", typeof(Hidden).FullName }
+        { "hidden", typeof(Hidden).FullName },
+        { "instant", typeof(Instant).FullName }
     };
 
     public static AttributeSyntax CreateVerb()
