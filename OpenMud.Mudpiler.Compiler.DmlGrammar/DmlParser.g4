@@ -28,6 +28,7 @@ identifier_name
   | 'world'
   | 'loc'
   | 'spawn'
+  | 'null'
   ;
 
 initializer_assignment: path=declaration_object_tree_path ASSIGNMENT expr;

@@ -89,6 +89,41 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
         }
 
         [Test]
+        public void AssertNull()
+        {
+            var dmlCode =
+                @"
+/proc/test_fail()
+    return ""1234"" as null
+
+/proc/test_pass0()
+    return null as null
+";
+            var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+            var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+            try
+            {
+                system.Global.ExecProc("test_fail").CompleteOrException();
+                Assert.Fail();
+            }
+            catch (DmlRuntimeAssertionError ex)
+            {
+            }
+
+
+            try
+            {
+                var r = (object)system.Global.ExecProc("test_pass0").CompleteOrException();
+                Assert.IsTrue(r == null);
+            }
+            catch (DmlRuntimeAssertionError ex)
+            {
+                Assert.Fail();
+            }
+        }
+
+        [Test]
         public void ComboTest()
         {
             var dmlCode =
@@ -99,8 +134,12 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
 /proc/test_pass0()
     return 1234 as num | text
 
+/proc/test_inner()
+    return ""1234""
+
 /proc/test_pass1()
-    return ""1234"" as num | text
+    var w = test_inner() as num|text
+    return w
 ";
             var assembly = MsBuildDmlCompiler.Compile(dmlCode);
             var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
