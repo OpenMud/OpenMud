@@ -77,6 +77,42 @@ mob/lerf
 
 
     [Test]
+    public void ImplicitIsTypeOnPropertyTest()
+    {
+        var dmlCode = @"
+
+mob/other_test
+
+mob/other
+    var/mob/other_test/testvar
+
+mob/lerf
+    testmethod()
+        var/mob/other/t = new()
+        t.testvar = 0
+
+        if(istype(t.testvar))
+            return 0
+
+        t.testvar = new/mob/other_test()
+
+        if(!istype(t.testvar))
+            return 0
+
+        return 15
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var w = system.CreateAtomic("/mob/lerf");
+
+        var r = w.ExecProc("testmethod").CompleteOrException();
+
+        Assert.IsTrue((int)r == 15);
+    }
+
+
+    [Test]
     public void IsTypeTest()
     {
         var dmlCode =

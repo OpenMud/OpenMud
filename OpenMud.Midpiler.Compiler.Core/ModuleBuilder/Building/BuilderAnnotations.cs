@@ -121,8 +121,8 @@ public static class BuilderAnnotations
 
     public static bool ExtractTypeHintAnnotation(SyntaxNode n, out string? typeHint)
     {
-        typeHint = n.GetAnnotations("varTypeHint").Select(n => n.Data).FirstOrDefault();
-
+        typeHint = n.GetAnnotatedNodes("varTypeHint").SingleOrDefault()?.GetAnnotations("varTypeHint")?.FirstOrDefault()?.Data;
+        
         return typeHint != null;
     }
 

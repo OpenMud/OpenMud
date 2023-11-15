@@ -784,6 +784,19 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return r;
     }
 
+    public ExpressionSyntax CreateRuntimeFieldIsType(ExpressionSyntax subject, string field)
+    {
+        var args = new List<ArgumentSyntax>(new[]
+        {
+            SyntaxFactory.Argument(subject),
+            SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(field)))
+        });
+
+        var r = CreateCall("indirect_istype", args);
+
+        return r;
+    }
+
     public override ExpressionPieceBuilder VisitExpr_istype_local([NotNull] DmlParser.Expr_istype_localContext c)
     {
         return resolver => CreateImplicitIsType(Util.IdentifierName(c.varname.GetText()),
@@ -794,6 +807,11 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     {
         return resolver =>
             CreateExplicitIsType(Visit(c.varname)(resolver), c.typename == null ? null : Visit(c.typename)(resolver));
+    }
+
+    public override ExpressionPieceBuilder VisitExpr_implicit_istype_property([NotNull] DmlParser.Expr_implicit_istype_propertyContext c)
+    {
+        return resolver => CreateRuntimeFieldIsType(Visit(c.varname)(resolver), c.identifier_name().GetText());
     }
 
     public override ExpressionPieceBuilder VisitExpr_property([NotNull] DmlParser.Expr_propertyContext c)

@@ -536,17 +536,55 @@ public class CSharpModule : IDreamMakerSymbolResolver
         );
     }
 
+    private ClassDeclarationSyntax AnnotateFieldTypeHints(ClassDeclarationSyntax value)
+    {
+        var fieldDeclarations = value.Members.Where(m => m is FieldDeclarationSyntax fld).Cast<FieldDeclarationSyntax>();
+        return value.ReplaceNodes(fieldDeclarations, (_, n) => {
+            var typeHint = BuilderAnnotations.ExtractTypeHintAnnotationOrDefault(n);
+
+            if (typeHint.Length == 0)
+                return n;
+
+            return n.WithAttributeLists(
+                SyntaxFactory.List(
+                    n.AttributeLists
+                    .Append(SyntaxFactory.AttributeList(
+                        SyntaxFactory.SeparatedList<AttributeSyntax>(new AttributeSyntax[] {
+                            SyntaxFactory.Attribute(
+                                SyntaxFactory.ParseName(typeof(RuntimeEnvironment.Settings.FieldTypeHint).FullName),
+                                SyntaxFactory.AttributeArgumentList(
+                                    SyntaxFactory.SeparatedList(new[]
+                                    {
+                                        SyntaxFactory.AttributeArgument(
+                                            SyntaxFactory.LiteralExpression(
+                                                SyntaxKind.StringLiteralExpression,
+                                                SyntaxFactory.Literal(typeHint)
+                                            )
+                                        )
+                                    })
+                                )
+                            )
+                        }
+                    ))
+                )
+            ));
+        });
+    }
+
     public CompilationUnitSyntax CreateCompilationUnit()
     {
         foreach (var u in fieldDeclarations.Keys.ToList())
             DefineFieldInitializer(u, SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression), false);
 
         foreach (var p in classPreBuildProcessors)
-        foreach (var k in classDeclarations.Keys.ToList())
-            p.Process(k, this);
+        {
+            foreach (var k in classDeclarations.Keys.ToList())
+                p.Process(k, this);
+        }
 
         var compilationUnit = SyntaxFactory.CompilationUnit();
         var constructedClasses = classDeclarations.Select(n => BuildClassFieldsConstructor(n.Key, n.Value));
+        constructedClasses = constructedClasses.Select(AnnotateFieldTypeHints);
 
         compilationUnit = compilationUnit.AddMembers(constructedClasses.ToArray());
         compilationUnit = compilationUnit.AddMembers(methodClassDeclarations.Values.ToArray());

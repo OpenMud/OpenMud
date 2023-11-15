@@ -15,16 +15,28 @@ public class SimpleTypeSolver : ITypeSolver
 
     public Type Lookup(string name, int maxDeclarationOrder = int.MaxValue)
     {
+        var r = LookupOrDefault(name, maxDeclarationOrder);
+
+        if (r == null)
+            throw new Exception("Type name could not be resolved: " + name);
+
+        return r;
+    }
+
+    public Type? LookupOrDefault(string name, int maxDeclarationOrder = int.MaxValue, Type? defaultType = null)
+    {
         var normalName = DmlPath.NormalizeTypeName(name);
 
         if (normalName == "/")
             return typeof(object);
 
-        return typeLibrary.Where(x =>
+        var t = typeLibrary.Where(x =>
                 x.Key.Item1 <= maxDeclarationOrder && x.Key.Item2 == normalName
             )
             .OrderByDescending(x => x.Key)
-            .Select(x => x.Value).First();
+            .Select(x => x.Value).FirstOrDefault();
+
+        return t ?? defaultType;
     }
 
     public string LookupName(Type t)

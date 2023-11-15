@@ -1,7 +1,9 @@
 ﻿using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
+using OpenMud.Mudpiler.RuntimeEnvironment.Settings;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using System.Reflection;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -23,6 +25,7 @@ internal class GlobalTyping : IRuntimeTypeBuilder
         procedureCollection.Register(0, new ActionDatumProc("locate", (args, datum) => locate(datum, args)));
         procedureCollection.Register(0, new ActionDatumProc("newlist", (args, datum) => newlist(datum, args)));
         procedureCollection.Register(0, new ActionDatumProc("istype", (args, datum) => istype(args[0], args[1])));
+        procedureCollection.Register(0, new ActionDatumProc("indirect_istype", (args, datum) => indirect_istype(args[0], args[1])));
         procedureCollection.Register(0, new ActionDatumProc("ismob", (args, datum) => ismob(args[0])));
     }
 
@@ -57,6 +60,45 @@ internal class GlobalTyping : IRuntimeTypeBuilder
             return false;
 
         return t.Get<Type>().IsAssignableFrom(subject.Type);
+    }
+
+    public bool indirect_istype(EnvObjectReference subject, EnvObjectReference field)
+    {
+        if (subject == null || subject.IsNull || field == null || field.IsNull)
+            return false;
+
+        var hostClassInstance = subject.GetOrDefault<Datum>(null);
+
+        if (hostClassInstance == null)
+            return false;
+
+        var hostClassType = hostClassInstance.GetType();
+        var fld = hostClassType.GetField(field.GetOrDefault<string>(""));
+
+        if (fld == null)
+            return false;
+
+        var fieldContents = fld.GetValue(hostClassInstance);
+
+        if (fieldContents is EnvObjectReference r)
+            fieldContents = r.IsNull ? null : r.Target;
+
+        if (fieldContents == null)
+            return false;
+
+        var contentsType = fieldContents.GetType();
+
+        var typeHintAttribute = fld.GetCustomAttribute<FieldTypeHint>();
+
+        if (typeHintAttribute == null)
+            return false;
+
+        var hintedType = typeSolver.LookupOrDefault(typeHintAttribute.TypeName);
+
+        if (hintedType == null)
+            return false;
+
+        return hintedType == contentsType || contentsType.IsSubclassOf(hintedType);
     }
 
     public bool ismob(EnvObjectReference subject)

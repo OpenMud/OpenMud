@@ -6,6 +6,7 @@ public interface ITypeSolver
 
     bool IsTypeKnown(string typeName);
     Type Lookup(string name, int maxDeclarationOrder = int.MaxValue);
+    Type? LookupOrDefault(string name, int maxDeclarationOrder = int.MaxValue, Type? defaultType = null);
 
     string LookupName(Type t);
 
