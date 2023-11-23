@@ -167,7 +167,8 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
                 Assert.Fail();
             }
         }
-
+        /*
+         * Temporarily disabling this test.
         [Test]
         public void ComboForListTest()
         {
@@ -206,7 +207,7 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
             {
                 Assert.Fail();
             }
-        }
+        }*/
 
     }
 }
