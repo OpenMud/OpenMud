@@ -1,3 +1,25 @@
+# [2.8.0](https://github.com/OpenMud/OpenMud/compare/v2.7.0...v2.8.0) (2023-11-23)
+
+
+### Bug Fixes
+
+* **compiler:** Added test case for "as null" assertion & resolved associated issues ([fc03d91](https://github.com/OpenMud/OpenMud/commit/fc03d9109d271df4e13dc181e1111ccd26304eed))
+* **compiler:** Changed casting semantics to type assertion semantics. The proper application of 'as' in an expression is as type assertion, not casting. ([fadfa40](https://github.com/OpenMud/OpenMud/commit/fadfa40561e53a2b45123aee072b1c1af5f22531))
+* **compiler:** Object declarations are permitted to have a hanging forward slash (i.e '/mob/test/' in an object declaration is treated the same as '/mob/test') ([21cc5ca](https://github.com/OpenMud/OpenMud/commit/21cc5ca04ba690ac77854da64c511bbb80fc8b48))
+
+
+### Features
+
+* **compiler:** Added basic casing between primitives (with as keyword) support. ([6b5eadb](https://github.com/OpenMud/OpenMud/commit/6b5eadb5cb7782fd1ec9aa9e3963f8ad054a4564))
+* **compiler:** Added compile support for setting proc "background" setting. ([f7c7df5](https://github.com/OpenMud/OpenMud/commit/f7c7df55456f9c4088f893c37be3291888b0cb6f))
+* **compiler:** Added support for "instant" setting. ([d4cd650](https://github.com/OpenMud/OpenMud/commit/d4cd6506f39b8ac8fe31339397796dc2e7d89a32))
+* **compiler:** Added support for break / continue keywords. ([ec8b9c5](https://github.com/OpenMud/OpenMud/commit/ec8b9c5df3a194ea3ce27e6c06fb23a5ed9fc589))
+* **compiler:** Added support for scientific notation (i.e 2e10) numeric literals. ([3792656](https://github.com/OpenMud/OpenMud/commit/37926562f82c4e69d16d1a8db42ab3266c3d657f))
+* **compiler:** Added support for the "hidden" setting. ([d360e96](https://github.com/OpenMud/OpenMud/commit/d360e9618ecf3ccd70c781e17945a4017d48002c))
+* **compiler:** Added support for unary assignment operations (++ / --) on lists. I.e allowing for "myarray[2]++" or "++myarray[2]" expressions. Additionally, added associated test cases. ([59642be](https://github.com/OpenMud/OpenMud/commit/59642be7507b69103bcd38d3d6ef74bd19ca300d))
+* **compiler:** Allow hanging forward slash in type name expressions (i.e "istype(x, /mob/example/)" ) ([58c1b4e](https://github.com/OpenMud/OpenMud/commit/58c1b4ee7255e442f0fced7fd66a8f130c1f5b24))
+* **compiler:** Better istype support (now supports expressions such as "istype(<some expression>.field_name)", i.e where type hint resolution must occur at runtime. ) ([bda5fd4](https://github.com/OpenMud/OpenMud/commit/bda5fd43e65252e51d29511932ceebbf213fb129))
+
 # [2.7.0](https://github.com/OpenMud/OpenMud/compare/v2.6.0...v2.7.0) (2023-11-13)
 
 
