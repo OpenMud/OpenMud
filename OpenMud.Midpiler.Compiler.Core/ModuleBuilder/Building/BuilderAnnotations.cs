@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
 
@@ -71,10 +72,10 @@ public static class BuilderAnnotations
 
     public static SyntaxAnnotation CreateTypeHints(string typeHint)
     {
-        var clsName = DmlPath.RootClassName(typeHint);
+        string clsName = "";
 
-        if (clsName == DmlPath.GLOBAL_PATH)
-            clsName = "";
+        if (typeHint.Length > 0)
+            clsName = DmlPath.BuildQualifiedDeclarationName(typeHint);
 
         return new SyntaxAnnotation("varTypeHint", clsName);
     }
@@ -121,8 +122,8 @@ public static class BuilderAnnotations
 
     public static bool ExtractTypeHintAnnotation(SyntaxNode n, out string? typeHint)
     {
-        typeHint = n.GetAnnotations("varTypeHint").Select(n => n.Data).FirstOrDefault();
-
+        typeHint = n.GetAnnotatedNodes("varTypeHint").SingleOrDefault()?.GetAnnotations("varTypeHint")?.FirstOrDefault()?.Data;
+        
         return typeHint != null;
     }
 

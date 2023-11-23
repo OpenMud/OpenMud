@@ -1,11 +1,13 @@
 ﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Compiler.DmmGrammar;
 using OpenMud.Mudpiler.Compiler.Project.Scene.DmmVisitors;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.Scene;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Project.Scene;
 
@@ -68,31 +70,33 @@ public class DmmSceneBuilderFactory
         return new SimpleSceneBuilder(new WorldBounds(boundsX, boundsY), World =>
         {
             foreach (var (location, classList) in unpacked)
-            foreach (var cls in classList)
             {
-                var e = World.CreateEntity();
-
-                var initArgs = new Dictionary<string, object>();
-
-                foreach (var (k, v) in cls.IntParameters)
-                    initArgs[k] = v;
-
-                foreach (var (k, v) in cls.StringParameters)
-                    initArgs[k] = v;
-
-                if (initArgs.Any())
-                    e.Set(new LogicFieldInitializerComponent(initArgs));
-
-                entityBuilder.CreateAtomic(e, cls.ClassName, null, location.Item1, location.Item2);
-
-                //Area pieces always share the same logic instance.
-                if (RuntimeTypeResolver.InheritsBaseTypeDatum(cls.ClassName, DmlPrimitiveBaseType.Area))
+                foreach (var cls in classList)
                 {
-                    var clsNormal = DmlPath.NormalizeClassName(cls.ClassName);
-                    if (!logicGuids.ContainsKey(DmlPath.NormalizeClassName(clsNormal)))
-                        logicGuids[clsNormal] = Guid.NewGuid();
+                    var e = World.CreateEntity();
 
-                    e.Set(new LogicIdentifierComponent(logicGuids[clsNormal]));
+                    var initArgs = new Dictionary<string, object>();
+
+                    foreach (var (k, v) in cls.IntParameters)
+                        initArgs[k] = v;
+
+                    foreach (var (k, v) in cls.StringParameters)
+                        initArgs[k] = v;
+
+                    if (initArgs.Any())
+                        e.Set(new LogicFieldInitializerComponent(initArgs));
+
+                    entityBuilder.CreateAtomic(e, cls.ClassName, null, location.Item1, location.Item2);
+
+                    var qualifiedClassName = DmlPath.BuildQualifiedDeclarationName(cls.ClassName);
+                    //Area pieces always share the same logic instance.
+                    if (DmlPath.IsDeclarationInstanceOfPrimitive(qualifiedClassName, DmlPrimitive.Area))
+                    {
+                        if (!logicGuids.ContainsKey(qualifiedClassName))
+                            logicGuids[qualifiedClassName] = Guid.NewGuid();
+
+                        e.Set(new LogicIdentifierComponent(logicGuids[qualifiedClassName]));
+                    }
                 }
             }
         });

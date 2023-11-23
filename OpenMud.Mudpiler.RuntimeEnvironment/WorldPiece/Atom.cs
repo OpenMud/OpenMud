@@ -2,6 +2,7 @@
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Settings;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
 
@@ -50,12 +51,12 @@ public class Atom : Datum
         _verbs.SetRegisteredProcedures(RegistedProcedures);
 
         var typePath = type.Get<string>();
-        if (RuntimeTypeResolver.InheritsBaseTypeDatum(typePath, DmlPrimitiveBaseType.Mob))
+        if (DmlPath.IsDeclarationInstanceOfPrimitive(typePath, DmlPrimitive.Mob))
             _verbs.SetDefaultVerbSource(new VerbSrc(SourceType.User));
-        else if (RuntimeTypeResolver.InheritsBaseTypeDatum(typePath, DmlPrimitiveBaseType.Obj))
+        else if (DmlPath.IsDeclarationInstanceOfPrimitive(typePath, DmlPrimitive.Obj))
             _verbs.SetDefaultVerbSource(new VerbSrc(SourceType.UserContents));
-        else if (RuntimeTypeResolver.InheritsBaseTypeDatum(typePath, DmlPrimitiveBaseType.Turf) ||
-                 RuntimeTypeResolver.InheritsBaseTypeDatum(typePath, DmlPrimitiveBaseType.Area))
+        else if (DmlPath.IsDeclarationInstanceOfPrimitive(typePath, DmlPrimitive.Turf) ||
+                 DmlPath.IsDeclarationInstanceOfPrimitive(typePath, DmlPrimitive.Area))
             _verbs.SetDefaultVerbSource(new VerbSrc(SourceType.View, 0));
 
 

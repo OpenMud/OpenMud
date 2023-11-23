@@ -4,6 +4,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.RuntimeEnvironment;
 
@@ -203,7 +204,7 @@ public sealed class MudEnvironment
     }
 
     private DatumProcExecutionContext SetupExecute(DatumProcExecutionContext? caller, EnvObjectReference source,
-        EnvObjectReference desintation, ProcArgumentList arguments, string method, long? precedence = null)
+        EnvObjectReference desintation, ProcArgumentList arguments, string method, long? precedence = null, bool nullIfNotFound = false)
     {
         if (desintation == null)
             throw new ArgumentNullException("Destination cannot be null.");
@@ -222,7 +223,16 @@ public sealed class MudEnvironment
         DatumProcExecutionContext ret;
 
         if (typeof(Datum).IsAssignableFrom(desintation.Type))
-            ret = desintation.Get<Datum>().Invoke(caller, method, usr, arguments, precedence);
+        {
+            var destDatum = desintation.Get<Datum>();
+
+            if (destDatum.HasProc(method, precedence ?? -1))
+                ret = desintation.Get<Datum>().Invoke(caller, method, usr, arguments, precedence);
+            else if (nullIfNotFound)
+                return new PreparedDatumProcContext(() => VarEnvObjectReference.NULL);
+            else
+                throw new DmlRuntimeError("Procedure not found.");
+        }
         else
             ret = new PreparedDatumProcContext(() =>
                 new VarEnvObjectReference(desintation.Invoke(method, arguments), true));
@@ -279,7 +289,7 @@ public sealed class MudEnvironment
     private void BuildFramework(string className, Type definition, DatumHandle handle,
         DatumProcCollection registedProcedures)
     {
-        var isMethod = RuntimeTypeResolver.IsMethod(definition);
+        var isMethod = TypeSolver.IsMethod(definition);
 
         bool Test(IRuntimeTypeBuilder builder)
         {
@@ -331,13 +341,13 @@ public sealed class MudEnvironment
             handle = new DatumHandle(this, scheduler, Lookup, Wrap, Unwrap, transactionProcessor,
                 destroyCallback.Destroy);
 
-        var globalDatum = DmlPath.IsRoot(className) ? entityInstance : rawGlobal;
+        var globalDatum = DmlPath.IsGlobal(className) ? entityInstance : rawGlobal;
 
-        var typePath = DmlPath.NormalizeClassName(className);
+        var typePath = DmlPath.BuildQualifiedDeclarationName(className);
         entityInstance.type.Assign(typePath, true);
 
         if (entityInstance is Atom atm && atm.name.IsNull)
-            atm.name.Assign(DmlPath.Split(typePath).Last().Replace('_', ' '));
+            atm.name.Assign(DmlPath.ExtractComponentName(typePath).Replace('_', ' '));
 
         pieces.Set(handle, entity, destroyCallback);
 
@@ -355,6 +365,9 @@ public sealed class MudEnvironment
 
         //invoke library
         entity.InvokeIfPresent("_constructor", new EnvObjectReference[0]);
+
+        if (handle.HasProc("_constructor_fieldinit"))
+            handle.ExecProc("_constructor_fieldinit").CompleteOrException();
 
         //Finally, invoke the New procedure (if present)
         if (handle.HasProc("New"))

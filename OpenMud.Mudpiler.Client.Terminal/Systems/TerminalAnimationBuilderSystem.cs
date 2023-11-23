@@ -6,6 +6,7 @@ using OpenMud.Mudpiler.Client.Terminal.Components;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 using Color = SadRogue.Primitives.Color;
 
 namespace OpenMud.Mudpiler.Client.Terminal.Systems;
@@ -82,7 +83,7 @@ internal class TerminalAnimationBuilderSystem : AEntitySetSystem<float>
         {
             text = logic["type"] as string;
             if (text != null)
-                text = DmlPath.ResolveBaseName(text)[0].ToString();
+                text = DmlPath.ExtractComponentName(text)[0].ToString();
         }
 
         if (text == null)

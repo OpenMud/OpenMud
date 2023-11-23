@@ -4,6 +4,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -24,7 +25,7 @@ internal class GlobalSound : IRuntimeTypeBuilder
 
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.HasImmediateBaseTypeDatum(target, DmlPrimitiveBaseType.Global);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.Global);
     }
 
     public EnvObjectReference sound(EnvObjectReference music, EnvObjectReference repeatSound,

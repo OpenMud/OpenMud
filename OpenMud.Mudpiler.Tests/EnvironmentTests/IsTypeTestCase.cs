@@ -39,6 +39,24 @@ public class IsTypeTestCase
         Assert.IsFalse((bool)system.Global.ExecProc("test2", new object[] { null }).CompleteOrException());
         Assert.IsTrue((bool)system.Global.ExecProc("test2", testMob2).CompleteOrException());
     }
+    [Test]
+    public void SimpleIsTypeImplicitWithHangingForwardSlashTest()
+    {
+        var dmlCode =
+            @"
+/mob/testMob
+/proc/test2(var/mob/n)
+    return istype(n, /mob/testMob/)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var testMob = system.CreateAtomic("/mob");
+        var testMob2 = system.CreateAtomic("/mob/testMob");
+
+        Assert.IsFalse((bool)system.Global.ExecProc("test2", testMob).CompleteOrException());
+        Assert.IsFalse((bool)system.Global.ExecProc("test2", new object[] { null }).CompleteOrException());
+        Assert.IsTrue((bool)system.Global.ExecProc("test2", testMob2).CompleteOrException());
+    }
 
 
     [Test]
@@ -73,6 +91,63 @@ mob/lerf
         var r = w.ExecProc("testmethod").CompleteOrException();
 
         Assert.IsTrue((int)r == 15);
+    }
+
+
+    [Test]
+    public void ImplicitIsTypeOnPropertyTest()
+    {
+        var dmlCode = @"
+
+mob/other_test
+
+mob/other
+    var/mob/other_test/testvar
+
+mob/lerf
+    testmethod()
+        var/mob/other/t = new()
+        t.testvar = 0
+
+        if(istype(t.testvar))
+            return 0
+
+        t.testvar = new/mob/other_test()
+
+        if(!istype(t.testvar))
+            return 0
+
+        return 15
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var w = system.CreateAtomic("/mob/lerf");
+
+        var r = w.ExecProc("testmethod").CompleteOrException();
+
+        Assert.IsTrue((int)r == 15);
+    }
+
+    [Test]
+    public void IsTypeOnNullTest()
+    {
+        var dmlCode = @"
+
+mob/other
+
+mob/lerf
+    testmethod()
+        return istype(null, /mob/other)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var w = system.CreateAtomic("/mob/lerf");
+
+        var r = (bool)w.ExecProc("testmethod").CompleteOrException();
+
+        Assert.IsTrue(r == false);
     }
 
 

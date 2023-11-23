@@ -5,6 +5,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -19,7 +20,7 @@ internal class ObjMovement : IRuntimeTypeBuilder
 
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.InheritsBaseTypeDatum(target, DmlPrimitiveBaseType.Obj);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.Obj);
     }
 
 
@@ -33,7 +34,7 @@ internal class ObjMovement : IRuntimeTypeBuilder
         EnvObjectReference stepX, EnvObjectReference stepY)
     {
         if (dest.TryGet<Atom>(out var a) &&
-            RuntimeTypeResolver.InheritsBaseTypeDatum(a.type, DmlPrimitiveBaseType.Movable))
+            DmlPath.IsDeclarationInstanceOfPrimitive(a.type, DmlPrimitive.Movable))
         {
             ((Atom)dest.Target).contents.Get<DmlList>().Add(VarEnvObjectReference.CreateImmutable(datum));
             return VarEnvObjectReference.CreateImmutable(1);

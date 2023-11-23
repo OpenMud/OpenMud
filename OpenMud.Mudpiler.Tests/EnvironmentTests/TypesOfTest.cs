@@ -57,12 +57,15 @@ public class TypesOfTest
     var allTypes = typesof(/mob)
 
     if(allTypes.len != 6)
-        return 0
+        return 2
 
     var t = list(new allTypes[1], new allTypes[2], new allTypes[3], new allTypes[4], new allTypes[5], new allTypes[6])
 
-    if(t.len != 6 || !t[1])
-        return 0
+    if(t.len != 6)
+        return 3
+
+    if(!t[1])
+        return 4
 
     return 1
 ";

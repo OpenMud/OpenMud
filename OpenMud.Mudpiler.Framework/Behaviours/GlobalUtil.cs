@@ -1,21 +1,29 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using DefaultEcs;
+using GoRogue.GameFramework;
+using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
 internal class GlobalUtil : IRuntimeTypeBuilder
 {
+    private ObjectInstantiator instantiator;
     private IDmlTaskScheduler scheduler;
+    private ITypeSolver typeSolver;
 
-    public GlobalUtil(IDmlTaskScheduler scheduler)
+    public GlobalUtil(IDmlTaskScheduler scheduler, ObjectInstantiator instantiator, ITypeSolver typeSolver)
     {
         this.scheduler = scheduler;
+        this.instantiator = instantiator;
+        this.typeSolver = typeSolver;
     }
 
     public void Build(DatumHandle e, Datum datum, DatumProcCollection procedureCollection)
@@ -32,12 +40,92 @@ internal class GlobalUtil : IRuntimeTypeBuilder
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.TEXT, text));
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.INDIRECT_CALL, indirect_call));
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.ADDTEXT, addtext));
+        procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.GENERATE_RANGE, generate_range));
+        procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.PICK_WEIGHTED, pick_weighted));
 
+    }
+
+    private EnvObjectReference do_pick(Tuple<double, EnvObjectReference>[] items)
+    {
+        // Calculate the total weight
+        double totalWeight = items.Select(x => x.Item1).Sum();
+
+        double randomValue = new Random().NextDouble() * totalWeight;
+
+        // Iterate through the items and find the one that corresponds to the random value
+        double cumulativeWeight = 0;
+        for (int i = 0; i < items.Length; i++)
+        {
+            cumulativeWeight += items[i].Item1;
+            if (randomValue < cumulativeWeight)
+            {
+                // Return the selected item
+                return items[i].Item2;
+            }
+        }
+
+        throw new Exception("Error, code should not be reachable.");
+    }
+
+    private EnvObjectReference pick_weighted(ProcArgumentList args, Datum self)
+    {
+        var argsList = args.GetArgumentList();
+
+        if (argsList.Length % 2 != 0)
+            throw new DmlRuntimeError("Weighted pick item length must be even set of tuples (weight, value)");
+
+        if (argsList.Length == 2)
+        {
+            var itm = argsList[1];
+            var nestedList = itm.GetOrDefault<DmlList>(null);
+            if (nestedList == null)
+                return VarEnvObjectReference.CreateImmutable(itm);
+
+            return do_pick(nestedList.Host.Select(i => Tuple.Create(100.0, i.Key)).ToArray());
+        }
+
+        var r = new List<Tuple<double, EnvObjectReference>>();
+
+        for(var i = 0; i < argsList.Length / 2; i++)
+        {
+            var prob = DmlEnv.AsNumeric(argsList[i * 2]);
+            var itm = argsList[i * 2 + 1];
+
+            r.Add(Tuple.Create((double)prob, itm));
+        }
+
+        return do_pick(r.ToArray());
+    }
+
+    private EnvObjectReference generate_range(ProcArgumentList args, Datum self)
+    {
+        var start = args.Get(0)?.GetOrDefault<int>(0) ?? 0;
+        var end = args.Get(1)?.GetOrDefault<int>(0) ?? 0;
+
+        var listBuffer = instantiator(typeSolver.Lookup("/list"));
+        var innerList = listBuffer.Get<DmlList>();
+
+        var direction = end - start;
+
+        if (direction == 0)
+            return listBuffer;
+
+        direction = direction / Math.Abs(direction);
+
+        var count = Math.Max(0, end - start + 1);
+
+        for (; count > 0; count--)
+        {
+            innerList.Add(VarEnvObjectReference.CreateImmutable(start));
+            start += direction;
+        }
+
+        return VarEnvObjectReference.CreateImmutable(listBuffer);
     }
 
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.HasImmediateBaseTypeDatum(target, DmlPrimitiveBaseType.Global);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.Global);
     }
 
     public EnvObjectReference findtext(EnvObjectReference haystack, EnvObjectReference needle, EnvObjectReference start,

@@ -25,6 +25,10 @@ public class BaseDmlFramework : IDmlFramework
         Scheduler = taskScheduler;
         this.entityVisibilitySolver = entityVisibilitySolver;
 
+        //NOTE!!
+        //When adding new types which are not under /datum or /atom, you need to update the System list in StaticTypeSolver
+        //
+        // For example, /sound or /list or /primitive_coord
         Types = new[]
         {
             new DmlRuntimeTypeDescriptor(
@@ -75,7 +79,7 @@ public class BaseDmlFramework : IDmlFramework
             new GlobalTasks(),
             new ProcBasic(),
             new ListBasic(),
-            new GlobalUtil(Scheduler)
+            new GlobalUtil(Scheduler, instantiator, typeSolver)
         };
     }
 

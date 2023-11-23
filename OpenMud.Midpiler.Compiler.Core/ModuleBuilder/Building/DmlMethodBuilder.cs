@@ -6,6 +6,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
 
@@ -38,7 +39,7 @@ public static class DmlMethodBuilder
         var decl = GenerateDmlProcClassImplementation(className, name, createImpl, attr, argNamesDecl,
             namePropertyImpl, argDefaultsDecl);
 
-        var classNames = BuiltinTypes.EnumerateProcNameAliasesOf(DmlPath.Concat(className, e.Identifier.Text));
+        var classNames = DmlPath.EnumerateTypeAliasesOf(DmlPath.Concat(className, e.Identifier.Text), true);
 
         decl = decl.WithAttributeLists(
             SyntaxFactory.List(new[]

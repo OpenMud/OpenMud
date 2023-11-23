@@ -46,10 +46,16 @@ public class MacroDefinition
             switch (c)
             {
                 case '(':
+                    if (braceIndex != 0)
+                        currentArg.Append(c);
+
                     braceIndex++;
                     break;
                 case ')':
                     braceIndex--;
+
+                    if (braceIndex != 0)
+                        currentArg.Append(c);
 
                     if (braceIndex == 0)
                     {
@@ -65,6 +71,8 @@ public class MacroDefinition
                         args.Add(currentArg.ToString());
                         currentArg = new StringBuilder();
                     }
+                    else
+                        currentArg.Append(c);
 
                     break;
                 default:
@@ -111,6 +119,22 @@ public class MacroDefinition
                 newText = newText.Insert(nextApplication.Item2.Index, nextApplication.Item1);
             }
         }
+
+        //We can have accidentally insert -- or ++ (since these are different operators.)
+
+        var start = match.Index - 1;
+        char? leading = start < 0 ? null : source.EnumerateFrom(start).FirstOrDefault();
+        char? trailing = source.EnumerateFrom(start + replaceLength + 1).FirstOrDefault();
+        char? insertLeading = newText.Length == 0 ? null : newText[0];
+        char? insertTrailing = newText.Length == 0 ? null : newText[newText.Length - 1];
+
+        var adjacentBlock = new HashSet<char>(new char[] { '-', '+' });
+
+        if (leading != null && insertLeading == leading && adjacentBlock.Contains(leading.Value))
+            newText = " " + newText;
+
+        if (trailing != null && insertTrailing == trailing && adjacentBlock.Contains(trailing.Value))
+            newText = newText + " ";
 
         source.Rewrite(match.Index, replaceLength, newText);
     }

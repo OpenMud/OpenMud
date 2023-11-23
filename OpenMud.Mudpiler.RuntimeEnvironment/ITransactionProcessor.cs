@@ -6,7 +6,7 @@ namespace OpenMud.Mudpiler.RuntimeEnvironment;
 
 public delegate DatumProcExecutionContext ExecuteTransaction(DatumProcExecutionContext? caller,
     EnvObjectReference source, EnvObjectReference destination, ProcArgumentList args, string name,
-    long? precedence = null);
+    long? precedence = null, bool nullIfNotFound = false);
 
 public delegate DatumProcExecutionContext ExecuteWithContext(DatumProcExecutionContext? caller, EntityHandle source,
     EntityHandle target, string verb, ProcArgumentList arguments);
@@ -22,5 +22,7 @@ public interface ITransactionProcessor
         ProcArgumentList args);
 
     DatumProcExecutionContext InvokePrec(DatumProcExecutionContext? caller, string name, long prec,
+        ProcArgumentList args);
+    DatumProcExecutionContext TryInvokePrec(DatumProcExecutionContext? caller, string name, long prec,
         ProcArgumentList args);
 }

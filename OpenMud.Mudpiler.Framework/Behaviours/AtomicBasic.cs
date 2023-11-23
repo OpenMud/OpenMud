@@ -6,6 +6,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -25,7 +26,7 @@ internal class AtomicBasic : IRuntimeTypeBuilder
 
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.InheritsBaseTypeDatum(target, DmlPrimitiveBaseType.Atom);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.Atom);
     }
 
     public void Build(DatumHandle handle, Datum datum, DatumProcCollection procedureCollection)
@@ -53,7 +54,7 @@ internal class AtomicBasic : IRuntimeTypeBuilder
         if (entityHandle == null)
             throw new Exception("Data binding not supported for datum handles");
 
-        var isArea = RuntimeTypeResolver.InheritsBaseTypeDatum(entityHandle["type"], DmlPrimitiveBaseType.Area);
+        var isArea = DmlPath.IsDeclarationInstanceOfPrimitive(entityHandle["type"], DmlPrimitive.Area);
 
         SimpleDmlCoord lookupCoord()
         {
@@ -96,7 +97,7 @@ internal class AtomicBasic : IRuntimeTypeBuilder
         if (entityHandle == null)
             throw new Exception("Data binding not supported for datum handles");
 
-        var isArea = RuntimeTypeResolver.InheritsBaseTypeDatum(entityHandle["type"], DmlPrimitiveBaseType.Area);
+        var isArea = DmlPath.IsDeclarationInstanceOfPrimitive(entityHandle["type"], DmlPrimitive.Area);
 
 
         void SetDirection(object direction)
@@ -133,9 +134,9 @@ internal class AtomicBasic : IRuntimeTypeBuilder
             if (coord.TryGet<Atom>(out var coordAtm))
             {
                 var replace =
-                    RuntimeTypeResolver.InheritsBaseTypeDatum(coordAtm.type.Get<string>(), DmlPrimitiveBaseType.Turf);
-                replace |= RuntimeTypeResolver.InheritsBaseTypeDatum(coordAtm.type.Get<string>(),
-                    DmlPrimitiveBaseType.Area);
+                    DmlPath.IsDeclarationInstanceOfPrimitive(coordAtm.type.Get<string>(), DmlPrimitive.Turf);
+                replace |= DmlPath.IsDeclarationInstanceOfPrimitive(coordAtm.type.Get<string>(),
+                    DmlPrimitive.Area);
 
                 atm.x.Assign(unpackCoord.Value.x);
                 atm.y.Assign(unpackCoord.Value.y);

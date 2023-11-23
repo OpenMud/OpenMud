@@ -40,14 +40,14 @@ internal class AreaTest
     var vv = 0
     Enter(t)
         vv += 1
-        world << vv
+        world << ""a0: "" + vv
         return 1
 
 /area/a1
     var vv = 10
     Enter(t)
         vv += 1
-        world << vv
+        world << ""a1: "" + vv
         return 1
 
 
@@ -101,10 +101,10 @@ xxx
         Assert.IsTrue(g.WorldMessages.SequenceEqual(new[]
         {
             "spawn",
-            "1",
-            "11",
-            "2",
-            "12"
+            "a0: 1",
+            "a1: 11",
+            "a0: 2",
+            "a1: 12"
         }));
     }
 

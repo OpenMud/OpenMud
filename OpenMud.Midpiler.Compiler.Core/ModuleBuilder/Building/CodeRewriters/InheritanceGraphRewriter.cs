@@ -1,7 +1,9 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building.CodeRewriters;
 
@@ -21,7 +23,7 @@ internal class InheritanceGraphRewriter : CSharpSyntaxRewriter
 
     private ClassDeclarationSyntax ResolvePrimitiveBaseClass(string basename, ClassDeclarationSyntax cls)
     {
-        if (!BuiltinTypes.IsPrimitiveClass(basename))
+        if (!DmlPath.IsPrimitiveClass(basename))
             basename = "datum";
 
         return cls.WithBaseList(
@@ -47,7 +49,7 @@ internal class InheritanceGraphRewriter : CSharpSyntaxRewriter
 
         string clsName;
 
-        if (BuiltinTypes.IsPrimitiveClass(name))
+        if (DmlPath.IsPrimitiveClass(name))
         {
             var originPrimitive = lookupPrimitive(name);
 

@@ -23,7 +23,7 @@ internal class ReplaceTopLevelInvoction : CSharpSyntaxRewriter
     private (ExpressionSyntax deferred, bool mustDefer) CreateDeferredEvalInitExpression(
         InvocationExpressionSyntax invoke)
     {
-        var dependence = invoke
+        var immediateDeps = invoke
             .ArgumentList
             .DescendantNodes(n => !(n is InvocationExpressionSyntax))
             .Where(n => n is InvocationExpressionSyntax)
@@ -33,6 +33,9 @@ internal class ReplaceTopLevelInvoction : CSharpSyntaxRewriter
                     deferral: CreateDeferredEvalInitExpression(n)
                 )
             )
+            .ToList();
+
+        var dependence = immediateDeps
             .Where(n => n.deferral.mustDefer)
             .Select((n, i) => (n, i))
             .ToDictionary(
@@ -69,6 +72,7 @@ internal class ReplaceTopLevelInvoction : CSharpSyntaxRewriter
         var depsArgumentType =
             SyntaxFactory.ArrayType(SyntaxFactory.ParseTypeName(typeof(DmlDeferredEvaluation).FullName),
                 SyntaxFactory.List(new[] { SyntaxFactory.ArrayRankSpecifier() }));
+
         var depsArgument =
             SyntaxFactory.ArrayCreationExpression(
                 depsArgumentType,
@@ -386,8 +390,6 @@ public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
 
     public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
     {
-        injectJumps = false;
-
         if (!BuilderAnnotations.HasProcNameAnnotation(node))
             return base.VisitMethodDeclaration(node);
 

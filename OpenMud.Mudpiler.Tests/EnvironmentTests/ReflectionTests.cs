@@ -28,6 +28,8 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
 
             var names = r0.GetCustomAttributes<ProcDefinition>().Select(x => x.Name).ToHashSet();
 
+            Assert.IsTrue(names.Contains("/GLOBAL/proc/test_target"));
+            Assert.IsTrue(names.Contains("/GLOBAL/test_target"));
             Assert.IsTrue(names.Contains("/proc/test_target"));
             Assert.IsTrue(names.Contains("/test_target"));
         }

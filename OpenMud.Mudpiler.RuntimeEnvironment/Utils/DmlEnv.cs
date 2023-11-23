@@ -95,6 +95,8 @@ public static class DmlEnv
             return (bool)subject ? 1 : 0;
         if (IsNumericType(subject))
             return (int)subject;
+        if (typeof(string).IsEquivalentTo(subject.GetType()) && int.TryParse((string)subject, out var num))
+            return num;
         throw new Exception("Unable to interpret as numeric.");
     }
 
@@ -208,5 +210,21 @@ public static class DmlEnv
         }
 
         return EnvironmentConstants.SOUTH;
+    }
+
+    public static bool TestPrimitiveType(EnvObjectReference subject, string typeName)
+    {
+        var t = subject.IsNull ? null : subject.Target;
+        switch (typeName)
+        {
+            case "text":
+                return t is string;
+            case "num":
+                return IsNumericType(t);
+            case "null":
+                return t == null;
+            default:
+                throw new Exception("Unknown primitive type name: " + typeName);
+        }
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using OpenMud.Mudpiler.Compiler.Core.Visitor;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building.CodeRewriters;
 
@@ -50,9 +51,9 @@ internal class IsTypeResolverRewriter : CSharpSyntaxRewriter
                 n => BuilderAnnotations.ExtractTypeHintAnnotationOrDefault(n));
 
         var fullPath = lookupName(c);
-        var baseClass = DmlPath.ResolveParentPath(fullPath);
+        var baseClass = DmlPath.ResolveParentClass(fullPath);
 
-        if (baseClass != null && !DmlPath.IsRoot(baseClass))
+        if (baseClass != null)
             decl = decl.Concat(FindClassDeclarations(lookupCls(baseClass))).ToDictionary(x => x.Key, x => x.Value);
 
         return decl;
@@ -104,6 +105,13 @@ internal class IsTypeResolverRewriter : CSharpSyntaxRewriter
     public override SyntaxNode? VisitInvocationExpression(InvocationExpressionSyntax node)
     {
         if (BuilderAnnotations.HasIsTypeAnnotationWithoutType(node))
+        {
+            var t = InferType(BuilderAnnotations.GetIsTypeTarget(node));
+
+            //This is typeof object, which everything is derived from.
+            if (t.Length == 0 || t == "/")
+                return SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression);
+
             return SyntaxFactory.InvocationExpression(
                     node.Expression,
                     node.ArgumentList.WithArguments(
@@ -118,7 +126,8 @@ internal class IsTypeResolverRewriter : CSharpSyntaxRewriter
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlNativeDeferred);
-        if (BuilderAnnotations.HasInferNewTypeTarget(node))
+        } else if (BuilderAnnotations.HasInferNewTypeTarget(node))
+        {
             return SyntaxFactory.InvocationExpression(
                     node.Expression,
                     node.ArgumentList.WithArguments(
@@ -133,6 +142,8 @@ internal class IsTypeResolverRewriter : CSharpSyntaxRewriter
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlNativeDeferred);
+        }
+
         return base.VisitInvocationExpression(node);
     }
 

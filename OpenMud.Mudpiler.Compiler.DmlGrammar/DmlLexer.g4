@@ -40,6 +40,11 @@ CALL:         'call';
 
 NULL:         'null';
 
+PICK:         'pick';
+PROB:         'prob';
+
+GOTO:         'goto';
+
 USR:          'usr';
 GROUP:        'group';
 LOC:          'loc';
@@ -146,6 +151,10 @@ STRING_LITERAL
 DECIMAL_INTEGER
  : NON_ZERO_DIGIT DIGIT*
  | '0'+
+ ;
+
+SCINOTATION_NUMBER
+ : NON_ZERO_DIGIT DIGIT* 'e' DIGIT*
  ;
 
 BlockComment 

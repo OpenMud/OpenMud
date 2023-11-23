@@ -5,6 +5,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -26,12 +27,12 @@ internal class AtomicReadWrite : IRuntimeTypeBuilder
 
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.InheritsBaseTypeDatum(target, DmlPrimitiveBaseType.Atom);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.Atom);
     }
 
     public void Build(DatumHandle e, Datum datum, DatumProcCollection procedureCollection)
     {
-        var isMob = RuntimeTypeResolver.InheritsBaseTypeDatum(datum.type.Get<string>(), DmlPrimitiveBaseType.Mob);
+        var isMob = DmlPath.IsDeclarationInstanceOfPrimitive(datum.type.Get<string>(), DmlPrimitive.Mob);
         procedureCollection.Register(0,
             new ActionDatumProc(
                 "Operator_Input",

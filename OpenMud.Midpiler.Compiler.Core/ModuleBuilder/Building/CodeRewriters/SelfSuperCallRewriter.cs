@@ -57,7 +57,7 @@ internal class SelfSuperCallRewriter : CSharpSyntaxRewriter
 
                 if (originalCall.ArgumentList.Arguments.Count == 0)
                     return SyntaxFactory.InvocationExpression(
-                            SyntaxFactory.ParseName("ctx.ex.InvokePrec"),
+                            SyntaxFactory.ParseName("ctx.ex.TryInvokePrec"),
                             SyntaxFactory.ArgumentList(
                                 SyntaxFactory.SeparatedList(
                                     InheritActiveArgumentList()
@@ -75,7 +75,7 @@ internal class SelfSuperCallRewriter : CSharpSyntaxRewriter
                         .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
                         .WithAdditionalAnnotations(BuilderAnnotations.DmlNativeDeferred);
                 return SyntaxFactory.InvocationExpression(
-                        SyntaxFactory.ParseName("ctx.ex.InvokePrec"),
+                        SyntaxFactory.ParseName("ctx.ex.TryInvokePrec"),
                         SyntaxFactory.ArgumentList(
                                 SyntaxFactory.SeparatedList(
                                     originalCall.ArgumentList.Arguments

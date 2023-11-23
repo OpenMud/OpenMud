@@ -8,3 +8,9 @@ public delegate StatementSyntax[] CodePieceBuilder(IDreamMakerSymbolResolver res
 public delegate ExpressionSyntax ExpressionPieceBuilder(IDreamMakerSymbolResolver resolver);
 
 public delegate ArgumentSyntax ArgumentPieceBuilder(IDreamMakerSymbolResolver resolver);
+
+public static class CodePieceBuilderUtil
+{
+    public static StatementSyntax[] NullCodePieceBuilder(IDreamMakerSymbolResolver r) =>
+        new StatementSyntax[0];
+}
