@@ -4,6 +4,7 @@ using OpenMud.Mudpiler.Compiler.Project.Scene;
 using OpenMud.Mudpiler.Core.Scene;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.Tests.EcsTest;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Tests.EnvironmentTests;
 
@@ -76,8 +77,11 @@ a
 
         Stabalize(g);
 
-        var subject = g.Environment.Actors
-            .Where(a => RuntimeTypeResolver.InheritsBaseTypeDatum(a["type"], DmlPrimitiveBaseType.Turf)).Single();
+        var subjects = g.Environment.Actors
+            .Where(a => g.Environment.TypeSolver.InheritsPrimitive(a["type"], DmlPrimitive.Turf))
+            .ToList();
+
+        var subject = subjects.Single();
 
         Assert.IsTrue(subject["layer"] == 10);
     }

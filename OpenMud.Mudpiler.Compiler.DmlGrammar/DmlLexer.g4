@@ -40,6 +40,11 @@ CALL:         'call';
 
 NULL:         'null';
 
+PICK:         'pick';
+PROB:         'prob';
+
+GOTO:         'goto';
+
 USR:          'usr';
 GROUP:        'group';
 LOC:          'loc';

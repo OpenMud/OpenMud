@@ -4,6 +4,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -20,7 +21,7 @@ internal class WorldReadWrite : IRuntimeTypeBuilder
 
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.InheritsBaseTypeDatum(target, DmlPrimitiveBaseType.World);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.World);
     }
 
     public void Build(DatumHandle e, Datum datum, DatumProcCollection procedureCollection)

@@ -28,6 +28,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\OpenMud.Mudpiler.Compiler.DmlGrammar\OpenMud.Mudpiler.Compiler.DmlGrammar.csproj" />
 		<ProjectReference Include="..\OpenMud.Mudpiler.RuntimeEnvironment\OpenMud.Mudpiler.RuntimeEnvironment.csproj" />
+		<ProjectReference Include="..\OpenMud.Mudpiler.TypeSolver\OpenMud.Mudpiler.TypeSolver.csproj" />
 	</ItemGroup>
 
 </Project>

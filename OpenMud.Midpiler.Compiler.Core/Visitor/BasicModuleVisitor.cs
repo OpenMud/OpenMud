@@ -190,6 +190,8 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         Func<StatementSyntax, BlockSyntax> warpWithBlock =
             s => s is BlockSyntax syntax ? syntax : SyntaxFactory.Block(s);
 
+        var bodyBuilder = CODE.Visit(body);
+
         MethodBodyPieceBuilder builder = (resolver, method) =>
         {
             List<AttributeSyntax> allAttributes = new();
@@ -201,7 +203,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
             method =
                 method
-                    .WithBody(warpWithBlock(CodeSuiteVisitor.GroupStatements(CODE.Visit(body)(resolver))))
+                    .WithBody(warpWithBlock(CodeSuiteVisitor.GroupStatements(bodyBuilder(resolver))))
                     .WithReturnType(SyntaxFactory.ParseTypeName("dynamic"))
                     .WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(
                         parameters.Select(p => CreateParameter(p, resolver))
@@ -262,18 +264,24 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
         if (context.vars_inner != null)
         {
+            var varBuilders = new List<IModulePieceBuilder>();
             var modifier = context.modifier?.GetText();
 
             var varDecl = context.vars_inner.NAME().Select(x => x.GetText()).ToList();
             varDecl.AddRange(context.vars_inner.initializer_assignment().Select(x => x.path.GetText()));
 
-            builders.AddRange(context.vars_inner.implicit_variable_declaration().Select(Visit));
-            builders.AddRange(context.vars_inner.initializer_assignment().Select(Visit));
+            varBuilders.AddRange(context.vars_inner.implicit_variable_declaration().Select(Visit));
+            varBuilders.AddRange(context.vars_inner.initializer_assignment().Select(Visit));
+            
+            varBuilders.AddRange(varDecl.Select(CreateFieldDeclaration));
 
             if (modifier != null)
-                varDecl = varDecl.Select(x => $"{modifier}/{x}").ToList();
-
-            builders.AddRange(varDecl.Select(CreateFieldDeclaration));
+            {
+                var scope = $"{modifier}/";
+                builders.AddRange(varBuilders.Select(v => new ScopedClassPieceBuilder(scope, v)));
+            }
+            else
+                builders.AddRange(varBuilders);
         }
 
         return new CompositeClassPieceBuilder(builders);
@@ -288,6 +296,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
                 .Concat(context.object_tree_definition())
                 .Concat(context.variable_declaration())
                 .Concat(context.variable_set_declaration())
+                .Concat(context.initializer_assignment())
                 .OrderBy(x => x.Start.Line);
 
         return new CompositeClassPieceBuilder(

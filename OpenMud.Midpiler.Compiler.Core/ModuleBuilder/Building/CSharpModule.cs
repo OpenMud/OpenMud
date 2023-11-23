@@ -6,6 +6,7 @@ using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building.PrebuildProcessor;
 using OpenMud.Mudpiler.Compiler.Core.Visitor;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
 
@@ -39,14 +40,14 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
     public CSharpModule()
     {
-        foreach (var t in BuiltinTypes.PredefinedTypes)
+        foreach (var t in DmlPath.DefaultCompilerImplementationTypes)
             primitiveClassNames[t] = DefineClass(t, c => c).Identifier.Text;
 
         Rewriters = new CSharpSyntaxRewriter[]
         {
             new IsTypeResolverRewriter(LookUpClass, LookUpClassName),
             new ClassNamespaceResolverWalker(),
-            new InheritanceGraphRewriter(LookUpClass, p => primitiveClassNames[BuiltinTypes.ResolveClassAlias(p)],
+            new InheritanceGraphRewriter(LookUpClass, p => primitiveClassNames[DmlPath.BuildQualifiedDeclarationName(p)],
                 LookUpClassName),
             new GlobalVariableRewriter(LookUpClass, LookUpClassName),
             new BaseConstructorCallChainResolverWalker(),
@@ -57,7 +58,9 @@ public class CSharpModule : IDreamMakerSymbolResolver
             new GenerateLocalContextRewriter(),
             new AsyncSegmentorRewriter(),
             new ImmediateEvaluationRewriter(),
-            new SourceMapperRewriter()
+            new SourceMapperRewriter(),
+            new ReservedKeywordVariableNameConflictResolver(),
+            new CilReturnStatementRewriter()
         };
     }
 
@@ -69,17 +72,13 @@ public class CSharpModule : IDreamMakerSymbolResolver
         if (fullPath == null || fullPath.Length == 0)
             throw new Exception("Method name cannot be blank or null...");
 
-        var modifiers = DmlPath.ExtractTailModifiers(fullPath, out var effectiveFullPath);
+        var modifiers = DmlPath.ParseNamespacePath(fullPath, out var effectiveClassNameFullPath, out var methodName, true);
 
-        effectiveFullPath = BuiltinTypes.ResolveClassAlias(DmlPath.RootClassName(effectiveFullPath));
-
-        var methodName = DmlPath.ResolveBaseName(effectiveFullPath);
+        var effectiveFullPath = DmlPath.BuildQualifiedDeclarationName(effectiveClassNameFullPath);
+        var fullMethodName = DmlPath.BuildQualifiedDeclarationName(effectiveFullPath, methodName!);
 
         if (methodName.Length == 0)
             throw new ArgumentException("Invalid method name.");
-
-        //Define all of the base classes..
-        var baseClassName = DmlPath.ResolveParentPath(effectiveFullPath);
 
         var defaultModifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword));
         var defaultAtrtibutes = SyntaxFactory.AttributeList();
@@ -101,7 +100,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
                     throw new Exception("Unsupported modifier on method: " + m);
             }
 
-        var declarationKey = new ModuleMethodDeclarationKey(declarationOrder, effectiveFullPath);
+        var declarationKey = new ModuleMethodDeclarationKey(declarationOrder, fullMethodName);
 
         if (!methodDeclarations.ContainsKey(declarationKey))
         {
@@ -121,14 +120,14 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
         methodDeclarations[declarationKey] = decl(methodDeclarations[declarationKey]);
 
-        var baseClass = Touch(baseClassName);
+        var baseClass = Touch(effectiveClassNameFullPath);
 
         var methodClassName = baseClass.Identifier.Text + "_" + methodName + "_" + declarationOrder;
 
         methodExecutionContextClassDeclarations[declarationKey] =
-            DmlMethodBuilder.BuildMethodExecutionContextClass(methodDeclarations[declarationKey], baseClassName,
+            DmlMethodBuilder.BuildMethodExecutionContextClass(methodDeclarations[declarationKey], effectiveClassNameFullPath,
                 methodClassName);
-        methodClassDeclarations[declarationKey] = DmlMethodBuilder.BuildMethodClass(baseClassName, methodClassName,
+        methodClassDeclarations[declarationKey] = DmlMethodBuilder.BuildMethodClass(effectiveClassNameFullPath, methodClassName,
             declarationOrder, methodDeclarations[declarationKey],
             methodExecutionContextClassDeclarations[declarationKey]);
     }
@@ -143,15 +142,13 @@ public class CSharpModule : IDreamMakerSymbolResolver
         if (fullPath == null || fullPath.Length == 0)
             throw new Exception("Field name cannot be blank or null...");
 
-        var modifiers = DmlPath.ExtractTailModifiers(fullPath, out var effectiveFullPath);
-
-        var fieldName = DmlPath.ResolveBaseName(effectiveFullPath);
+        var modifiers = DmlPath.ParseNamespacePath(fullPath, out var effectiveFullPath, out var fieldName, true);
 
         if (fieldName.Length == 0)
             throw new ArgumentException("Invalid field name.");
 
         //Define all of the base classes..
-        var baseClassName = BuiltinTypes.ResolveClassAlias(DmlPath.ResolveParentPath(effectiveFullPath));
+        var baseClassName = DmlPath.BuildQualifiedDeclarationName(effectiveFullPath);
 
         var defaultModifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword),
             SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword));
@@ -169,7 +166,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
                     throw new Exception("Unsupported modifier on Field: " + m);
             }
 
-        var absoluteName = BuiltinTypes.ResolveClassAlias(DmlPath.RootClassName(DmlPath.RemoveModifiers(fullPath)));
+        var absoluteName = DmlPath.BuildQualifiedDeclarationName(baseClassName, fieldName);
 
         if (!fieldDeclarations.ContainsKey(absoluteName))
         {
@@ -221,8 +218,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
             throw new Exception("Invalid configuration path...");
 
         var keyName = components.Last();
-        var hostPath = BuiltinTypes.ResolveClassAlias(
-            DmlPath.RootClassName(DmlPath.RemoveModifiers(string.Join("/", components.Take(components.Count - 1)))));
+        var hostPath = DmlPath.BuildQualifiedDeclarationName(DmlPath.BuildPath(components.Take(components.Count - 1)));
 
         if (!settings.ContainsKey(hostPath))
             settings[hostPath] = new Dictionary<string, AttributeSyntax>();
@@ -268,8 +264,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
     public void DefineFieldInitializer(string fullPath, ExpressionSyntax initializer, bool replaceExisting = true)
     {
-        var fieldName = DmlPath.ResolveBaseName(fullPath);
-        var parent = BuiltinTypes.ResolveClassAlias(DmlPath.RootClassName(DmlPath.ResolveParentPath(fullPath)));
+        DmlPath.ParseNamespacePath(fullPath, out var parent, out var fieldName, true);
 
         //Make sure the class is initialized.
         DefineClass(parent, c => c);
@@ -295,13 +290,13 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
     public string DefineSupportMethod(string baseClass, Func<MethodDeclarationSyntax, MethodDeclarationSyntax> decl)
     {
-        var parent = BuiltinTypes.ResolveClassAlias(DmlPath.RootClassName(baseClass));
+        var parent = DmlPath.BuildQualifiedDeclarationName(baseClass);
 
         //Make sure the class is initialized.
         DefineClass(parent, c => c);
 
         var supportIdx = 0;
-        Func<int, string> supportName = idx => DmlPath.Concat(parent, $"__SUPPORT{idx}");
+        Func<int, string> supportName = idx => DmlPath.BuildQualifiedDeclarationName(parent, $"__SUPPORT{idx}");
 
         var declKey = new ModuleMethodDeclarationKey(0, supportName(supportIdx));
 
@@ -315,18 +310,18 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
         DefineClassMethod(selectedName, decl, 0);
 
-        return DmlPath.ResolveBaseName(selectedName);
+        return DmlPath.ExtractComponentName(selectedName);
     }
 
     private ClassDeclarationSyntax LookUpClass(string n)
     {
-        return classDeclarations[BuiltinTypes.ResolveClassAlias(DmlPath.RootClassName(n))];
+        return classDeclarations[DmlPath.BuildQualifiedDeclarationName(n)];
     }
 
     private string LookUpClassName(ClassDeclarationSyntax n)
     {
         return classDeclarations
-            .Where(y => y.Value.Identifier.Text == BuiltinTypes.ResolveClassAlias(n.Identifier.Text)).Single().Key;
+            .Where(y => y.Value.Identifier.Text == n.Identifier.Text).Single().Key;
     }
 
     private ClassDeclarationSyntax DefineClass(string? fullPath, Func<ClassDeclarationSyntax, ClassDeclarationSyntax> define)
@@ -335,29 +330,25 @@ public class CSharpModule : IDreamMakerSymbolResolver
             fullPath = DmlPath.GLOBAL_PATH;
 
         //Define all of the base classes..
-        var pathName = DmlPath.RootClassName(DmlPath.RemoveModifiers(fullPath));
-        pathName = BuiltinTypes.ResolveClassAlias(pathName);
+        var pathName = DmlPath.BuildQualifiedDeclarationName(fullPath);
 
         if (pathName.Length == 0)
             throw new ArgumentException("Invalid class name path.");
 
-        var baseClassName = DmlPath.ResolveParentPath(pathName);
+        var baseClassName = DmlPath.ResolveParentClass(pathName);
         if (baseClassName != null)
             DefineClass(baseClassName, c => c);
 
         if (!classDeclarations.TryGetValue(pathName, out var decl))
         {
-            var clsName = DmlPath.ResolveBaseName(pathName);
-
-            if (!DmlPath.IsRoot(pathName))
-                clsName += $"_{classDeclarations.Count}";
+            var clsName = DmlPath.ExtractComponentName(pathName) + $"_{classDeclarations.Count}";
 
             decl = SyntaxFactory.ClassDeclaration(
                     clsName
                 )
                 .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)));
 
-            var classNames = BuiltinTypes.EnumerateAliasesOf(pathName);
+            var classNames = DmlPath.EnumerateTypeAliasesOf(pathName);
 
             decl = decl.WithAttributeLists(
                 SyntaxFactory.List(new[]
@@ -395,7 +386,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
     private void CreateOrReplaceMember(string clsName, string memberName,
         Func<FieldDeclarationSyntax, FieldDeclarationSyntax> newMem)
     {
-        var absoluteName = BuiltinTypes.ResolveClassAlias(DmlPath.RootClassName(DmlPath.Concat(clsName, memberName)));
+        var absoluteName = DmlPath.BuildQualifiedDeclarationName(clsName, memberName);
 
         var replacement = CreateOrReplaceMember<FieldDeclarationSyntax>(
             clsName,
@@ -445,31 +436,55 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
         return newMember;
     }
+    
+    private BlockSyntax CreateFieldInitializers(string fullName)
+    {
+        var fieldInitializerStatements = new List<StatementSyntax>();
+
+        fieldInitializerStatements.Add(SyntaxFactory.ExpressionStatement(ExpressionVisitor.CreateSuperCall()));
+        
+        if (fieldInitializers.TryGetValue(fullName, out var fields))
+        {
+            foreach (var f in fields)
+            {
+                fieldInitializerStatements.Add(
+                    SyntaxFactory.ExpressionStatement(
+                        EXPR.CreateAssignment(
+                            Util.IdentifierName(f.Key),
+                            f.Value
+                        )
+                    )
+                );
+            }
+        }
+
+        var result = SyntaxFactory.Block(fieldInitializerStatements.ToArray());
+
+        return result;
+    }
+
+    private bool IsClassImmediateChildOf(string super, string child)
+    {
+        var childSuper = DmlPath.ResolveParentClass(child);
+
+        if (childSuper == null)
+            return false;
+
+        return (DmlPath.IsGlobal(super) && DmlPath.IsGlobal(childSuper)) || childSuper == super;
+    }
 
     private BlockSyntax CreateConstructor(string fullName)
     {
         var statements = new List<StatementSyntax>();
 
-
-        if (fieldInitializers.TryGetValue(fullName, out var fields))
-            foreach (var f in fields)
-                statements.Add(
-                    SyntaxFactory.ExpressionStatement(
-                        EXPR.CreateAssignment(SyntaxFactory.IdentifierName(f.Key), f.Value)
-                    )
-                );
-
         var depth = DmlPath.ComputePathDepth(fullName);
 
         var childMethods = methodClassDeclarations.Where(x =>
-            (DmlPath.IsRoot(fullName) && DmlPath.IsRoot(DmlPath.ResolveParentPath(x.Key.Name))) ||
-            DmlPath.ResolveParentPath(x.Key.Name) == fullName
+            IsClassImmediateChildOf(fullName, x.Key.Name)
         ).OrderBy(m => m.Key.DeclarationOrder);
 
         foreach (var (m, cls) in childMethods)
         {
-            var methodName = DmlPath.ResolveBaseName(m.Name);
-
             if (m.DeclarationOrder >= MAX_METHOD_REDECLARATIONS ||
                 depth * MAX_METHOD_REDECLARATIONS / MAX_METHOD_REDECLARATIONS != depth)
                 throw new Exception("Inheritance or declaration depth too deep.");
@@ -514,7 +529,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
         return SyntaxFactory.Block(statements.ToArray());
     }
 
-    private ClassDeclarationSyntax BuildClassFieldsConstructor(string name, ClassDeclarationSyntax builtClass)
+    private ClassDeclarationSyntax BuildClassConstructor(string name, ClassDeclarationSyntax builtClass)
     {
         return builtClass.AddMembers(
             SyntaxFactory.MethodDeclaration(
@@ -534,6 +549,13 @@ public class CSharpModule : IDreamMakerSymbolResolver
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlImmediateEvaluateMethod)
         );
+    }
+
+    private void BuildClassFieldInitializer(string name)
+    {
+        var initName = "_constructor_fieldinit";
+
+        DefineClassMethod(DmlPath.BuildQualifiedDeclarationName(name, $"{initName}"), old => old.WithBody(CreateFieldInitializers(name)), 0);
     }
 
     private ClassDeclarationSyntax AnnotateFieldTypeHints(ClassDeclarationSyntax value)
@@ -575,6 +597,11 @@ public class CSharpModule : IDreamMakerSymbolResolver
     {
         foreach (var u in fieldDeclarations.Keys.ToList())
             DefineFieldInitializer(u, SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression), false);
+        
+        foreach(var c in classDeclarations.ToList())
+        {
+            BuildClassFieldInitializer(c.Key);
+        }
 
         foreach (var p in classPreBuildProcessors)
         {
@@ -583,7 +610,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
         }
 
         var compilationUnit = SyntaxFactory.CompilationUnit();
-        var constructedClasses = classDeclarations.Select(n => BuildClassFieldsConstructor(n.Key, n.Value));
+        var constructedClasses = classDeclarations.Select(n => BuildClassConstructor(n.Key, n.Value));
         constructedClasses = constructedClasses.Select(AnnotateFieldTypeHints);
 
         compilationUnit = compilationUnit.AddMembers(constructedClasses.ToArray());

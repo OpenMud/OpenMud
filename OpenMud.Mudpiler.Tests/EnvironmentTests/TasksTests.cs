@@ -286,4 +286,70 @@ public class TasksTests
                 })
         );
     }
+
+
+    [Test]
+    public void SpawnImmediateTest()
+    {
+        var dmlCode =
+            @"
+/proc/task_test()
+    var x = 10
+    spawn()
+        world << x
+        x -= 1
+        world << x
+    x += 1
+    world << x
+";
+        var assembly = Assembly.LoadFile(MsBuildDmlCompiler.Compile(dmlCode));
+        var g = new TestGame(new NullSceneBuilder(5, 5), assembly);
+
+        var ctx = g.Environment.Global.ExecProc("task_test");
+
+        Stabalize(g, 0.5f);
+
+        Assert.IsTrue(
+            g.WorldMessages.ToList()
+                .SequenceEqual(new[]
+                {
+                    "11",
+                    "10",
+                    "9"
+                })
+        );
+    }
+
+
+    [Test]
+    public void SpawnImmediateNoArgListTest()
+    {
+        var dmlCode =
+            @"
+/proc/task_test()
+    var x = 10
+    spawn
+        world << x
+        x -= 1
+        world << x
+    x += 1
+    world << x
+";
+        var assembly = Assembly.LoadFile(MsBuildDmlCompiler.Compile(dmlCode));
+        var g = new TestGame(new NullSceneBuilder(5, 5), assembly);
+
+        var ctx = g.Environment.Global.ExecProc("task_test");
+
+        Stabalize(g, 0.5f);
+
+        Assert.IsTrue(
+            g.WorldMessages.ToList()
+                .SequenceEqual(new[]
+                {
+                    "11",
+                    "10",
+                    "9"
+                })
+        );
+    }
 }

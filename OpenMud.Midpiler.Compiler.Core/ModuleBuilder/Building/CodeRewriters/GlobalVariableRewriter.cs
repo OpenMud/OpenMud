@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building.CodeRewriters;
 
@@ -17,7 +18,7 @@ internal class GlobalVariableRewriter : CSharpSyntaxRewriter
             .Concat(t.GetProperties(FIELD_SEARCH_FLAGS).Select(f => f.Name)).ToHashSet();
 
     // Some special objects have hidden fields that need to be accounted for as well...
-    private readonly Dictionary<string, HashSet<string>> hiddenFields = BuiltinTypes.PrimitiveClassNames.ToDictionary(
+    private readonly Dictionary<string, HashSet<string>> hiddenFields = DmlPath.UserDeclarablePrimitives.ToDictionary(
         x => x,
         x => computeNames(BuiltinTypes.ResolveType(x)));
 
@@ -102,12 +103,12 @@ internal class GlobalVariableRewriter : CSharpSyntaxRewriter
             .Select(n => n.Declaration.Variables.Single().Identifier.Text);
 
         var fullPath = lookupName(c);
-        var baseClass = DmlPath.ResolveParentPath(fullPath);
+        var baseClass = DmlPath.ResolveParentClass(fullPath);
 
-        if (baseClass != null && !DmlPath.IsRoot(baseClass))
+        if (baseClass != null)
             decl = decl.Concat(FindClassDeclarations(lookupCls(baseClass)));
 
-        var normalized = DmlPath.RootClassName(fullPath);
+        var normalized = DmlPath.BuildQualifiedDeclarationName(fullPath);
 
         if (hiddenFields.TryGetValue(normalized, out var hidden))
             decl = decl.Concat(hidden);

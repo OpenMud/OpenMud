@@ -159,11 +159,11 @@ public sealed class DatumProcCollection
     {
         if (procedures.Any())
         {
-            var maxPrec = procedures.Keys.Max();
+            var maxPrec = startingPrec;
             var explored = new HashSet<string>();
 
-            if (startingPrec >= 0)
-                maxPrec = Math.Max(maxPrec, startingPrec);
+            if (startingPrec < 0)
+                maxPrec = procedures.Keys.Max();
 
             var levels = procedures.Keys.OrderByDescending(x => x).Where(x => x >= 0 && x <= maxPrec);
             foreach (var i in levels)

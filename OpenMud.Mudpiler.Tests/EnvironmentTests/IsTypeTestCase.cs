@@ -129,6 +129,27 @@ mob/lerf
         Assert.IsTrue((int)r == 15);
     }
 
+    [Test]
+    public void IsTypeOnNullTest()
+    {
+        var dmlCode = @"
+
+mob/other
+
+mob/lerf
+    testmethod()
+        return istype(null, /mob/other)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var w = system.CreateAtomic("/mob/lerf");
+
+        var r = (bool)w.ExecProc("testmethod").CompleteOrException();
+
+        Assert.IsTrue(r == false);
+    }
+
 
     [Test]
     public void IsTypeTest()

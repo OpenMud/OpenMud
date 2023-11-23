@@ -3,6 +3,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -10,7 +11,7 @@ internal class AtomicCollision : IRuntimeTypeBuilder
 {
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.InheritsBaseTypeDatum(target, DmlPrimitiveBaseType.Atom);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.Atom);
     }
 
     public void Build(DatumHandle e, Datum datum, DatumProcCollection procedureCollection)

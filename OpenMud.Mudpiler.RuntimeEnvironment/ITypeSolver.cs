@@ -1,4 +1,6 @@
-﻿namespace OpenMud.Mudpiler.RuntimeEnvironment;
+﻿using OpenMud.Mudpiler.TypeSolver;
+
+namespace OpenMud.Mudpiler.RuntimeEnvironment;
 
 public interface ITypeSolver
 {
@@ -11,4 +13,8 @@ public interface ITypeSolver
     string LookupName(Type t);
 
     Type[] SubClasses(Type s);
+
+    bool InheritsPrimitive(string v, DmlPrimitive turf);
+
+    bool IsMethod(Type t);
 }

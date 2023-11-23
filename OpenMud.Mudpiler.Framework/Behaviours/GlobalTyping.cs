@@ -4,6 +4,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Settings;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -27,9 +28,10 @@ internal class GlobalTyping : IRuntimeTypeBuilder
         procedureCollection.Register(0, new ActionDatumProc("locate", (args, datum) => locate(datum, args)));
         procedureCollection.Register(0, new ActionDatumProc("newlist", (args, datum) => newlist(datum, args)));
         procedureCollection.Register(0, new ActionDatumProc("istype", (args, datum) => istype(args[0], args[1])));
-        procedureCollection.Register(0, new ActionDatumProc("indirect_istype", (args, datum) => indirect_istype(args[0], args[1])));
+        procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.INDIRECT_ISTYPE, (args, datum) => indirect_istype(args[0], args[1])));
         procedureCollection.Register(0, new ActionDatumProc("ismob", (args, datum) => ismob(args[0])));
         procedureCollection.Register(0, new ActionDatumProc("assert_primitive", (args, datum) => assert_primitive(args[0], args[1])));
+        procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.INDIRECT_NEW, (args, datum) => indirect_new(args[0], args[1], args.Split(2).last)));
     }
 
     private EnvObjectReference assert_primitive(EnvObjectReference subject, EnvObjectReference typeList)
@@ -47,7 +49,7 @@ internal class GlobalTyping : IRuntimeTypeBuilder
 
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.HasImmediateBaseTypeDatum(target, DmlPrimitiveBaseType.Global);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.Global);
     }
 
     private dynamic ResolveType(EnvObjectReference name)
@@ -72,8 +74,12 @@ internal class GlobalTyping : IRuntimeTypeBuilder
 
     public bool istype(EnvObjectReference subject, EnvObjectReference t)
     {
-        if (subject == null || subject.IsNull)
+        if (subject == null || subject.IsNull || t == null || t.IsNull)
             return false;
+
+        //Everything is an object in DML runtime.
+        if (typeof(object) == t.Get<Type>())
+            return true;
 
         return t.Get<Type>().IsAssignableFrom(subject.Type);
     }
@@ -117,11 +123,44 @@ internal class GlobalTyping : IRuntimeTypeBuilder
         return hintedType == contentsType || contentsType.IsSubclassOf(hintedType);
     }
 
+    public EnvObjectReference indirect_new(EnvObjectReference subject, EnvObjectReference field, ProcArgumentList args)
+    {
+        if (subject == null || subject.IsNull || field == null || field.IsNull)
+            throw new DmlRuntimeError("The host or field parameters are null but must be specified.");
+
+        var hostClassInstance = subject.GetOrDefault<Datum>(null);
+
+        if (hostClassInstance == null)
+            throw new DmlRuntimeError("The host object is not a valid DML type.");
+
+        var hostClassType = hostClassInstance.GetType();
+        var fld = hostClassType.GetField(field.GetOrDefault<string>(""));
+
+        if (fld == null)
+            throw new DmlRuntimeError("The field to emplace the instantiated value does not exist on the specified type.");
+
+        var typeHintAttribute = fld.GetCustomAttribute<FieldTypeHint>();
+
+        if (typeHintAttribute == null)
+            throw new DmlRuntimeError("Cannot indirect instantiate on this field because it has no associated type hint.");
+
+        var hintedType = typeSolver.LookupOrDefault(typeHintAttribute.TypeName);
+
+        if (hintedType == null)
+            throw new DmlRuntimeError("Cannot indirect instantiate on this field the associated type could not be located in the runtime type library.");
+
+        var r = instantiator(hintedType, args);
+
+        fld.SetValue(hostClassInstance, r);
+
+        return r;
+    }
+
     public bool ismob(EnvObjectReference subject)
     {
-        return RuntimeTypeResolver.InheritsBaseTypeDatum(
+        return DmlPath.IsDeclarationInstanceOfPrimitive(
             subject.Get<Datum>().type.Get<string>(),
-            DmlPrimitiveBaseType.Mob
+            DmlPrimitive.Mob
         );
     }
 

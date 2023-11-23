@@ -5,6 +5,7 @@ using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Tests.EnvironmentTests;
 
@@ -34,8 +35,8 @@ public class AtomicTests
 
         var name = $"/{subject.Item1}/test_atomic";
         var instance = system.CreateAtomic(name);
-        Assert.IsTrue(RuntimeTypeResolver.ExpandClassPath(instance["type"]) ==
-                      RuntimeTypeResolver.ExpandClassPath(subject.Item2));
+        Assert.IsTrue(DmlPath.BuildQualifiedDeclarationName(instance["type"]) ==
+                      DmlPath.BuildQualifiedDeclarationName(subject.Item2));
         Assert.IsTrue(instance["name"] == "test atomic");
     }
 

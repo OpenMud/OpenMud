@@ -2,6 +2,7 @@
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 
 namespace OpenMud.Mudpiler.Tests.EnvironmentTests;
 
@@ -170,6 +171,7 @@ mob
     {
         var dmlCode =
             @"
+/var/test_global = 10
 my_datum
     var q
     New(n)
@@ -190,4 +192,78 @@ my_datum
 
         Assert.IsTrue((int)(r["q"] + mob["q"]) == 30);
     }
+
+
+    [Test]
+    public void VarSetWithImplicitNewTest()
+    {
+        var dmlCode =
+            @"
+/mob/t
+    var
+	    test = 10
+	    var/list/pieces = new
+
+/proc/test()
+    var/mob/t/testmob = new
+    return testmob.pieces
+
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        DatumHandle r = (DatumHandle)system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(r.Unwrap<DmlList>().len == 0);
+    }
+
+    [Test]
+    public void VarSetWithImplicitNewWithoutVarTest()
+    {
+        var dmlCode =
+            @"
+/mob/t
+    var
+	    test = 10
+	    list/pieces = new
+
+/proc/test()
+    var/mob/t/testmob = new
+    return testmob.pieces
+
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        DatumHandle r = (DatumHandle)system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(r.Unwrap<DmlList>().len == 0);
+    }
+
+    [Test]
+    public void NewCallIndirectTest()
+    {
+        var dmlCode =
+            @"
+/mob/t
+    var
+	    test = 10
+	    list/pieces = null
+
+/proc/test()
+    var/mob/t/testmob = new
+    testmob.pieces = new(3)
+    return testmob.pieces
+
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        DatumHandle r = (DatumHandle)system.Global.ExecProc("test").CompleteOrException();
+
+        //Yes, the list constructor consumes dim sizes, unlike the "list(...)" literal expression in DML which generates literal lists.
+        //That is an unclear language semantic, but this test is checking if the returned array is of size 3.
+        Assert.IsTrue(r.Unwrap<DmlList>().len == 3);
+    }
 }
+

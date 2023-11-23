@@ -31,9 +31,9 @@ public class Datum
         return RegistedProcedures.Enumerate(prec);
     }
 
-    public bool HasProc(string name)
+    public bool HasProc(string name, long prec = -1)
     {
-        return EnumerateProcs().Any(p => p.Name == name);
+        return EnumerateProcs(prec).Any(p => p.Name == name);
     }
 
     public DatumProc GetProc(string name, long prec = -1)

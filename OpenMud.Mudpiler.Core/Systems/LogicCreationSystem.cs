@@ -6,21 +6,22 @@ using OpenMud.Mudpiler.Core.Scene;
 using OpenMud.Mudpiler.Core.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Core.Systems;
 
 [With(typeof(CreateLogicComponent))]
 public class LogicCreationSystem : AEntitySetSystem<float>
 {
-    private static readonly Dictionary<DmlPrimitiveBaseType, Action<Entity>> BaseTypeMarkers = new()
+    private static readonly Dictionary<DmlPrimitive, Action<Entity>> BaseTypeMarkers = new()
     {
-        { DmlPrimitiveBaseType.Turf, e => e.Set<TurfComponent>() },
-        { DmlPrimitiveBaseType.Atom, e => e.Set<AtomicComponent>() },
-        { DmlPrimitiveBaseType.Obj, e => e.Set<ObjComponent>() },
-        { DmlPrimitiveBaseType.Area, e => e.Set(new AreaComponent()) },
-        { DmlPrimitiveBaseType.Movable, e => e.Set(new MovableComponent()) },
-        { DmlPrimitiveBaseType.Datum, e => e.Set(new DatumComponent()) },
-        { DmlPrimitiveBaseType.Mob, e => e.Set(new MobComponent()) }
+        { DmlPrimitive.Turf, e => e.Set<TurfComponent>() },
+        { DmlPrimitive.Atom, e => e.Set<AtomicComponent>() },
+        { DmlPrimitive.Obj, e => e.Set<ObjComponent>() },
+        { DmlPrimitive.Area, e => e.Set(new AreaComponent()) },
+        { DmlPrimitive.Movable, e => e.Set(new MovableComponent()) },
+        { DmlPrimitive.Datum, e => e.Set(new DatumComponent()) },
+        { DmlPrimitive.Mob, e => e.Set(new MobComponent()) }
     };
 
     private readonly IMudEntityBuilder entityBuilder;
@@ -75,7 +76,7 @@ public class LogicCreationSystem : AEntitySetSystem<float>
             entity.Remove<CreateLogicComponent>();
             entity.Set(new VerbDetailsComponent());
 
-            foreach (var bt in RuntimeTypeResolver.EnumerateBaseTypes(typePath))
+            foreach (var bt in DmlPath.EnumerateBaseTypes(typePath))
                 if (BaseTypeMarkers.TryGetValue(bt, out var marker))
                     marker(entity);
 

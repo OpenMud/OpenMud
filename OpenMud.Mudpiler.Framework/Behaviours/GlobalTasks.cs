@@ -2,6 +2,7 @@
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -77,7 +78,7 @@ internal class GlobalTasks : IRuntimeTypeBuilder
 
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.HasImmediateBaseTypeDatum(target, DmlPrimitiveBaseType.Global);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.Global);
     }
 
     public EnvObjectReference sleep(EnvObjectReference delay)

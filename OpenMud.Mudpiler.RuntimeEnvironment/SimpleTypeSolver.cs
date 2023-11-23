@@ -1,4 +1,8 @@
-﻿using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+﻿using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
+using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
+using System.IO;
 
 namespace OpenMud.Mudpiler.RuntimeEnvironment;
 
@@ -25,13 +29,13 @@ public class SimpleTypeSolver : ITypeSolver
 
     public Type? LookupOrDefault(string name, int maxDeclarationOrder = int.MaxValue, Type? defaultType = null)
     {
-        var normalName = DmlPath.NormalizeTypeName(name);
-
-        if (normalName == "/")
+        if (name.Length == 0 || name == "/")
             return typeof(object);
 
+        var fullyQualifiedTypeName = DmlPath.BuildQualifiedDeclarationName(name);
+
         var t = typeLibrary.Where(x =>
-                x.Key.Item1 <= maxDeclarationOrder && x.Key.Item2 == normalName
+                x.Key.Item1 <= maxDeclarationOrder && x.Key.Item2 == fullyQualifiedTypeName
             )
             .OrderByDescending(x => x.Key)
             .Select(x => x.Value).FirstOrDefault();
@@ -51,16 +55,40 @@ public class SimpleTypeSolver : ITypeSolver
 
     public Type[] SubClasses(Type s)
     {
-        var subject = Lookup(s);
+        var subClasses = typeLibrary.Values.Distinct().Where(
+            k => {
+                if (k == s) return false;
 
-        var subClasses = typeLibrary.Keys.Where(
-            k => k != subject && k.Item2.StartsWith(subject.Item2));
+                return s.IsAssignableFrom(k);
+            }
+        );
 
-        return subClasses.Select(k => typeLibrary[k]).ToArray();
+        return subClasses.ToArray();
     }
 
     public Tuple<int, string> Lookup(Type t)
     {
         return typeLibrary.Where(x => x.Value.IsEquivalentTo(t)).Select(x => x.Key).First();
+    }
+
+    public bool InheritsPrimitive(string path, DmlPrimitive type)
+    {
+        var t = LookupOrDefault(path);
+
+        if (t == null)
+            throw new Exception("Unknown type.");
+
+        //Procedures are an exception. Their type paths do no represent their inheritance hierarchy, but instead their location.
+        //For example, the method xyz on object wuv would have the type path /wuv/xyz, but in this case the method (xyz) does not inherit from
+        //the base class wub.
+        if (typeof(DatumProc).IsAssignableFrom(t))
+            return false;
+
+        return DmlPath.EnumerateBaseTypes(path).Contains(type);
+    }
+
+    public bool IsMethod(Type t)
+    {
+        return typeof(DmlDatumProc).IsAssignableFrom(t);
     }
 }

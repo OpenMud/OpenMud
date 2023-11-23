@@ -6,6 +6,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -22,7 +23,7 @@ internal class GlobalPathing : IRuntimeTypeBuilder
 
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.HasImmediateBaseTypeDatum(target, DmlPrimitiveBaseType.Global);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.Global);
     }
 
     public void Build(DatumHandle handle, Datum datum, DatumProcCollection procedureCollection)

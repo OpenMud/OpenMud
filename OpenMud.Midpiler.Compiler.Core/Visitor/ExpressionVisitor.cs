@@ -415,7 +415,7 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
 
     public override ExpressionPieceBuilder VisitExpr_primitive_assert_type([NotNull] DmlParser.Expr_primitive_assert_typeContext context)
     {
-        return (r) => CreatePrimitiveAssertType(Visit(context.left)(r), context.identifier_name().Select(i => i.GetText()).ToArray());
+        return (r) => CreatePrimitiveAssertType(Visit(context.left)(r), context.as_list().parameter_as_constraint().Select(i => i.GetText()).ToArray());
     }
 
     public override ExpressionPieceBuilder VisitExpr_unary_post([NotNull] DmlParser.Expr_unary_postContext c)
@@ -692,17 +692,24 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return resolver => CreateResolveType(context.GetText());
     }
 
+    public static ExpressionSyntax CreateSuperCall() => CreateSuperCall(Enumerable.Empty<ArgumentSyntax>());
+
+    public static ExpressionSyntax CreateSuperCall(IEnumerable<ArgumentSyntax> args)
+    {
+        return
+            SyntaxFactory.InvocationExpression(
+                SyntaxFactory.ParseName("placeholder"),
+                SyntaxFactory.ArgumentList(
+                    SyntaxFactory.SeparatedList(args)
+                )
+            ).WithAdditionalAnnotations(BuilderAnnotations.CallBaseAnnotation);
+    }
+
     public override ExpressionPieceBuilder VisitSuper_call([NotNull] DmlParser.Super_callContext c)
     {
         var rawArgs = ParseArgumentList(c.argument_list()).ToList();
 
-        return resolver =>
-            SyntaxFactory.InvocationExpression(
-                SyntaxFactory.ParseName("placeholder"),
-                SyntaxFactory.ArgumentList(
-                    SyntaxFactory.SeparatedList(rawArgs.Select(y => y(resolver)))
-                )
-            ).WithAdditionalAnnotations(BuilderAnnotations.CallBaseAnnotation);
+        return resolver => CreateSuperCall(rawArgs.Select(y => y(resolver)));
     }
 
     public override ExpressionPieceBuilder VisitSelf_call([NotNull] DmlParser.Self_callContext c)
@@ -787,7 +794,7 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
             SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(field)))
         });
 
-        var r = CreateCall("indirect_istype", args);
+        var r = CreateCall(RuntimeFrameworkIntrinsic.INDIRECT_ISTYPE, args);
 
         return r;
     }
@@ -940,6 +947,31 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
             : c.list_expr().expr().Select(Visit).ToList();
 
         return resolver => CreateListLiteral(rawElements.Select(e => e(resolver)));
+    }
+
+    public override ExpressionPieceBuilder VisitList_range_expr([NotNull] DmlParser.List_range_exprContext context)
+    {
+        return resolver => CreateCall(RuntimeFrameworkIntrinsic.GENERATE_RANGE, new[] { SyntaxFactory.Argument(Visit(context.start)(resolver)), SyntaxFactory.Argument(Visit(context.end)(resolver)) });
+    }
+
+    public override ExpressionPieceBuilder VisitPick_expression([NotNull] DmlParser.Pick_expressionContext context)
+    {
+        return (resolver) =>
+        {
+            var args = context.pick_expr().pick_expr_pair().SelectMany(p =>
+            {
+                var probVal = p.prob == null ? 100 : int.Parse(p.prob.Text);
+                var prob = SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(probVal));
+
+                return new[]
+                {
+                    SyntaxFactory.Argument(prob),
+                    SyntaxFactory.Argument(Visit(p.val)(resolver))
+                };
+            });
+
+            return CreateCall(RuntimeFrameworkIntrinsic.PICK_WEIGHTED, args);
+        };
     }
 
     public override ExpressionPieceBuilder VisitExpr_prereturn(DmlParser.Expr_prereturnContext context)

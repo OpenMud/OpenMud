@@ -1,4 +1,5 @@
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder;
 

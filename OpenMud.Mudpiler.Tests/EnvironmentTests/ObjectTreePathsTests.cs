@@ -67,6 +67,52 @@ turf
     }
 
     [Test]
+    public void SingleLineObjFieldDeclaration()
+    {
+        var dmlCode =
+            @"
+obj
+	test
+		var
+			testfield
+
+/obj/test/testfield = 10
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var o = system.CreateAtomic("/obj/test");
+        Assert.IsTrue((int)o["testfield"] == 10);
+    }
+
+
+
+    [Test]
+    public void GlobalVarDeclaration()
+    {
+        var dmlCode =
+            @"
+var/global/testfield = 10
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var o = system.Global["testfield"];
+        Assert.IsTrue(o == 10);
+    }
+
+    [Test]
+    public void GlobalVarDeclaration2()
+    {
+        var dmlCode =
+            @"
+/var/global/testfield = 10
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var o = system.Global["testfield"];
+        Assert.IsTrue(o == 10);
+    }
+
+    [Test]
     public void ObjDeclarationWithHangingForwardSlashTest()
     {
         var dmlCode =
@@ -178,5 +224,26 @@ var/
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
         var r = (int)system.Global.ExecProc("test0").CompleteOrException();
         Assert.IsTrue((int)system.Global.ExecProc("test0").CompleteOrException() == 30);
+    }
+
+    [Test]
+    public void InitializeGlobalVariableComplexExpressionTest()
+    {
+        /*
+         * Removal: The item is removed. If the same value exists twice, the one at the end of the list is removed first.
+         */
+
+        var dmlCode =
+            @"
+
+/proc/test(w)
+    return w * w
+
+var/global/test_global = test(20)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global["test_global"];
+        Assert.IsTrue(r == 20 * 20);
     }
 }

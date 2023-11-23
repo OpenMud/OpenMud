@@ -5,6 +5,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Framework.Behaviours;
 
@@ -12,7 +13,7 @@ public class ListBasic : IRuntimeTypeBuilder
 {
     public bool AcceptsDatum(string target)
     {
-        return RuntimeTypeResolver.InheritsBaseTypeDatum(target, DmlPrimitiveBaseType.List);
+        return DmlPath.IsDeclarationInstanceOfPrimitive(target, DmlPrimitive.List);
     }
 
     public void Build(DatumHandle e, Datum datum, DatumProcCollection procedureCollection)

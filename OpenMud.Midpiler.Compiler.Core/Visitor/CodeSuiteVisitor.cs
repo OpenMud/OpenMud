@@ -1,12 +1,15 @@
+using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using Antlr4.Runtime.Tree;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
 using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.CodeSuiteBuilder;
 using OpenMud.Mudpiler.Compiler.DmlGrammar;
+using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
-using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
+using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Core.Visitor;
 
@@ -23,12 +26,30 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
     private static readonly string VARGEN_PREFIX = "__supportvar";
     private readonly ExpressionVisitor EXPR = new();
     private readonly SourceMapping mapping;
-
+    private string? adjacentLabel = null;
+    private bool generatedLabel = false;
     private int vargenIndex;
+    private int labelgenIndex = 0;
+
+    private Dictionary<string, string> loopExitLabels = new Dictionary<string, string>();
+    private Dictionary<string, string> loopContinueLabels = new Dictionary<string, string>();
+    
+    private Stack<string> currentLoopExitLabel = new();
+    private Stack<string> currentLoopContinueLabel = new();
 
     internal CodeSuiteVisitor(SourceMapping mapping)
     {
         this.mapping = mapping;
+    }
+
+    private string GenerateLabelName(string name)
+    {
+        return $"lbl_{name}";
+    }
+
+    private string GenerateSupportLabel()
+    {
+        return $"lblsupport_{labelgenIndex++}";
     }
 
     public IdentifierNameSyntax GenerateSupportVariable()
@@ -48,9 +69,14 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
     {
         return builder =>
         {
+            var delayExpression = context.delay == null
+                ? SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(0))
+                : EXPR.Visit(context.delay)(builder)
+                ;
+
             var spawnCall = EXPR.CreateCall("spawn", new[]
             {
-                SyntaxFactory.Argument(EXPR.Visit(context.delay)(builder))
+                SyntaxFactory.Argument(delayExpression)
             });
 
             return new StatementSyntax[] {
@@ -75,7 +101,11 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         var chains = new List<Tuple<ExpressionPieceBuilder, CodePieceBuilder>>();
 
         for (var i = 0; i < c.expr().Length; i++)
-            chains.Add(new Tuple<ExpressionPieceBuilder, CodePieceBuilder>(EXPR.Visit(c.expr(i)), Visit(c.suite(i))));
+        {
+            var suite = c.suite(i);
+            var body = suite == null ? CodePieceBuilderUtil.NullCodePieceBuilder : Visit(suite);
+            chains.Add(new Tuple<ExpressionPieceBuilder, CodePieceBuilder>(EXPR.Visit(c.expr(i)), body));
+        }
 
         return resolver =>
         {
@@ -104,16 +134,45 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         };
     }
 
+    private (string exitLabel, string continueLabel, CodePieceBuilder) VisitWrapLoop(DmlParser.SuiteContext ctx, string? adjacentLabel)
+    {
+        var exitLabel = GenerateSupportLabel();
+        var continueLabel = GenerateSupportLabel();
+
+        currentLoopContinueLabel.Push(continueLabel);
+        currentLoopExitLabel.Push(exitLabel);
+
+        if (adjacentLabel != null)
+        {
+            loopContinueLabels[adjacentLabel] = continueLabel;
+            loopExitLabels[adjacentLabel] = exitLabel;
+        }
+
+        var bodyBuilder = Visit(ctx);
+
+        if (adjacentLabel != null)
+        {
+            loopContinueLabels.Remove(adjacentLabel);
+            loopExitLabels.Remove(adjacentLabel);
+        }
+
+        currentLoopContinueLabel.Pop();
+        currentLoopExitLabel.Pop();
+
+        return (exitLabel, continueLabel, bodyBuilder);
+    }
 
     public override CodePieceBuilder VisitForlist_list_recycle_in(
         [NotNull] DmlParser.Forlist_list_recycle_inContext context)
     {
         var iterName = Util.IdentifierName(context.iter_var.GetText());
 
+        var (exitLabel, continueLabel, bodyBulder) = VisitWrapLoop(context.suite(), this.adjacentLabel);
+
         return resolver =>
         {
             var iteratorSupportName = GenerateSupportVariable();
-            var body = GroupStatements(Visit(context.suite())(resolver));
+            var body = GroupStatements(bodyBulder(resolver));
 
             var assignIterToVar = SyntaxFactory.ExpressionStatement(
                 EXPR.CreateAssignment(
@@ -140,12 +199,12 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             );
 
             return new[] {
-                CreateForEach(iteratorSupportName, EXPR.Visit(context.expr())(resolver), body)
+                CreateForEach(exitLabel, continueLabel, iteratorSupportName, EXPR.Visit(context.expr())(resolver), body)
             };
         };
     }
 
-    public StatementSyntax CreateForEach(IdentifierNameSyntax iteratorName, ExpressionSyntax provider,
+    public StatementSyntax CreateForEach(string exitLabelName, string continueLabelName, IdentifierNameSyntax iteratorName, ExpressionSyntax provider,
         StatementSyntax body)
     {
         var collectionContainerVarRef = GenerateSupportVariable();
@@ -217,7 +276,10 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 ExpressionVisitor.CreateUnAsn("++", stepperVarRef, stepperVarRef)
             );
 
-        var drivingLoop = SyntaxFactory.WhileStatement(
+        var continueLabel = CreateLabel(continueLabelName);
+        var breakLabel = CreateLabel(exitLabelName);
+
+        var drivingLoop = (StatementSyntax)SyntaxFactory.WhileStatement(
             SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression),
             SyntaxFactory.Block(
                 SyntaxFactory.List(new[]
@@ -225,36 +287,137 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     abortExecutor,
                     iteratorAssigner,
                     stepIncrementor,
-                    body
+                    body,
+                    continueLabel
                 })
             )
         );
-        
+
         return SyntaxFactory.Block(
             SyntaxFactory.List(new StatementSyntax[]
             {
                 collectionContainerInitializer,
                 collectionStepInitializer,
-                drivingLoop
+                drivingLoop,
+                breakLabel
+            })
+        );
+    }
+
+
+    public StatementSyntax CreateForLoop(string exitLabelName, string continueLabelName, ExpressionSyntax? condition, StatementSyntax? step, StatementSyntax body)
+    {
+        var doEvalstepperVarRef = GenerateSupportVariable();
+
+        var doEvalStepperInitializer = SyntaxFactory.LocalDeclarationStatement(
+            SyntaxFactory.VariableDeclaration(
+                SyntaxFactory.ParseTypeName("bool"),
+                SyntaxFactory.SeparatedList(new[]
+                {
+                    SyntaxFactory.VariableDeclarator(doEvalstepperVarRef.Identifier)
+                        .WithInitializer(SyntaxFactory.EqualsValueClause(
+                            SyntaxFactory.LiteralExpression(
+                                SyntaxKind.FalseLiteralExpression
+                            )
+                        )
+                    )
+                })
+            )
+        );
+
+        var stepperEvaluator = step == null ? null : SyntaxFactory.IfStatement(
+            doEvalstepperVarRef,
+            step
+        );
+
+        var abortExecutor = condition == null ? null : SyntaxFactory.IfStatement(
+            SyntaxFactory.PrefixUnaryExpression(
+                SyntaxKind.LogicalNotExpression,
+                condition),
+            SyntaxFactory.BreakStatement()
+        );
+
+        var toggleEvaluator =
+            SyntaxFactory.ExpressionStatement(
+                ExpressionVisitor.CreateBinAsn("=", doEvalstepperVarRef, SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression))
+            );
+
+        var loopBody = new List<StatementSyntax>();
+
+        if (stepperEvaluator != null)
+            loopBody.Add(stepperEvaluator);
+
+        if (abortExecutor != null)
+            loopBody.Add(abortExecutor);
+
+        loopBody.Add(toggleEvaluator);
+        loopBody.Add(body);
+
+        var continueLabel = CreateLabel(continueLabelName);
+
+        loopBody.Add(continueLabel);
+
+        var drivingLoop = (StatementSyntax)SyntaxFactory.WhileStatement(
+            SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression),
+            SyntaxFactory.Block(
+                SyntaxFactory.List(
+                    loopBody
+                )
+            )
+        );
+
+        var breakLabel = CreateLabel(exitLabelName);
+
+        return SyntaxFactory.Block(
+            SyntaxFactory.List(new StatementSyntax[]
+            {
+                doEvalStepperInitializer,
+                drivingLoop,
+                breakLabel
             })
         );
     }
 
     public override CodePieceBuilder VisitBreak_stmt([NotNull] DmlParser.Break_stmtContext context)
     {
-        return (r) => new[] { SyntaxFactory.BreakStatement() };
+        if (currentLoopExitLabel.Count == 0)
+            throw new Exception("Not in a loop!");
+
+        var lbl = currentLoopExitLabel.Peek();
+
+        if(context.NAME() != null)
+        {
+            if (!loopExitLabels.TryGetValue(context.NAME().GetText(), out lbl))
+                throw new Exception("Invalid loop label.");
+        }
+
+        return (r) => new[] { CreateGoto(lbl)};
     }
 
     public override CodePieceBuilder VisitContinue_stmt([NotNull] DmlParser.Continue_stmtContext context)
     {
-        return (r) => new[] { SyntaxFactory.ContinueStatement() };
+        if (currentLoopContinueLabel.Count == 0)
+            throw new Exception("Not in a loop!");
+
+        var lbl = currentLoopContinueLabel.Peek();
+
+
+        if (context.NAME() != null)
+        {
+            if (!loopContinueLabels.TryGetValue(context.NAME().GetText(), out lbl))
+                throw new Exception("Invalid loop label.");
+        }
+
+        return (r) => new[] { CreateGoto(lbl) };
     }
 
     public override CodePieceBuilder VisitForlist_list_in([NotNull] DmlParser.Forlist_list_inContext context)
     {
         var path = context.path.GetText();
-        var identifierName = Util.IdentifierName(DmlPath.ResolveBaseName(path));
-        var baseObj = DmlPath.ResolveParentPath(path);
+        var identifierName = Util.IdentifierName(DmlPath.ExtractComponentName(path));
+        var baseObj = DmlPath.ResolveParentClass(path);
+
+        var (exitLabel, continueLabel, bodyBulder) = VisitWrapLoop(context.suite(), this.adjacentLabel);
 
         return resolver =>
         {
@@ -271,7 +434,92 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             );
 
             return new[] {
-                CreateForEach(identifierName, enumAtomicTypes, GroupStatements(Visit(context.suite())(resolver)))
+                CreateForEach(exitLabel, continueLabel, identifierName, enumAtomicTypes, GroupStatements(bodyBulder(resolver)))
+            };
+        };
+    }
+
+    public override CodePieceBuilder VisitFor_decl([NotNull] DmlParser.For_declContext context)
+    {
+        var declDetails = ParseVariableDeclaration(context.variable_declaration());
+        var (exitLabel, continueLabel, bodyBulder) = VisitWrapLoop(context.suite(), this.adjacentLabel);
+
+        return resolver =>
+        {
+            var body = GroupStatements(bodyBulder(resolver));
+
+            return
+                CreateCodePieceBuilder(declDetails)(resolver)
+                .Append(
+                    CreateForLoop(
+                        exitLabel,
+                        continueLabel,
+                        context.loop_test == null ? null : EXPR.Visit(context.loop_test)(resolver),
+                        context.update == null ? null : SyntaxFactory.ExpressionStatement(EXPR.Visit(context.update)(resolver)),
+                        body
+                    )
+                )
+                .ToArray();
+        };
+    }
+
+    public override CodePieceBuilder VisitFor_recycle([NotNull] DmlParser.For_recycleContext context)
+    {
+        var declDetails = EXPR.Visit(context.initilizer);
+        var (exitLabel, continueLabel, bodyBulder) = VisitWrapLoop(context.suite(), this.adjacentLabel);
+        return resolver =>
+        {
+            var body = GroupStatements(bodyBulder(resolver));
+
+            return new[] {
+                SyntaxFactory.ExpressionStatement(declDetails(resolver)),
+                CreateForLoop(
+                    exitLabel,
+                    continueLabel,
+                    context.loop_test == null ? null : EXPR.Visit(context.loop_test)(resolver),
+                    context.update == null ? null : SyntaxFactory.ExpressionStatement(EXPR.Visit(context.update)(resolver)),
+                    body
+                )
+            };
+        };
+    }
+
+    public override CodePieceBuilder VisitFor_nodecl([NotNull] DmlParser.For_nodeclContext context)
+    {
+        var (exitLabel, continueLabel, bodyBulder) = VisitWrapLoop(context.suite(), this.adjacentLabel);
+        return resolver =>
+        {
+            var body = GroupStatements(bodyBulder(resolver));
+
+            return new[]
+            {
+                CreateForLoop(
+                    exitLabel,
+                    continueLabel,
+                    context.loop_test == null ? null : EXPR.Visit(context.loop_test)(resolver),
+                    context.update == null ? null : SyntaxFactory.ExpressionStatement(EXPR.Visit(context.update)(resolver)),
+                    body
+                )
+            };
+        };
+    }
+
+    public override CodePieceBuilder VisitWhile_stmt([NotNull] DmlParser.While_stmtContext context)
+    {
+        var (exitLabel, continueLabel, bodyBulder) = VisitWrapLoop(context.suite(), this.adjacentLabel);
+        return resolver =>
+        {
+            var body = GroupStatements(bodyBulder(resolver));
+
+            return new[]
+            {
+                CreateForLoop(
+                    exitLabel,
+                    continueLabel,
+                    EXPR.Visit(context.expr())(resolver),
+                    null,
+                    body
+                )
             };
         };
     }
@@ -279,9 +527,10 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
     public override CodePieceBuilder VisitForlist_decl_in([NotNull] DmlParser.Forlist_decl_inContext context)
     {
         var declDetails = ParseVariableDeclaration(context.variable_declaration());
+        var (exitLabel, continueLabel, bodyBulder) = VisitWrapLoop(context.suite(), this.adjacentLabel);
         return resolver =>
         {
-            var body = GroupStatements(Visit(context.suite())(resolver));
+            var body = GroupStatements(bodyBulder(resolver));
 
             if (declDetails.objectType != null)
             {
@@ -303,6 +552,8 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
             return new[] {
                 CreateForEach(
+                    exitLabel,
+                    continueLabel,
                     Util.IdentifierName(declDetails.variableName),
                     EXPR.Visit(context.expr())(resolver),
                     body
@@ -313,9 +564,11 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
     public override CodePieceBuilder VisitSuite_single_stmt(DmlParser.Suite_single_stmtContext c)
     {
+        var builder = Visit(c.simple_stmt());
+
         return resolver =>
         {
-            var r = Visit(c.simple_stmt())(resolver).Single();
+            var r = builder(resolver).Single();
 
             var addr = mapping.Lookup(c.start.Line);
 
@@ -357,37 +610,47 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         };
     }
 
-    public override CodePieceBuilder VisitSuite_multi_stmt(DmlParser.Suite_multi_stmtContext c)
-    {
+    private CodePieceBuilder ParseStatementsAsBlock(IEnumerable<ParserRuleContext> statements) {
+        var stmtBuilders = statements
+            .Select(s => Tuple.Create(s, Visit(s)))
+            .ToList();
+
         return resolver =>
         {
             var block = SyntaxFactory.Block(
-                c.stmt()
-                .Select(s => Tuple.Create(s, Visit(s)))
+                stmtBuilders
                 .Where(x => x.Item2 != null)
                 .SelectMany(s =>
+                {
+                    var r = s.Item2(resolver);
+
+                    var addr = mapping.Lookup(s.Item1.Start.Line);
+
+                    if (addr.HasValue)
                     {
-                        var r = s.Item2(resolver);
-
-                        var addr = mapping.Lookup(s.Item1.Start.Line);
-
-                        if (addr.HasValue)
-                        {
-                            r = r.Select(
-                                w => 
-                                    w.WithAdditionalAnnotations(
-                                        BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line)
-                                    )
-                                ).ToArray();
-                        }
-
-                        return r;
+                        r = r.Select(
+                            w =>
+                                w.WithAdditionalAnnotations(
+                                    BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line)
+                                )
+                            ).ToArray();
                     }
+
+                    return r;
+                }
                 )
             );
 
             return new[] { block };
         };
+    }
+
+    public override CodePieceBuilder VisitSuite_multi_stmt(DmlParser.Suite_multi_stmtContext c)
+    {
+        var statements = c.stmt().Cast<ParserRuleContext>().Concat(
+            c.stmt_list_item().Select(c => (ParserRuleContext)c.compound_stmt() ?? c.small_stmt())
+        ).ToList();
+        return ParseStatementsAsBlock(statements);
     }
 
     public override CodePieceBuilder VisitSuite_empty([NotNull] DmlParser.Suite_emptyContext context)
@@ -496,6 +759,34 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         };
     }
 
+
+    public override CodePieceBuilder VisitNew_call_indirect([NotNull] DmlParser.New_call_indirectContext c)
+    {
+        var rawArgs = c.argument_list() == null
+            ? new List<ArgumentPieceBuilder>()
+            : EXPR.ParseArgumentList(c.argument_list()).ToList();
+
+        var subject = EXPR.Visit(c.dest);
+        var field = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(c.field.GetText()));
+
+        return resolver =>
+        {
+            var newExpr = EXPR.CreateCall(RuntimeFrameworkIntrinsic.INDIRECT_NEW,
+                SyntaxFactory.SeparatedList(
+                    new[]
+                    {
+                        SyntaxFactory.Argument(subject(resolver)),
+                        SyntaxFactory.Argument(field)
+                    }.Concat(
+                        rawArgs.Select(y => y(resolver))
+                    )
+                )
+            );
+
+            return new[] { SyntaxFactory.ExpressionStatement(newExpr) };
+        };
+    }
+
     public VariableDeclarationMetadata ParseVariableDeclaration(
         DmlParser.Implicit_typed_variable_declarationContext ctx,
         string? typePrefix = null
@@ -549,11 +840,6 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         else if (objectType != null)
         {
             objType = objectType.GetText();
-            /*
-            var modifiers = DmlPath.ExtractTailModifiers(DmlPath.Concat(objectType.GetText(), name.GetText()),
-                out var remainder, false);
-            objType = remainder.Length > 0 ? DmlPath.RootClassName(remainder) : null;
-            variableName = DmlPath.NameWithModifiers(modifiers, name.GetText());*/
         }
 
         if(objectTypePrefix != null)
@@ -561,8 +847,8 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
         if (objType != null)
         {
-            var modifiers = DmlPath.ExtractTailModifiers(DmlPath.Concat(objType, name.GetText()), out var remainder, false);
-            objType = remainder.Length > 0 ? DmlPath.RootClassName(remainder) : null;
+            var modifiers = DmlPath.ParseDeclarationPath(DmlPath.Concat(objType, name.GetText()), out var remainder, out var _, true);
+            objType = remainder.Length > 0 ? DmlPath.BuildQualifiedDeclarationName(remainder) : null;
             variableName = DmlPath.NameWithModifiers(modifiers, name.GetText());
         }
 
@@ -600,7 +886,16 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         if (init == null)
             init = resolver => SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression);
 
-        ExpressionPieceBuilder wrapper = resolver => EXPR.CreateVariable(init(resolver));
+
+        ExpressionPieceBuilder wrapper = (resolver) =>
+        {
+            var target = init(resolver);
+            var r = EXPR.CreateVariable(target);
+            if (target.HasAnnotation(BuilderAnnotations.DmlInvoke))
+                r = r.WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke);
+
+            return r;
+        };
 
         return new VariableDeclarationMetadata
             { variableName = variableName, objectType = objType, init = wrapper, varType = typeDesc };
@@ -838,4 +1133,94 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             return new[] { ifElseIfBlock };
         };
     }
+
+
+    private StatementSyntax CreateLabel(string name)
+    {
+        return SyntaxFactory.ExpressionStatement(
+            SyntaxFactory.InvocationExpression(
+                SyntaxFactory.ParseName("InlineIL.IL.MarkLabel"),
+                SyntaxFactory.ArgumentList(
+                    SyntaxFactory.SeparatedList(new[]
+                    {
+                        SyntaxFactory.Argument(
+                            SyntaxFactory.LiteralExpression(
+                                SyntaxKind.StringLiteralExpression,
+                                SyntaxFactory.Literal(GenerateLabelName(name))
+                            )
+                            .WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation)
+                        )
+                    })
+                )
+            )
+        );
+    }
+
+    private StatementSyntax CreateGoto(string name)
+    {
+        return SyntaxFactory.ExpressionStatement(
+            SyntaxFactory.InvocationExpression(
+                SyntaxFactory.ParseName("InlineIL.IL.Emit.Br"),
+                SyntaxFactory.ArgumentList(
+                    SyntaxFactory.SeparatedList(new[]
+                    {
+                        SyntaxFactory.Argument(
+                            SyntaxFactory.LiteralExpression(
+                                SyntaxKind.StringLiteralExpression,
+                                SyntaxFactory.Literal(GenerateLabelName(name))
+                            )
+                            .WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation)
+                        )
+                    })
+                )
+            )
+        );
+    }
+
+    public override CodePieceBuilder VisitGoto_label_declaration([NotNull] DmlParser.Goto_label_declarationContext c)
+    {
+        //Need to create a closure (block) because it marks a potential re-entry boundary for async operation rewriter builder step
+        adjacentLabel = c.NAME().GetText();
+        generatedLabel = true;
+        var body = ParseStatementsAsBlock(c.stmt());
+        return (resolver) =>
+        {
+            return new[] {
+                    SyntaxFactory.Block(new StatementSyntax[] {
+                        CreateLabel(c.NAME().GetText())
+                    }
+                    .Concat(body(resolver))
+                )
+            };
+        };
+    }
+
+    public override CodePieceBuilder VisitGoto_stmt([NotNull] DmlParser.Goto_stmtContext context)
+    {
+        return resolver => new[] { CreateGoto(context.NAME().GetText()) };
+    }
+
+    public override CodePieceBuilder VisitStmt([NotNull] DmlParser.StmtContext context)
+    {
+        var r = base.VisitStmt(context);
+        if (!generatedLabel)
+            this.adjacentLabel = null;
+
+        this.generatedLabel = false;
+        return r;
+    }
+
+    public override CodePieceBuilder VisitStmt_list([NotNull] DmlParser.Stmt_listContext context)
+    {
+
+        var builders = context.stmt_list_item()
+            .Select(x => (IParseTree)x.compound_stmt() ?? x.small_stmt())
+            .Select(Visit)
+            .Where(x => x != null)
+            .ToList();
+
+        return (resolver) =>
+            builders.SelectMany(r => r(resolver)).ToArray();
+    }
+
 }

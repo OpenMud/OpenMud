@@ -13,5 +13,9 @@ namespace OpenMud.Mudpiler.RuntimeEnvironment
         public static readonly string TEXT = "text";
         public static readonly string ADDTEXT = "addtext";
         public static readonly string INDIRECT_CALL = "_indirect_call";
+        public static readonly string GENERATE_RANGE = "_generate_range";
+        public static readonly string PICK_WEIGHTED = "_weighted_pick";
+        public static readonly string INDIRECT_NEW = "indirect_new";
+        public static readonly string INDIRECT_ISTYPE = "indirect_istype";
     }
 }

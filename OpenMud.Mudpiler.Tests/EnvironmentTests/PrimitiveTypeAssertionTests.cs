@@ -168,5 +168,45 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
             }
         }
 
+        [Test]
+        public void ComboForListTest()
+        {
+            var dmlCode =
+                @"
+/proc/test_fail()
+    var w = list(null, ""test"", 123)
+
+    for(var/i as null | text in w)
+        var l = i
+
+/proc/test_pass0()
+    var w = list(null, ""test"", ""123"")
+
+    for(var/i as null | text in w)
+        var l = i
+";
+            var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+            var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+            try
+            {
+                system.Global.ExecProc("test_fail").CompleteOrException();
+                Assert.Fail();
+            }
+            catch (DmlRuntimeAssertionError ex)
+            {
+            }
+
+
+            try
+            {
+                var r = (int)system.Global.ExecProc("test_pass0").CompleteOrException();
+            }
+            catch (DmlRuntimeAssertionError ex)
+            {
+                Assert.Fail();
+            }
+        }
+
     }
 }

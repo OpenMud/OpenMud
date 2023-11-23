@@ -14,6 +14,7 @@ dml_module:
     | object_function_definition
     | variable_set_declaration
     | variable_declaration
+    | initializer_assignment
     | object_tree_definition
     )* EOF;
 
@@ -28,7 +29,8 @@ identifier_name
   | 'world'
   | 'loc'
   | 'spawn'
-  | 'null'
+  | 'pick'
+  | 'prob'
   ;
 
 initializer_assignment: path=declaration_object_tree_path ASSIGNMENT expr;
@@ -74,8 +76,8 @@ implicit_variable_declaration
   ;
 
 variable_declaration
-  : VAR FWD_SLASH implicit_typed_variable_declaration
-  | VAR implicit_untyped_variable_declaration
+  : FWD_SLASH? VAR FWD_SLASH implicit_typed_variable_declaration
+  | FWD_SLASH? VAR implicit_untyped_variable_declaration
   ;
 
 variable_set_declaration
@@ -114,7 +116,7 @@ object_tree_stmt
   | object_tree_definition;
 
 object_tree_suite: NEWLINE (INDENT object_tree_stmt+ DEDENT)?;
-object_tree_var_suite: NEWLINE (INDENT ((initializer_assignment | implicit_variable_declaration | NAME) NEWLINE)+ DEDENT)? ;
+object_tree_var_suite: NEWLINE (INDENT ((implicit_variable_declaration | initializer_assignment | NAME) NEWLINE)+ DEDENT)? ;
 
 //Function Definitions
 
@@ -168,16 +170,39 @@ argument_list_item: (arg_name=identifier_name ASSIGNMENT)? expr ;
 argument_list: OPEN_PARENS (argument_list_item (COMMA argument_list_item)*)? CLOSE_PARENS ;
 //Code Blocks
 
+
+
+stmt_list_item
+  : small_stmt
+  | compound_stmt
+  ;
+
+stmt_list
+    : stmt_list_item (SEMICOLON stmt_list_item)+ (SEMICOLON+|NEWLINE|(SEMICOLON+ NEWLINE))
+    | stmt_list_item SEMICOLON NEWLINE?
+    ;
+
 stmt
   : variable_set_declaration
+  | goto_label_declaration
+  | stmt_list
   | simple_stmt
-  | compound_stmt;
+  | compound_stmt
+  ;
 
 simple_stmt: small_stmt NEWLINE;
 
 return_stmt: RETURN ret=expr?;
+
+goto_label_declaration
+  : NAME COLON? NEWLINE stmt*
+  | NAME COLON? NEWLINE INDENT stmt* DEDENT;
+goto_stmt: GOTO NAME;
+
 small_stmt
-  : new_call_implicit
+  : goto_stmt
+  | new_call_implicit
+  | new_call_indirect
   | variable_declaration
   | flow_stmt
   | prereturn_assignment
@@ -188,10 +213,14 @@ small_stmt
   | config_statement
   | del_statement
   ;
-
+  
 
 new_call_implicit:
   dest=identifier_name ASSIGNMENT NEW FWD_SLASH? arglist=argument_list?
+  ;
+
+new_call_indirect:
+  dest=expr DOT field=identifier_name ASSIGNMENT NEW FWD_SLASH? arglist=argument_list?
   ;
 
 del_statement: DEL target=expr;
@@ -294,21 +323,21 @@ static_call:
 
 
 forlist_stmt
-  : FOR OPEN_PARENS iter_var=identifier_name SET_IN collection=expr CLOSE_PARENS suite #forlist_list_recycle_in
-  | FOR OPEN_PARENS bag=variable_declaration SET_IN collection=expr CLOSE_PARENS suite #forlist_decl_in
-  | FOR OPEN_PARENS VAR path=object_tree_path_expr CLOSE_PARENS suite #forlist_list_in
+  : FOR OPEN_PARENS iter_var=identifier_name as_list? SET_IN collection=expr CLOSE_PARENS suite #forlist_list_recycle_in
+  | FOR OPEN_PARENS bag=variable_declaration as_list? SET_IN collection=expr CLOSE_PARENS suite #forlist_decl_in
+  | FOR OPEN_PARENS VAR path=object_tree_path_expr as_list? CLOSE_PARENS suite #forlist_list_in
   ;
 
-for_stmt:
-  FOR OPEN_PARENS
-    initilizer=basic_assignment SEMICOLON
-    loop_test=expr SEMICOLON
-    update=expr
-  CLOSE_PARENS;
+for_stmt
+  : FOR OPEN_PARENS COMMA loop_test=expr? COMMA update=expr? CLOSE_PARENS suite #for_nodecl
+  | FOR OPEN_PARENS initilizer=variable_declaration COMMA loop_test=expr? COMMA update=expr? CLOSE_PARENS suite #for_decl
+  | FOR OPEN_PARENS initilizer=expr COMMA loop_test=expr? COMMA update=expr? CLOSE_PARENS suite #for_recycle
+  ;
+
 
 flow_stmt: break_stmt | continue_stmt;
-break_stmt: BREAK;
-continue_stmt: CONTINUE;
+break_stmt: BREAK target=NAME?;
+continue_stmt: CONTINUE target=NAME?;
 
 compound_stmt: for_stmt | forlist_stmt | if_stmt | do_while_stmnt | while_stmt | switch_stmnt | spawn_stmt;
 
@@ -336,16 +365,24 @@ switch_stmnt: SWITCH OPEN_PARENS expr CLOSE_PARENS NEWLINE INDENT
   DEDENT
   ;
 
-if_stmt: IF OPEN_PARENS test=expr CLOSE_PARENS pass=suite (ELSE IF OPEN_PARENS elif_test=expr CLOSE_PARENS elif_pass=suite)* (ELSE else_pass=suite)?;
-spawn_stmt: SPAWN OPEN_PARENS delay=expr CLOSE_PARENS run=suite;
+if_stmt: IF OPEN_PARENS test=expr CLOSE_PARENS pass=suite? (ELSE IF OPEN_PARENS elif_test=expr CLOSE_PARENS elif_pass=suite)* (ELSE else_pass=suite)?;
+spawn_stmt: SPAWN (OPEN_PARENS delay=expr? CLOSE_PARENS)? run=suite;
 
 do_while_stmnt: DO suite DEDENT WHILE OPEN_PARENS expr CLOSE_PARENS NEWLINE INDENT;
 
 while_stmt: WHILE OPEN_PARENS expr CLOSE_PARENS suite;
+
+suite_multi_stmt
+  : NEWLINE INDENT stmt+ DEDENT
+  | NEWLINE? OPEN_BRACE INDENT stmt+ DEDENT CLOSE_BRACE NEWLINE? 
+  | NEWLINE? OPEN_BRACE stmt+ CLOSE_BRACE NEWLINE? 
+  | NEWLINE? OPEN_BRACE stmt_list_item (SEMICOLON stmt_list_item)* SEMICOLON* CLOSE_BRACE NEWLINE?
+  ;
+
 suite
   : simple_stmt #suite_single_stmt
   | compound_stmt #suite_compound_stmt
-  | NEWLINE INDENT stmt+ DEDENT #suite_multi_stmt
+  | suite_multi_stmt #suite_group
   | NEWLINE #suite_empty;
 
 bit_op: (OP_LEFT_SHIFT | OP_RIGHT_SHIFT | CARET |  BITWISE_OR | AMP);
@@ -368,6 +405,20 @@ assoc_list_expr:
 
 null_expr: NULL;
 
+pick_expr_pair
+  : prob=NUMBER SEMICOLON val=expr
+  | SEMICOLON? val=expr
+  | PROB OPEN_PARENS prob=NUMBER CLOSE_PARENS SEMICOLON? val=expr
+  ;
+
+pick_expr
+  : PICK OPEN_PARENS pick_expr_pair (COMMA pick_expr_pair)* CLOSE_PARENS
+  ;
+
+as_list:
+  AS (parameter_as_constraint (BITWISE_OR parameter_as_constraint)*)
+  ;
+
 expr
  : null_expr #expr_null
  | ISTYPE OPEN_PARENS varname=identifier_name (COMMA typename=expr)? CLOSE_PARENS #expr_istype_local
@@ -385,6 +436,7 @@ expr
  | literal=SCINOTATION_NUMBER #expr_dec_scientific_literal
  | OPEN_PARENS inner=expr CLOSE_PARENS #expr_grouped
  | expr INTERR expr COLON expr #expr_turnary
+ | pick_expr #pick_expression
  | expr_complex #expr_stmnt_stub
  | STRING #expr_string_literal
  | RESOURCE #expr_resource_identifier
@@ -393,6 +445,7 @@ expr
  | left=expr op=cmp_op right=expr #expr_cmp_binary
  | left=expr op=bit_op right=expr #expr_bit_binary
  | left=expr op=logic_op right=expr #expr_logic_binary
- | left=expr AS (identifier_name (BITWISE_OR identifier_name)*) #expr_primitive_assert_type
+ | left=expr as_list #expr_primitive_assert_type
  | DOT #expr_prereturn
+ | start=expr TO end=expr #list_range_expr
 ;

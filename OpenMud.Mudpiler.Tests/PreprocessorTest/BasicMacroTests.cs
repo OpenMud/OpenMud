@@ -420,6 +420,69 @@ test(1,2,3)
     }
 
     [Test]
+    public void TestMacroTemplating3()
+    {
+        var testCode =
+            @"
+#define C * 10 + 2
+
+/proc/test()
+    return 2 C
+";
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
+
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == 22);
+    }
+
+    [Test]
+    public void TestMacroTemplating4()
+    {
+        var testCode =
+            @"
+#define C -1
+
+/proc/test()
+    return -C
+";
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
+
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == 1);
+    }
+
+    [Test]
+    public void TestMacroTemplating5()
+    {
+        var testCode =
+            @"
+#define C 1-
+
+/proc/test()
+    return C-1
+";
+        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant)
+            .AsPlainText(false);
+
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance == 2);
+    }
+
+    [Test]
     public void TestMacroDoesntImpactStrings()
     {
         var testCode =
@@ -921,6 +984,27 @@ this is multiline""}
 
         var instance = (string)system.Global.ExecProc("test").CompleteOrException();
         Assert.IsTrue(instance == "this is multiline");
+    }
+
+
+    [Test]
+    public void TestMacroArgumentIntegrityWithBraceAndComma()
+    {
+        var testCode = @"
+#define neg(x) -x
+
+/proc/test()
+    return neg(sqrt(32, 5))
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+
+        Assert.IsTrue(r.Contains("-sqrt(32, 5)"));
     }
 
     private (IImmutableDictionary<string, MacroDefinition> macros, IImmutableSourceFileDocument importBody) processImport(
