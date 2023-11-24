@@ -183,7 +183,10 @@ internal class GlobalUtil : IRuntimeTypeBuilder
         var ctx = proc.Create();
 
         ctx.SetupContext(null, null, self, self.ctx);
-        ctx.ActiveArguments = proc.DefaultArgumentList().Overlay(args);
+
+        var argListBuilder = proc.CreateDefaultArgumentListBuilder().SetupContext(null, null, self, self.ctx);
+
+        ctx.ActiveArguments = argListBuilder.CompleteOrException().Get<ProcArgumentList>().Overlay(args);
 
         return CallHelper(ctx);
     }

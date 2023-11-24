@@ -230,7 +230,58 @@ public class FlexibleArguments
 
         var mob = system.CreateAtomic("/mob");
 
-        var r = (int)mob.ExecProc("test").CompleteOrException();
+        var interim = mob.ExecProc("test").CompleteOrException();
+        var r = (int)interim;
         Assert.IsTrue(r == 44);
+    }
+
+    [Test]
+    public void ComplexDefaultArguments()
+    {
+        var dmlCode =
+            @"
+/proc/wow(var/x)
+    return x * 10
+
+/mob
+    proc
+        test2(var/a=wow(9), var/b)
+            return (a + 2) * (b - 3)
+        test()
+            return test2(b=7)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var mob = system.CreateAtomic("/mob");
+
+        var interim = mob.ExecProc("test").CompleteOrException();
+        var r = (int)interim;
+        Assert.IsTrue(r == (90 + 2) * (7 - 3));
+    }
+
+    [Test]
+    public void ComplexDefaultArguments2()
+    {
+        var dmlCode =
+            @"
+/proc/wow(var/x)
+    return x * 10
+
+/mob
+    proc
+        test2(var/a=wow(9) - 4, var/b)
+            return (a + 2) * (b - 3)
+        test()
+            return test2(b=7)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var mob = system.CreateAtomic("/mob");
+
+        var interim = mob.ExecProc("test").CompleteOrException();
+        var r = (int)interim;
+        Assert.IsTrue(r == ((90 - 4) + 2) * (7 - 3));
     }
 }

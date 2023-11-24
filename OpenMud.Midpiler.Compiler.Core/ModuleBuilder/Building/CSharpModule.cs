@@ -27,6 +27,9 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
     private readonly Dictionary<string, FieldDeclarationSyntax> fieldDeclarations = new();
     private readonly Dictionary<string, Dictionary<string, ExpressionSyntax>> fieldInitializers = new();
+    
+    private readonly Dictionary<ModuleMethodDeclarationKey, ClassDeclarationSyntax> methodClassArgumentBuilderDeclarations = new();
+
     private readonly Dictionary<ModuleMethodDeclarationKey, ClassDeclarationSyntax> methodClassDeclarations = new();
     private readonly Dictionary<ModuleMethodDeclarationKey, MethodDeclarationSyntax> methodDeclarations = new();
 
@@ -123,13 +126,26 @@ public class CSharpModule : IDreamMakerSymbolResolver
         var baseClass = Touch(effectiveClassNameFullPath);
 
         var methodClassName = baseClass.Identifier.Text + "_" + methodName + "_" + declarationOrder;
+        var argBuilderClassName = methodClassName + "_arginit";
 
+        methodClassArgumentBuilderDeclarations[declarationKey] = DmlMethodBuilder.BuildDefaultArgListBuilderMethodClass(
+            argBuilderClassName,
+            effectiveClassNameFullPath,
+            methodDeclarations[declarationKey]
+        );
+        
         methodExecutionContextClassDeclarations[declarationKey] =
             DmlMethodBuilder.BuildMethodExecutionContextClass(methodDeclarations[declarationKey], effectiveClassNameFullPath,
                 methodClassName);
-        methodClassDeclarations[declarationKey] = DmlMethodBuilder.BuildMethodClass(effectiveClassNameFullPath, methodClassName,
-            declarationOrder, methodDeclarations[declarationKey],
-            methodExecutionContextClassDeclarations[declarationKey]);
+
+        methodClassDeclarations[declarationKey] = DmlMethodBuilder.BuildMethodClass(
+            effectiveClassNameFullPath,
+            methodClassName,
+            declarationOrder,
+            methodDeclarations[declarationKey],
+            methodExecutionContextClassDeclarations[declarationKey],
+            methodClassArgumentBuilderDeclarations[declarationKey]
+        );
     }
 
     public ClassDeclarationSyntax Touch(string path)
@@ -615,6 +631,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
         compilationUnit = compilationUnit.AddMembers(constructedClasses.ToArray());
         compilationUnit = compilationUnit.AddMembers(methodClassDeclarations.Values.ToArray());
+        compilationUnit = compilationUnit.AddMembers(methodClassArgumentBuilderDeclarations.Values.ToArray());
         compilationUnit = compilationUnit.AddMembers(methodExecutionContextClassDeclarations.Values.ToArray());
 
         foreach (var rewriter in Rewriters)

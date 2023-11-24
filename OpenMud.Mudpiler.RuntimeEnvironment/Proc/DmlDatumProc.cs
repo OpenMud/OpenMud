@@ -63,11 +63,29 @@ public abstract class DmlDatumProcExecutionContext : DatumProcExecutionContext
 public abstract class DmlDatumProc : DatumProc
 {
     public abstract string[] ArgumentNames();
-    public abstract EnvObjectReference[] ArgumentDefaults();
 
-    public override ProcArgumentList DefaultArgumentList() =>
-        new ProcArgumentList(ArgumentNames().Zip(ArgumentDefaults())
-            .Select((a) => new ProcArgument(a.First, a.Second)).ToArray());
+    protected virtual DatumProcExecutionContext DmlCreateArgumentBuilder()
+    {
+        return new PreparedDatumProcContext(() => VarEnvObjectReference.NULL);
+    }
+
+    public override DatumProcExecutionContext CreateDefaultArgumentListBuilder()
+    {
+        var intermediate = DmlCreateArgumentBuilder();
+
+        var netProc = new PreparedChainDatumProcContext(
+            intermediate,
+            r => {
+                var argList = r.IsNull ? new EnvObjectReference[0] : r.Get<EnvObjectReference[]>();
+                var namedArgList = new ProcArgumentList(ArgumentNames().Zip(argList)
+                    .Select((a) => new ProcArgument(a.First, a.Second)).ToArray());
+
+                return new PreparedDatumProcContext(() => new VarEnvObjectReference(namedArgList, true));
+            }
+        );
+
+        return netProc;
+    }
 
     protected abstract DmlDatumProcExecutionContext DmlCreate();
 
