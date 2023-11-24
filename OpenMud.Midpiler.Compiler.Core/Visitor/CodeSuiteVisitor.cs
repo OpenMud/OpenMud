@@ -472,7 +472,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             var body = GroupStatements(bodyBulder(resolver));
 
             return new[] {
-                SyntaxFactory.ExpressionStatement(declDetails(resolver)),
+                ExpressionVisitor.WrapEnsureStatement(declDetails(resolver)),
                 CreateForLoop(
                     exitLabel,
                     continueLabel,
