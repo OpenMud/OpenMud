@@ -20,8 +20,44 @@ public static class DmlMethodBuilder
         return decl;
     }
 
+    public static ClassDeclarationSyntax BuildDefaultArgListBuilderMethodClass(string name, string subjectClassName, MethodDeclarationSyntax subjectMethod)
+    {
+        var argInit = subjectMethod.ParameterList.Parameters.ToList().Select(p => p.Default?.Value).Select(e => e ?? ExpressionVisitor.CreateNull());
+
+        var defaultResult = SyntaxFactory.ArrayType(SyntaxFactory.ParseTypeName(typeof(EnvObjectReference).FullName),
+            SyntaxFactory.List(new[] { SyntaxFactory.ArrayRankSpecifier() }));
+
+        var argBuilderMethod = SyntaxFactory.MethodDeclaration(
+               defaultResult,
+               "ArgumentDefaults"
+           )
+           .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword),
+               SyntaxFactory.Token(SyntaxKind.OverrideKeyword)))
+           .WithBody(SyntaxFactory.Block(
+               SyntaxFactory.List<StatementSyntax>(new[]
+               {
+                    SyntaxFactory.ReturnStatement(
+                        SyntaxFactory.ArrayCreationExpression(
+                            defaultResult,
+                            SyntaxFactory.InitializerExpression(SyntaxKind.ArrayInitializerExpression,
+                                SyntaxFactory.SeparatedList<ExpressionSyntax>(
+                                        argInit
+                                    )
+                                )
+                        )
+                    )
+               })
+           ))
+           .WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation);
+
+
+        var r = GenerateExecutionContextClassImplementation(argBuilderMethod, null, name);
+
+        return r.WithAdditionalAnnotations(BuilderAnnotations.CreateProcClassPathAnnotation(subjectClassName));
+    }
+
     public static ClassDeclarationSyntax BuildMethodClass(string className, string name, int declarationOrder,
-        MethodDeclarationSyntax e, ClassDeclarationSyntax contextImplementation)
+        MethodDeclarationSyntax e, ClassDeclarationSyntax contextImplementation, ClassDeclarationSyntax defaultArgListBuilder)
     {
         var createImpl = GenerateCreateContextImplementation(contextImplementation);
 
@@ -34,7 +70,7 @@ public static class DmlMethodBuilder
         var argNamesType = SyntaxFactory.ArrayType(SyntaxFactory.ParseTypeName("string"),
             SyntaxFactory.List(new[] { SyntaxFactory.ArrayRankSpecifier() }));
         var argNamesDecl = GenerateArgumentNamesImplementation(implArgNames, argNamesType);
-        var argDefaultsDecl = GenerateArgumentDefaults(e);
+        var argDefaultsDecl = GenerateArgumentDefaults(defaultArgListBuilder);
 
         var decl = GenerateDmlProcClassImplementation(className, name, createImpl, attr, argNamesDecl,
             namePropertyImpl, argDefaultsDecl);
@@ -102,7 +138,7 @@ public static class DmlMethodBuilder
     }
 
     private static ClassDeclarationSyntax GenerateExecutionContextClassImplementation(MethodDeclarationSyntax e,
-        string className, string name)
+        string? className, string name)
     {
         var argFieldNames = e.ParameterList.Parameters.Select((p, i) => "argumentidx_" + i).ToArray();
 
@@ -125,7 +161,7 @@ public static class DmlMethodBuilder
         var setupPosArgsMethod = GenerateSetupPositionalArguments(argFieldNames);
         var continueImpl = GenerateDmlContinue(e);
 
-        return SyntaxFactory.ClassDeclaration(
+        var r = SyntaxFactory.ClassDeclaration(
                 SyntaxFactory.List<AttributeListSyntax>(),
                 SyntaxFactory.TokenList(),
                 SyntaxFactory.Identifier(name + "_context"),
@@ -137,8 +173,12 @@ public static class DmlMethodBuilder
                 })),
                 SyntaxFactory.List<TypeParameterConstraintClauseSyntax>(),
                 SyntaxFactory.List(new MemberDeclarationSyntax[] { setupPosArgsMethod, continueImpl }.Concat(argFields))
-            )
-            .WithAdditionalAnnotations(BuilderAnnotations.CreateProcClassPathAnnotation(className));
+            );
+
+        if(className != null)
+            r = r.WithAdditionalAnnotations(BuilderAnnotations.CreateProcClassPathAnnotation(className));
+
+        return r;
     }
 
     private static MethodDeclarationSyntax GenerateSetupPositionalArguments(string[] argFieldNames)
@@ -235,30 +275,22 @@ public static class DmlMethodBuilder
             .WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation);
     }
 
-    private static MethodDeclarationSyntax GenerateArgumentDefaults(MethodDeclarationSyntax e)
+    private static MethodDeclarationSyntax GenerateArgumentDefaults(ClassDeclarationSyntax ctxClass)
     {
-        var argInit = e.ParameterList.Parameters.ToList().Select(p => p.Default?.Value).Select(e => e ?? ExpressionVisitor.CreateNull());
-
-        var defaultResult = SyntaxFactory.ArrayType(SyntaxFactory.ParseTypeName(typeof(EnvObjectReference).FullName),
-            SyntaxFactory.List(new[] { SyntaxFactory.ArrayRankSpecifier() }));
-
         return SyntaxFactory.MethodDeclaration(
-                defaultResult,
-                "ArgumentDefaults"
+                SyntaxFactory.ParseTypeName(typeof(DmlDatumProcExecutionContext).FullName),
+                "DmlCreateArgumentBuilder"
             )
-            .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword),
+            .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
                 SyntaxFactory.Token(SyntaxKind.OverrideKeyword)))
             .WithBody(SyntaxFactory.Block(
                 SyntaxFactory.List<StatementSyntax>(new[]
                 {
                     SyntaxFactory.ReturnStatement(
-                        SyntaxFactory.ArrayCreationExpression(
-                            defaultResult,
-                            SyntaxFactory.InitializerExpression(SyntaxKind.ArrayInitializerExpression,
-                                SyntaxFactory.SeparatedList<ExpressionSyntax>(
-                                        argInit
-                                    )
-                                )
+                        SyntaxFactory.ObjectCreationExpression(
+                            SyntaxFactory.ParseTypeName(ctxClass.Identifier.Text),
+                            SyntaxFactory.ArgumentList(),
+                            null
                         )
                     )
                 })

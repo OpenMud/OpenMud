@@ -365,6 +365,18 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return CreateUnAsnArrayOp(c.unop.GetText(), Visit(c.dest), Visit(c.asn_idx.idx), true);
     }
 
+    //When we have an ExpressionSyntax, and we are not sure that it is a valid statement, we wrap it in a discard assignment
+    public static StatementSyntax WrapEnsureStatement(ExpressionSyntax expr)
+    {
+        var newExpr = SyntaxFactory.AssignmentExpression(
+                SyntaxKind.SimpleAssignmentExpression,
+                SyntaxFactory.IdentifierName("_"),
+                expr
+            );
+
+        return SyntaxFactory.ExpressionStatement(newExpr);
+    }
+
     private ExpressionPieceBuilder CreateUnAsnArrayOp(string op, ExpressionPieceBuilder dest, ExpressionPieceBuilder idx, bool isPostOp)
     {
         var lhs_eval = CreateBin(DmlBinary.ArrayIndex, dest, idx);
