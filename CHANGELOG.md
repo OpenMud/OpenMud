@@ -1,3 +1,15 @@
+# [2.9.0](https://github.com/OpenMud/OpenMud/compare/v2.8.0...v2.9.0) (2023-11-24)
+
+
+### Bug Fixes
+
+* **compiler:** Added necessary support for "for loops" with useless expressions as initializers. For example "for(my_var, ..., ...)", in this case the initializer has no effect, but standard DreamMaker grammer will compile it anyways. ([36e5a22](https://github.com/OpenMud/OpenMud/commit/36e5a227aa7f64ab8b5d53b4c006092813e542e7))
+
+
+### Features
+
+* **compiler:** Added support for complex default argument expressions which require an execution context. For example "/proc/myproc(var/x = testglobal(14) + 13) { ... }" ([f13f195](https://github.com/OpenMud/OpenMud/commit/f13f19519dc560909cc26cca6f6fea829549b683))
+
 # [2.8.0](https://github.com/OpenMud/OpenMud/compare/v2.7.0...v2.8.0) (2023-11-23)
 
 
