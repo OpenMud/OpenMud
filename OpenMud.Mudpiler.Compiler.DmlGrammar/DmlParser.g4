@@ -348,8 +348,8 @@ continue_stmt: CONTINUE target=NAME?;
 
 compound_stmt: for_stmt | forlist_stmt | if_stmt | do_while_stmnt | while_stmt | switch_stmnt | spawn_stmt;
 
-switch_numset
-  : NUMBER (COMMA NUMBER)*
+switch_exprset
+  : expr (COMMA expr)+
   ;
 
 switch_range
@@ -357,8 +357,8 @@ switch_range
   ;
 
 switch_constraint
-  : switch_numset
-  | switch_range
+  : switch_range
+  | switch_exprset
   | expr
   ;
 

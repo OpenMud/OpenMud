@@ -1008,20 +1008,17 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             );
     }
 
-    private ExpressionPieceBuilder ProcessSwitchSet(IdentifierNameSyntax exprVar, DmlParser.Switch_numsetContext r)
+    private ExpressionPieceBuilder ProcessSwitchSet(IdentifierNameSyntax exprVar, DmlParser.Switch_exprsetContext r)
     {
-        ExpressionSyntax NumLiteral(int w)
+        var nums = r.expr().Select(EXPR.Visit).ToList();
+
+        return (resolver) =>
         {
-            return SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(w));
-        }
-
-        var nums = r.NUMBER().Select(p => NumLiteral(int.Parse(p.GetText())));
-
         var exprs = nums.Select(n =>
             ExpressionVisitor.CreateBin(
                 DmlBinary.Equals,
                 b => exprVar,
-                b => n
+                    b => n(resolver)
             )
         ).ToList();
 
@@ -1032,7 +1029,8 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             )
         );
 
-        return logicalOr;
+            return logicalOr(resolver);
+        };
     }
 
     private ExpressionPieceBuilder ProcessSwitchRange(IdentifierNameSyntax exprVar, DmlParser.Switch_rangeContext r)
@@ -1073,8 +1071,8 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             return Tuple.Create(ProcessSwitchExpr(exprVar, constraint.expr()), suite);
         if (constraint.switch_range() != null)
             return Tuple.Create(ProcessSwitchRange(exprVar, constraint.switch_range()), suite);
-        if (constraint.switch_numset() != null)
-            return Tuple.Create(ProcessSwitchSet(exprVar, constraint.switch_numset()), suite);
+        if (constraint.switch_exprset() != null)
+            return Tuple.Create(ProcessSwitchSet(exprVar, constraint.switch_exprset()), suite);
         throw new Exception("Unknown switch semantics.");
     }
 
