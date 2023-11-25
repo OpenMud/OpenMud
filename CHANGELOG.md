@@ -1,3 +1,12 @@
+# [2.10.0](https://github.com/OpenMud/OpenMud/compare/v2.9.0...v2.10.0) (2023-11-25)
+
+
+### Features
+
+* **compiler:** Added support for field initializers adjacent to new statements. I.e "var x = new {x = 20; y = 30} () ([0ff267a](https://github.com/OpenMud/OpenMud/commit/0ff267aee4128938455de6f26b1807072eee293d))
+* **compiler:** Added support to omit arguments by leaving them blank: i.e "mycall(a,,c,d,,f)" ([585b64f](https://github.com/OpenMud/OpenMud/commit/585b64f371d409bff752a970811a5eda8f5bc2c2))
+* **compiler:** Changed switch to support all kinds of expressions with an if-clause, not just integers. ([f42a344](https://github.com/OpenMud/OpenMud/commit/f42a3440f4d202ba28aea5c1878614cb2707a00a))
+
 # [2.9.0](https://github.com/OpenMud/OpenMud/compare/v2.8.0...v2.9.0) (2023-11-24)
 
 
