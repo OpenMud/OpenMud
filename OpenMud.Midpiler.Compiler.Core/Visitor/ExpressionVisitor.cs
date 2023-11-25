@@ -561,13 +561,14 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     {
         return c.argument_list_item().Select(x =>
         {
-            var inner = Visit(x);
+            var inner = x.expr() == null ? ((r) => ExpressionVisitor.CreateNull()) : Visit(x.expr());
+            
             return new ArgumentPieceBuilder(
                 e =>
                 {
                     var arg = SyntaxFactory.Argument(inner(e));
 
-                    if (x.arg_name != null)
+                    if (x?.arg_name != null)
                         arg = arg.WithNameColon(
                             SyntaxFactory.NameColon(SyntaxFactory.IdentifierName(x.arg_name.GetText())));
 
@@ -777,7 +778,6 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     {
         return resolver => CreateNull();
     }
-
 
     public ExpressionSyntax CreateExplicitIsType(ExpressionSyntax subject, ExpressionSyntax? typeName = null,
         bool allowMissingTypeArg = false)

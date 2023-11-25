@@ -284,4 +284,32 @@ public class FlexibleArguments
         var r = (int)interim;
         Assert.IsTrue(r == ((90 - 4) + 2) * (7 - 3));
     }
+
+    [Test]
+    public void OmitPositionalArgumentsWithBlank()
+    {
+        var dmlCode =
+            @"
+/proc/wow(var/a, var/b, var/c)
+    var d = b
+    if(!d)
+        d = -2
+
+    return a * d * c
+
+/proc/test0()
+    return wow(4,2,3)
+
+/proc/test1()
+    return wow(4,,3)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var t0 = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue(t0 == 4 * 2 * 3);
+
+        var t1 = (int)system.Global.ExecProc("test1").CompleteOrException();
+        Assert.IsTrue(t1 == 4 * -2 * 3);
+    }
 }

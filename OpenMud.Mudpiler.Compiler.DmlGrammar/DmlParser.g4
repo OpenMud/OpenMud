@@ -166,8 +166,11 @@ parameter
 empty_parameter_list: OPEN_PARENS CLOSE_PARENS ;
 non_empty_parameter_list: OPEN_PARENS (parameter (COMMA parameter)*)+ CLOSE_PARENS ;
 parameter_list: OPEN_PARENS (parameter (COMMA parameter)*)? CLOSE_PARENS ;
-argument_list_item: (arg_name=identifier_name ASSIGNMENT)? expr ;
-argument_list: OPEN_PARENS (argument_list_item (COMMA argument_list_item)*)? CLOSE_PARENS ;
+argument_list_item: (arg_name=identifier_name ASSIGNMENT)? expr?;
+argument_list
+    : OPEN_PARENS CLOSE_PARENS
+    | OPEN_PARENS (argument_list_item (COMMA argument_list_item)*)? CLOSE_PARENS
+    ;
 //Code Blocks
 
 

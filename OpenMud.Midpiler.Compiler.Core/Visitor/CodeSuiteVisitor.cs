@@ -1014,20 +1014,20 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
         return (resolver) =>
         {
-        var exprs = nums.Select(n =>
-            ExpressionVisitor.CreateBin(
-                DmlBinary.Equals,
-                b => exprVar,
+            var exprs = nums.Select(n =>
+                ExpressionVisitor.CreateBin(
+                    DmlBinary.Equals,
+                    b => exprVar,
                     b => n(resolver)
-            )
-        ).ToList();
+                )
+            ).ToList();
 
-        var logicalOr = exprs.Aggregate((a, b) => ExpressionVisitor.CreateBin(
-                DmlBinary.LogicalOr,
-                a,
-                b
-            )
-        );
+            var logicalOr = exprs.Aggregate((a, b) => ExpressionVisitor.CreateBin(
+                    DmlBinary.LogicalOr,
+                    a,
+                    b
+                )
+            );
 
             return logicalOr(resolver);
         };
