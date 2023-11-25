@@ -166,8 +166,11 @@ parameter
 empty_parameter_list: OPEN_PARENS CLOSE_PARENS ;
 non_empty_parameter_list: OPEN_PARENS (parameter (COMMA parameter)*)+ CLOSE_PARENS ;
 parameter_list: OPEN_PARENS (parameter (COMMA parameter)*)? CLOSE_PARENS ;
-argument_list_item: (arg_name=identifier_name ASSIGNMENT)? expr ;
-argument_list: OPEN_PARENS (argument_list_item (COMMA argument_list_item)*)? CLOSE_PARENS ;
+argument_list_item: (arg_name=identifier_name ASSIGNMENT)? expr?;
+argument_list
+    : OPEN_PARENS CLOSE_PARENS
+    | OPEN_PARENS (argument_list_item (COMMA argument_list_item)*)? CLOSE_PARENS
+    ;
 //Code Blocks
 
 
@@ -213,14 +216,21 @@ small_stmt
   | config_statement
   | del_statement
   ;
-  
+
+new_call_field_initializer:
+    identifier_name ASSIGNMENT expr
+    ;
+
+new_call_field_initializer_list:
+    OPEN_BRACE new_call_field_initializer (SEMICOLON new_call_field_initializer)* SEMICOLON CLOSE_BRACE
+    ;
 
 new_call_implicit:
-  dest=identifier_name ASSIGNMENT NEW FWD_SLASH? arglist=argument_list?
+  dest=identifier_name ASSIGNMENT NEW FWD_SLASH? new_call_field_initializer_list? arglist=argument_list?
   ;
 
 new_call_indirect:
-  dest=expr DOT field=identifier_name ASSIGNMENT NEW FWD_SLASH? arglist=argument_list?
+  dest=expr DOT field=identifier_name ASSIGNMENT NEW FWD_SLASH? new_call_field_initializer_list?  arglist=argument_list?
   ;
 
 del_statement: DEL target=expr;
@@ -298,7 +308,7 @@ new_call_operand
   ;
 
 new_call_explicit:
-  NEW type_hint_eval=new_call_operand? FWD_SLASH? arglist=argument_list?
+  NEW type_hint_eval=new_call_operand? FWD_SLASH? new_call_field_initializer_list? arglist=argument_list?
   ;
 
 self_call:
@@ -341,8 +351,8 @@ continue_stmt: CONTINUE target=NAME?;
 
 compound_stmt: for_stmt | forlist_stmt | if_stmt | do_while_stmnt | while_stmt | switch_stmnt | spawn_stmt;
 
-switch_numset
-  : NUMBER (COMMA NUMBER)*
+switch_exprset
+  : expr (COMMA expr)+
   ;
 
 switch_range
@@ -350,8 +360,8 @@ switch_range
   ;
 
 switch_constraint
-  : switch_numset
-  | switch_range
+  : switch_range
+  | switch_exprset
   | expr
   ;
 

@@ -736,9 +736,11 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             ? new List<ArgumentPieceBuilder>()
             : EXPR.ParseArgumentList(c.argument_list()).ToList();
 
+        var fieldInitExpr = c.new_call_field_initializer_list() == null ? null : EXPR.ParseFieldInitExpression(c.new_call_field_initializer_list());
+
         return resolver =>
         {
-            var newExpr = SyntaxFactory.InvocationExpression(
+            ExpressionSyntax newExpr = SyntaxFactory.InvocationExpression(
                     SyntaxFactory.ParseName("ctx.NewAtomic"),
                     SyntaxFactory.ArgumentList(
                             SyntaxFactory.SeparatedList(
@@ -749,6 +751,9 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
                 .WithAdditionalAnnotations(BuilderAnnotations.CreateInferNewType(c.dest.GetText()));
+
+            if (fieldInitExpr != null)
+                newExpr = EXPR.WrapFieldInitializer(newExpr, fieldInitExpr.Select(x => Tuple.Create(x.Item1, x.Item2(resolver))));
 
             var asn = EXPR.CreateAssignment(
                 Util.IdentifierName(c.dest.GetText()),
@@ -769,6 +774,8 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         var subject = EXPR.Visit(c.dest);
         var field = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(c.field.GetText()));
 
+        var fieldInitExpr = c.new_call_field_initializer_list() == null ? null : EXPR.ParseFieldInitExpression(c.new_call_field_initializer_list());
+
         return resolver =>
         {
             var newExpr = EXPR.CreateCall(RuntimeFrameworkIntrinsic.INDIRECT_NEW,
@@ -782,6 +789,10 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     )
                 )
             );
+
+
+            if (fieldInitExpr != null)
+                newExpr = EXPR.WrapFieldInitializer(newExpr, fieldInitExpr.Select(x => Tuple.Create(x.Item1, x.Item2(resolver))));
 
             return new[] { SyntaxFactory.ExpressionStatement(newExpr) };
         };
@@ -997,31 +1008,29 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             );
     }
 
-    private ExpressionPieceBuilder ProcessSwitchSet(IdentifierNameSyntax exprVar, DmlParser.Switch_numsetContext r)
+    private ExpressionPieceBuilder ProcessSwitchSet(IdentifierNameSyntax exprVar, DmlParser.Switch_exprsetContext r)
     {
-        ExpressionSyntax NumLiteral(int w)
+        var nums = r.expr().Select(EXPR.Visit).ToList();
+
+        return (resolver) =>
         {
-            return SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(w));
-        }
+            var exprs = nums.Select(n =>
+                ExpressionVisitor.CreateBin(
+                    DmlBinary.Equals,
+                    b => exprVar,
+                    b => n(resolver)
+                )
+            ).ToList();
 
-        var nums = r.NUMBER().Select(p => NumLiteral(int.Parse(p.GetText())));
+            var logicalOr = exprs.Aggregate((a, b) => ExpressionVisitor.CreateBin(
+                    DmlBinary.LogicalOr,
+                    a,
+                    b
+                )
+            );
 
-        var exprs = nums.Select(n =>
-            ExpressionVisitor.CreateBin(
-                DmlBinary.Equals,
-                b => exprVar,
-                b => n
-            )
-        ).ToList();
-
-        var logicalOr = exprs.Aggregate((a, b) => ExpressionVisitor.CreateBin(
-                DmlBinary.LogicalOr,
-                a,
-                b
-            )
-        );
-
-        return logicalOr;
+            return logicalOr(resolver);
+        };
     }
 
     private ExpressionPieceBuilder ProcessSwitchRange(IdentifierNameSyntax exprVar, DmlParser.Switch_rangeContext r)
@@ -1062,8 +1071,8 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             return Tuple.Create(ProcessSwitchExpr(exprVar, constraint.expr()), suite);
         if (constraint.switch_range() != null)
             return Tuple.Create(ProcessSwitchRange(exprVar, constraint.switch_range()), suite);
-        if (constraint.switch_numset() != null)
-            return Tuple.Create(ProcessSwitchSet(exprVar, constraint.switch_numset()), suite);
+        if (constraint.switch_exprset() != null)
+            return Tuple.Create(ProcessSwitchSet(exprVar, constraint.switch_exprset()), suite);
         throw new Exception("Unknown switch semantics.");
     }
 

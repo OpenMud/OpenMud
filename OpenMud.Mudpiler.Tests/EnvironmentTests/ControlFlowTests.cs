@@ -286,6 +286,57 @@ var/num/test_input = 10
         Assert.IsTrue((int)system.Global.ExecProc("testproc", 100).CompleteOrException() == 1111);
     }
 
+
+
+    [Test]
+    public void TestSwitchSimpleString()
+    {
+        var dmlCode =
+            @"
+/proc/testproc(a0)
+    var retVal = 0
+    switch(a0)
+        if(""hello"", ""world"") retVal = 40
+        if(""bob"")     retVal = 2222
+        else           retVal = 1111
+
+    return retVal
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        Assert.IsTrue((int)system.Global.ExecProc("testproc", "hello").CompleteOrException() == 40);
+        Assert.IsTrue((int)system.Global.ExecProc("testproc", "world").CompleteOrException() == 40);
+        Assert.IsTrue((int)system.Global.ExecProc("testproc", "bob").CompleteOrException() == 2222);
+        Assert.IsTrue((int)system.Global.ExecProc("testproc", "tob").CompleteOrException() == 1111);
+    }
+
+    //This is valid per DML Language
+    [Test]
+    public void TestSwitchSimpleHangingElse()
+    {
+        var dmlCode =
+            @"
+/proc/testproc(a0)
+    var retVal = 0
+    switch(a0)
+        if(""hello"", ""world"")
+            retVal = 40
+        if(""bob"")
+            retVal = 2222
+        else
+
+    return retVal
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        Assert.IsTrue((int)system.Global.ExecProc("testproc", "hello").CompleteOrException() == 40);
+        Assert.IsTrue((int)system.Global.ExecProc("testproc", "world").CompleteOrException() == 40);
+        Assert.IsTrue((int)system.Global.ExecProc("testproc", "bob").CompleteOrException() == 2222);
+        Assert.IsTrue((int)system.Global.ExecProc("testproc", "tob").CompleteOrException() == 0);
+    }
+
     [Test]
     public void TestForLoopContinueStatement()
     {

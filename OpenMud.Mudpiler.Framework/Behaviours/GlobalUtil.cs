@@ -39,6 +39,7 @@ internal class GlobalUtil : IRuntimeTypeBuilder
 
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.TEXT, text));
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.INDIRECT_CALL, indirect_call));
+        procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.FIELD_LIST_INIT, fieldlist_init));
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.ADDTEXT, addtext));
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.GENERATE_RANGE, generate_range));
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.PICK_WEIGHTED, pick_weighted));
@@ -201,16 +202,60 @@ internal class GlobalUtil : IRuntimeTypeBuilder
         {
             if (callArgs[0].Type == typeof(string) && callArgs[1].Type == typeof(string))
                 return indirect_call_external_library(callArgs[0].Get<string>(), callArgs[1].Get<string>(), targetArgs, self);
-            
+
             if (callArgs[0].Type.IsAssignableTo(typeof(Datum)) && callArgs[1].Type == typeof(string))
                 return indirect_call_instance(callArgs[0].Get<Datum>(), callArgs[1].Get<string>(), targetArgs, self);
 
-        } 
-        
+        }
+
         if (callArgs.MaxPositionalArgument >= 1 && typeof(Type).IsAssignableFrom(callArgs[0].Type))
             return indirect_call_static(callArgs[0].Get<Type>(), targetArgs, self);
-        
+
         throw new Exception("Invalid arguments for an indirect call.");
+    }
+
+
+
+    public EnvObjectReference fieldlist_init(ProcArgumentList args, Datum self)
+    {
+        //First argument is allocated to the subject object
+        var (callArgs, fieldAsnList) = args.Split(1);
+
+        var targetFields = fieldAsnList.GetArgumentList();
+
+        if (targetFields.Length % 2 != 0)
+            throw new DmlRuntimeError("Weighted pick item length must be even set of tuples (weight, value)");
+
+        var r = new List<Tuple<string, EnvObjectReference>>();
+
+        for (var i = 0; i < targetFields.Length / 2; i++)
+        {
+            var name = DmlEnv.AsText(targetFields[i * 2])!;
+            var asn = targetFields[i * 2 + 1];
+
+            r.Add(Tuple.Create(name, asn));
+        }
+
+        var targetObj = callArgs[0].Get<Datum>();
+
+        var hostClassType = targetObj.GetType();
+
+        foreach (var o in r)
+        {
+            var fld = hostClassType.GetField(o.Item1);
+
+            if (fld == null)
+                throw new DmlRuntimeError($"Unable to initialize field {o.Item1} on object, does not exist.");
+
+            var cur = fld.GetValue(targetObj) as EnvObjectReference;
+
+            if (cur != null)
+                cur.Assign(VarEnvObjectReference.CreateImmutable(o.Item2));
+            else
+                fld.SetValue(targetObj, new VarEnvObjectReference(o.Item2, false));
+        }
+
+        return VarEnvObjectReference.CreateImmutable(targetObj);
     }
 
     public EnvObjectReference text(ProcArgumentList args)

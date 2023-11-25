@@ -11,6 +11,7 @@ using OpenMud.Mudpiler.Compiler.DmlGrammar;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
+using static OpenMud.Mudpiler.Compiler.DmlGrammar.DmlParser;
 
 namespace OpenMud.Mudpiler.Compiler.Core.Visitor;
 
@@ -560,13 +561,14 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     {
         return c.argument_list_item().Select(x =>
         {
-            var inner = Visit(x);
+            var inner = x.expr() == null ? ((r) => ExpressionVisitor.CreateNull()) : Visit(x.expr());
+            
             return new ArgumentPieceBuilder(
                 e =>
                 {
                     var arg = SyntaxFactory.Argument(inner(e));
 
-                    if (x.arg_name != null)
+                    if (x?.arg_name != null)
                         arg = arg.WithNameColon(
                             SyntaxFactory.NameColon(SyntaxFactory.IdentifierName(x.arg_name.GetText())));
 
@@ -777,7 +779,6 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return resolver => CreateNull();
     }
 
-
     public ExpressionSyntax CreateExplicitIsType(ExpressionSyntax subject, ExpressionSyntax? typeName = null,
         bool allowMissingTypeArg = false)
     {
@@ -859,6 +860,50 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return resolver => CreateResolveType(context.object_tree_path_expr().GetText());
     }
 
+    public List<Tuple<string, ExpressionPieceBuilder>> ParseFieldInitExpression(New_call_field_initializer_listContext ctx)
+    {
+        return ctx.new_call_field_initializer().Select(x =>
+                Tuple.Create(
+                    x.identifier_name().GetText(),
+                    Visit(x.expr())
+                )
+            )
+            .ToList();
+    }
+
+    public ExpressionSyntax WrapFieldInitializer(ExpressionSyntax newExpression, IEnumerable<Tuple<string, ExpressionSyntax>> fieldInitializers)
+    {
+        var args = new List<ArgumentSyntax>();
+
+        args.Add(SyntaxFactory.Argument(newExpression));
+
+        foreach (var p in fieldInitializers)
+        {
+            args.Add(SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(p.Item1))));
+            args.Add(SyntaxFactory.Argument(p.Item2));
+        }
+
+        return CreateCall(RuntimeFrameworkIntrinsic.FIELD_LIST_INIT, args);
+    }
+
+    public ExpressionPieceBuilder WrapFieldInitializer(ExpressionPieceBuilder newExpression, IEnumerable<Tuple<string, ExpressionPieceBuilder>> fieldInitializers)
+    {
+        return r => WrapFieldInitializer(newExpression(r), fieldInitializers.Select(f => Tuple.Create(f.Item1, f.Item2(r))));
+    }
+
+    public ExpressionPieceBuilder WrapFieldInitializer(ExpressionPieceBuilder newExpression, DmlParser.New_call_field_initializer_listContext ctx)
+    {
+        var args = ctx.new_call_field_initializer().Select(x =>
+                Tuple.Create(
+                    x.identifier_name().GetText(),
+                    Visit(x.expr())
+                )
+            )
+            .ToList();
+
+        return WrapFieldInitializer(newExpression, args);
+    }
+
     public override ExpressionPieceBuilder VisitNew_call_explicit([NotNull] DmlParser.New_call_explicitContext c)
     {
         ExpressionPieceBuilder typeHint;
@@ -881,7 +926,7 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
             ? new List<ArgumentPieceBuilder>()
             : ParseArgumentList(c.argument_list()).ToList();
 
-        return resolver =>
+        ExpressionPieceBuilder newExpr = (resolver) =>
             SyntaxFactory.InvocationExpression(
                     SyntaxFactory.ParseName("ctx.NewAtomic"),
                     SyntaxFactory.ArgumentList(
@@ -893,6 +938,11 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
                         .WithAdditionalAnnotations(BuilderAnnotations.CreateManagedArgsAnnotation(1))
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke);
+
+        if(c.new_call_field_initializer_list() != null)
+            newExpr = WrapFieldInitializer(newExpr, c.new_call_field_initializer_list());
+
+        return newExpr;
     }
 
     public void PushTypeHint(string objType)
