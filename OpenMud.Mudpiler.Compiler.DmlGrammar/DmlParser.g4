@@ -213,14 +213,21 @@ small_stmt
   | config_statement
   | del_statement
   ;
-  
+
+new_call_field_initializer:
+    identifier_name ASSIGNMENT expr
+    ;
+
+new_call_field_initializer_list:
+    OPEN_BRACE new_call_field_initializer (SEMICOLON new_call_field_initializer)* SEMICOLON CLOSE_BRACE
+    ;
 
 new_call_implicit:
-  dest=identifier_name ASSIGNMENT NEW FWD_SLASH? arglist=argument_list?
+  dest=identifier_name ASSIGNMENT NEW FWD_SLASH? new_call_field_initializer_list? arglist=argument_list?
   ;
 
 new_call_indirect:
-  dest=expr DOT field=identifier_name ASSIGNMENT NEW FWD_SLASH? arglist=argument_list?
+  dest=expr DOT field=identifier_name ASSIGNMENT NEW FWD_SLASH? new_call_field_initializer_list?  arglist=argument_list?
   ;
 
 del_statement: DEL target=expr;
@@ -298,7 +305,7 @@ new_call_operand
   ;
 
 new_call_explicit:
-  NEW type_hint_eval=new_call_operand? FWD_SLASH? arglist=argument_list?
+  NEW type_hint_eval=new_call_operand? FWD_SLASH? new_call_field_initializer_list? arglist=argument_list?
   ;
 
 self_call:

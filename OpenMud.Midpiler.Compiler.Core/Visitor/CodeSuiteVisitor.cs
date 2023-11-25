@@ -736,9 +736,11 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             ? new List<ArgumentPieceBuilder>()
             : EXPR.ParseArgumentList(c.argument_list()).ToList();
 
+        var fieldInitExpr = c.new_call_field_initializer_list() == null ? null : EXPR.ParseFieldInitExpression(c.new_call_field_initializer_list());
+
         return resolver =>
         {
-            var newExpr = SyntaxFactory.InvocationExpression(
+            ExpressionSyntax newExpr = SyntaxFactory.InvocationExpression(
                     SyntaxFactory.ParseName("ctx.NewAtomic"),
                     SyntaxFactory.ArgumentList(
                             SyntaxFactory.SeparatedList(
@@ -749,6 +751,9 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                 )
                 .WithAdditionalAnnotations(BuilderAnnotations.DmlInvoke)
                 .WithAdditionalAnnotations(BuilderAnnotations.CreateInferNewType(c.dest.GetText()));
+
+            if (fieldInitExpr != null)
+                newExpr = EXPR.WrapFieldInitializer(newExpr, fieldInitExpr.Select(x => Tuple.Create(x.Item1, x.Item2(resolver))));
 
             var asn = EXPR.CreateAssignment(
                 Util.IdentifierName(c.dest.GetText()),
@@ -769,6 +774,8 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         var subject = EXPR.Visit(c.dest);
         var field = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(c.field.GetText()));
 
+        var fieldInitExpr = c.new_call_field_initializer_list() == null ? null : EXPR.ParseFieldInitExpression(c.new_call_field_initializer_list());
+
         return resolver =>
         {
             var newExpr = EXPR.CreateCall(RuntimeFrameworkIntrinsic.INDIRECT_NEW,
@@ -782,6 +789,10 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     )
                 )
             );
+
+
+            if (fieldInitExpr != null)
+                newExpr = EXPR.WrapFieldInitializer(newExpr, fieldInitExpr.Select(x => Tuple.Create(x.Item1, x.Item2(resolver))));
 
             return new[] { SyntaxFactory.ExpressionStatement(newExpr) };
         };
