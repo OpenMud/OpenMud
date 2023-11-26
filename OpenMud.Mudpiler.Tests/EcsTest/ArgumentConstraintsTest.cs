@@ -1,7 +1,12 @@
-﻿namespace OpenMud.Mudpiler.Tests.EcsTest;
+﻿using OpenMud.Mudpiler.Compiler.Core;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
+using OpenMud.Mudpiler.RuntimeEnvironment;
+
+namespace OpenMud.Mudpiler.Tests.EcsTest;
 
 public class ArgumentConstraintsTest
 {
+	[Test]
     public void TestInList()
     {
         var dmlCode =
@@ -25,10 +30,20 @@ public class ArgumentConstraintsTest
 
 	verb/ex3(a as mob in list(n + 1))
 		world << a
+
+	verb/ex4(a as mob in clients)
+		world << a
+
+	verb/ex5(a as mob in world)
+		world << a
+
+	verb/ex5(a[])
+		world << a
 ";
-        //ex0, ex1: Test that accepts on, off, but nothing else
-        //ex2: Allow argument to be omitted.
-        //ex3: only allow mobs of self as argument.
-        Assert.IsTrue(false);
+
+        dmlCode = Preprocessor.Preprocess("testfile.dme", ".", dmlCode, (a, b) => throw new NotImplementedException(),
+            (a, b, c, d) => throw new Exception("Import not supported"), EnvironmentConstants.BUILD_MACROS);
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
     }
 }

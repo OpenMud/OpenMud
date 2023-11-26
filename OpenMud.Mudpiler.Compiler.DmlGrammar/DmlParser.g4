@@ -160,9 +160,24 @@ parameter_constraint_set
   | SET_IN CLIENTS                                #parameter_constraint_set_inclients
   ;
 
+parameter_list_hint:
+    OPEN_BRACKET CLOSE_BRACKET
+    ;
+
 parameter
-  : (VAR FWD_SLASH)? ((object_ref_type=reference_object_tree_path | primitive_type=identifier_name) FWD_SLASH?)? (name=identifier_name (ASSIGNMENT init=expr)? (AS as_constraints=parameter_aslist)? set_constraints=parameter_constraint_set? )
-  | (name=identifier_name (ASSIGNMENT init=expr)?)
+  : (VAR FWD_SLASH)? 
+    (
+        (
+            object_ref_type=reference_object_tree_path |
+            primitive_type=identifier_name
+        )
+        parameter_list_hint?
+        FWD_SLASH?
+    )?
+    (
+        name=identifier_name parameter_list_hint? (ASSIGNMENT init=expr)? (AS as_constraints=parameter_aslist)? set_constraints=parameter_constraint_set?
+    )
+  | (name=identifier_name parameter_list_hint? (ASSIGNMENT init=expr)?)
   ;
   
 empty_parameter_list: OPEN_PARENS CLOSE_PARENS ;
