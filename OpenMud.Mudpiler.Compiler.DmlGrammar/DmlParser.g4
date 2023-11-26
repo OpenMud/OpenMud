@@ -32,6 +32,7 @@ identifier_name
   | 'pick'
   | 'prob'
   | 'clients'
+  | 'group'
   ;
 
 initializer_assignment: path=declaration_object_tree_path ASSIGNMENT expr;
