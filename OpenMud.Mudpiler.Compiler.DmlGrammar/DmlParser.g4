@@ -378,7 +378,7 @@ switch_stmnt: SWITCH OPEN_PARENS expr CLOSE_PARENS NEWLINE INDENT
 if_stmt: IF OPEN_PARENS test=expr CLOSE_PARENS pass=suite? (ELSE IF OPEN_PARENS elif_test=expr CLOSE_PARENS elif_pass=suite)* (ELSE else_pass=suite)?;
 spawn_stmt: SPAWN (OPEN_PARENS delay=expr? CLOSE_PARENS)? run=suite;
 
-do_while_stmnt: DO suite DEDENT WHILE OPEN_PARENS expr CLOSE_PARENS NEWLINE INDENT;
+do_while_stmnt: DO suite WHILE OPEN_PARENS expr CLOSE_PARENS NEWLINE;
 
 while_stmt: WHILE OPEN_PARENS expr CLOSE_PARENS suite;
 

@@ -836,4 +836,27 @@ var/num/test_input = 10
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
         var r = system.Global.ExecProc("test").CompleteOrException();
     }
+
+    [Test]
+    public void DoWhileTest()
+    {
+        var dmlCode =
+            @"
+/proc/test_iter()
+    var testset = list(5,8,6,7,9,2,1,3)
+    var total = 0
+    var/i = 1
+  
+    do
+        total += testset[i]
+        i++
+    while(i != 1 && i <= testset.len)
+
+    return total
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test_iter").CompleteOrException();
+        Assert.IsTrue(r == new[] { 5, 8, 6, 7, 9, 2, 1, 3 }.Sum());
+    }
 }

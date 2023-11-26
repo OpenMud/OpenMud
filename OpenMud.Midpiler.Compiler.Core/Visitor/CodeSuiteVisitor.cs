@@ -333,7 +333,7 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         var abortExecutor = condition == null ? null : SyntaxFactory.IfStatement(
             SyntaxFactory.PrefixUnaryExpression(
                 SyntaxKind.LogicalNotExpression,
-                condition),
+                SyntaxFactory.ParenthesizedExpression(condition)),
             SyntaxFactory.BreakStatement()
         );
 
@@ -519,6 +519,56 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     EXPR.Visit(context.expr())(resolver),
                     null,
                     body
+                )
+            };
+        };
+    }
+
+    public override CodePieceBuilder VisitDo_while_stmnt([NotNull] DmlParser.Do_while_stmntContext context)
+    {
+        var (exitLabel, continueLabel, bodyBulder) = VisitWrapLoop(context.suite(), this.adjacentLabel);
+        return resolver =>
+        {
+            var bodyStmts = bodyBulder(resolver).ToList();
+
+            var skipTestExpressionVar = GenerateSupportVariable();
+
+            var initSkipTestExpression = SyntaxFactory.LocalDeclarationStatement(
+                SyntaxFactory.VariableDeclaration(
+                    SyntaxFactory.ParseTypeName("bool"),
+                    SyntaxFactory.SeparatedList(new[]
+                    {
+                    SyntaxFactory.VariableDeclarator(skipTestExpressionVar.Identifier)
+                        .WithInitializer(SyntaxFactory.EqualsValueClause(
+                            SyntaxFactory.LiteralExpression(
+                                SyntaxKind.TrueLiteralExpression
+                            )
+                        )
+                    )
+                    })
+                )
+            );
+
+            var toggleSkipTestExpression =
+                SyntaxFactory.ExpressionStatement(
+                    ExpressionVisitor.CreateBinAsn("=", skipTestExpressionVar, SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression))
+                );
+
+            bodyStmts.Insert(0, toggleSkipTestExpression);
+
+            var continueExpr = EXPR.Visit(context.expr())(resolver);
+
+            continueExpr = SyntaxFactory.BinaryExpression(SyntaxKind.LogicalOrExpression, skipTestExpressionVar, continueExpr);
+
+            return new[]
+            {
+                initSkipTestExpression,
+                CreateForLoop(
+                    exitLabel,
+                    continueLabel,
+                    continueExpr,
+                    null,
+                    GroupStatements(bodyStmts.ToArray())
                 )
             };
         };
