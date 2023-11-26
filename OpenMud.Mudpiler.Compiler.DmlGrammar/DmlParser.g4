@@ -211,7 +211,7 @@ stmt
   | compound_stmt
   ;
 
-simple_stmt: small_stmt NEWLINE;
+simple_stmt: small_stmt SEMICOLON? NEWLINE;
 
 return_stmt: RETURN ret=expr?;
 

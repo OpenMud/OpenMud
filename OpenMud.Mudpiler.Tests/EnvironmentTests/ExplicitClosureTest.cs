@@ -79,5 +79,56 @@ namespace OpenMud.Mudpiler.Tests.EnvironmentTests
             var r = (int)system.Global.ExecProc("test").CompleteOrException();
             Assert.IsTrue(r == 17);
         }
+
+        [Test]
+        public void StatementListWithIfStatement0()
+        {
+            var dmlCode =
+                @"
+/proc/test(var/n)
+    var/w = 10
+    if (n == 0)
+        w++;
+    else
+        w-=20;
+        
+    return w
+";
+            var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+            var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+            var r1 = (int)system.Global.ExecProc("test", 0).CompleteOrException();
+            Assert.IsTrue(r1 == 11);
+
+            var r2 = (int)system.Global.ExecProc("test", 1).CompleteOrException();
+            Assert.IsTrue(r2 == -10);
+        }
+
+        [Test]
+        public void StatementListWithIfStatement1()
+        {
+            //Side note, this is a language feature that really makes no sense. But it seems simple single-statement code suites can optionally terminate with a semi-colon.
+            //BUT these are not proper statement lists. For example, the following code would be invalid:
+            // if(...) stmt1; stmt2; (NOT Valid because we have two statements...)
+            // else ...
+            //
+            var dmlCode =
+                @"
+/proc/test(var/n)
+    var/w = 10
+    if (n == 0) w++;
+    else w-=20;
+        
+    return w
+";
+            var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+            var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+            var r1 = (int)system.Global.ExecProc("test", 0).CompleteOrException();
+            Assert.IsTrue(r1 == 11);
+
+            var r2 = (int)system.Global.ExecProc("test", 1).CompleteOrException();
+            Assert.IsTrue(r2 == -10);
+        }
     }
 }
