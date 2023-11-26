@@ -6,7 +6,6 @@ using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using OpenMud.Mudpiler.Compiler.DmeGrammar;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
 
@@ -218,7 +217,11 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
 
     public override IImmutableSourceFileDocument VisitString_expression([NotNull] DmeParser.String_expressionContext context)
     {
-        return Visit(context.code_block());
+        var r = Visit(context.code_block());
+
+        var start = SourceFileDocument.Create(fileName, context.Start.Line, $"text(", true);
+        var end = SourceFileDocument.Create(fileName, context.Start.Line, ")", true);
+        return new ConcatSourceFileDocument(new[] { start, r, end }, "");
     }
 
     private string EscapeString(string str)

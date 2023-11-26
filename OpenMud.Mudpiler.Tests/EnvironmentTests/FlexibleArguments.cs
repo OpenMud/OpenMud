@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using OpenMud.Mudpiler.Compiler.Core;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor;
 using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 
@@ -311,5 +312,46 @@ public class FlexibleArguments
 
         var t1 = (int)system.Global.ExecProc("test1").CompleteOrException();
         Assert.IsTrue(t1 == 4 * -2 * 3);
+    }
+
+    [Test]
+    public void DefineNamedArgumentWithExprTest0()
+    {
+        var dmlCode =
+            @"
+/proc/tgt(var/c, var/d)
+    return c - d
+
+/proc/test0()
+    return tgt(""d""=10, ""c""=4)
+
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var t0 = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue(t0 == 4 - 10);
+    }
+
+    [Test]
+    public void DefineNamedArgumentWithExprTest1()
+    {
+        var testCode =
+            @"
+/proc/tgt(var/c, var/d)
+    return c - d
+
+/proc/test0()
+    var/t0 = ""d""
+    var/t1 = ""c""
+    return tgt(""[t0]""=10, ""[t1]""=4)
+
+";
+        var dmlCode = Preprocessor.Preprocess("testFile.dml", ".", testCode, null, null);
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var t0 = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue(t0 == 4 - 10);
     }
 }

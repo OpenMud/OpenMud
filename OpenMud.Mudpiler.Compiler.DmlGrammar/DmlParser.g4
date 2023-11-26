@@ -185,7 +185,11 @@ parameter
 empty_parameter_list: OPEN_PARENS CLOSE_PARENS ;
 non_empty_parameter_list: OPEN_PARENS (parameter (COMMA parameter)*)+ CLOSE_PARENS ;
 parameter_list: OPEN_PARENS (parameter (COMMA parameter)*)? CLOSE_PARENS ;
-argument_list_item: (arg_name=identifier_name ASSIGNMENT)? expr?;
+argument_list_item
+    : (arg_name=identifier_name ASSIGNMENT)? asn=expr?
+    | arg_name_cplx=expr ASSIGNMENT asn=expr
+    ;
+
 argument_list
     : OPEN_PARENS CLOSE_PARENS
     | OPEN_PARENS (argument_list_item (COMMA argument_list_item)*)? CLOSE_PARENS

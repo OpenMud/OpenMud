@@ -561,17 +561,33 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     {
         return c.argument_list_item().Select(x =>
         {
-            var inner = x.expr() == null ? ((r) => ExpressionVisitor.CreateNull()) : Visit(x.expr());
-            
+            var inner = x.asn == null ? ((r) => ExpressionVisitor.CreateNull()) : Visit(x.asn);
+
             return new ArgumentPieceBuilder(
                 e =>
                 {
                     var arg = SyntaxFactory.Argument(inner(e));
 
-                    if (x?.arg_name != null)
-                        arg = arg.WithNameColon(
-                            SyntaxFactory.NameColon(SyntaxFactory.IdentifierName(x.arg_name.GetText())));
+                    ExpressionSyntax? argumentName = null;
 
+                    if (x?.arg_name != null)
+                        argumentName = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(x!.arg_name.GetText()));
+                    else if (x?.arg_name_cplx != null)
+                        argumentName = Visit(x!.arg_name_cplx)(e);
+
+                    if (argumentName != null)
+                    {
+
+                        arg = SyntaxFactory.Argument(
+                            SyntaxFactory.TupleExpression(
+                                SyntaxFactory.SeparatedList(new[] {
+                                    SyntaxFactory.Argument(argumentName!),
+                                    arg
+                                })
+                            )
+                        )
+                        .WithAdditionalAnnotations(BuilderAnnotations.NamedArgumentTuple);
+                    }
                     return arg;
                 }
             );
