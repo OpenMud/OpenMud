@@ -152,13 +152,14 @@ constant_list: OPEN_PARENS CLOSE_PARENS;
 
 parameter_constraint_set
   : SET_IN USR DOT CONTENTS                      #parameter_constraint_set_usr_contents
-  | SET_IN USR DOT LOC                               #parameter_constraint_set_usr_loc
+  | SET_IN USR DOT LOC                           #parameter_constraint_set_usr_loc
   | SET_IN USR DOT GROUP                         #parameter_constraint_set_usr_group
   | SET_IN OVIEW OPEN_PARENS (arg=NUMBER)? CLOSE_PARENS       #parameter_constraint_set_oview
   | SET_IN VIEW  OPEN_PARENS (arg=NUMBER)? CLOSE_PARENS       #parameter_constraint_set_view
   | SET_IN LIST args=argument_list                #parameter_constraint_set_list_list_eval
   | SET_IN WORLD                                  #parameter_constraint_set_inworld
   | SET_IN CLIENTS                                #parameter_constraint_set_inclients
+  | SET_IN identifier_name                        #parameter_constraint_set_inVariable
   ;
 
 parameter_list_hint:

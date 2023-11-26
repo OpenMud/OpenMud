@@ -11,6 +11,8 @@ public class ArgumentConstraintsTest
     {
         var dmlCode =
             @"
+/var/list/test_global = list(1,2,3)
+
 /mob
 	var n as num
 	verb/ex0(a as anything in list(""on"", ""off""))
@@ -38,6 +40,12 @@ public class ArgumentConstraintsTest
 		world << a
 
 	verb/ex5(a[])
+		world << a
+
+	verb/ex5(a[])
+		world << a
+
+	verb/ex5(a in test_global)
 		world << a
 ";
 
