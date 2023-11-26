@@ -684,6 +684,25 @@ var/num/test_input = 10
     }
 
     [Test]
+    public void ForLoopDeclSemicolonTest()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    var/w = 1
+
+    for(var/i=1; i<=3; i++)
+        w *= (1 + i)
+
+    return w
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(r == 1 * 2 * 3 * 4);
+    }
+
+    [Test]
     public void ForLoopDeclWithNopInitTest()
     {
         var dmlCode =

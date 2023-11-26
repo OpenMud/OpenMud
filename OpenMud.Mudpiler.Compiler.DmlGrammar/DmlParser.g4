@@ -339,9 +339,9 @@ forlist_stmt
   ;
 
 for_stmt
-  : FOR OPEN_PARENS COMMA loop_test=expr? COMMA update=expr? CLOSE_PARENS suite #for_nodecl
-  | FOR OPEN_PARENS initilizer=variable_declaration COMMA loop_test=expr? COMMA update=expr? CLOSE_PARENS suite #for_decl
-  | FOR OPEN_PARENS initilizer=expr COMMA loop_test=expr? COMMA update=expr? CLOSE_PARENS suite #for_recycle
+  : FOR OPEN_PARENS (COMMA|SEMICOLON) loop_test=expr? (COMMA|SEMICOLON) update=expr? CLOSE_PARENS suite #for_nodecl
+  | FOR OPEN_PARENS initilizer=variable_declaration (COMMA|SEMICOLON) loop_test=expr? (COMMA|SEMICOLON) update=expr? CLOSE_PARENS suite #for_decl
+  | FOR OPEN_PARENS initilizer=expr (COMMA|SEMICOLON) loop_test=expr? (COMMA|SEMICOLON) update=expr? CLOSE_PARENS suite #for_recycle
   ;
 
 
