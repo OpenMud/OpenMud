@@ -158,6 +158,11 @@ public static class ParametersConstraintBuilder
             return resolver => CreateSimple(argIdx, SourceType.World);
         }
 
+        public override Func<IDreamMakerSymbolResolver, AttributeSyntax> VisitParameter_constraint_set_inclients([NotNull] DmlParser.Parameter_constraint_set_inclientsContext context)
+        {
+            return resolver => CreateSimple(argIdx, SourceType.Clients);
+        }
+
         public override Func<IDreamMakerSymbolResolver, AttributeSyntax> VisitParameter_constraint_set_oview(
             [NotNull] DmlParser.Parameter_constraint_set_oviewContext context)
         {

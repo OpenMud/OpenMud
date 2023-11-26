@@ -31,6 +31,7 @@ identifier_name
   | 'spawn'
   | 'pick'
   | 'prob'
+  | 'clients'
   ;
 
 initializer_assignment: path=declaration_object_tree_path ASSIGNMENT expr;
@@ -156,6 +157,7 @@ parameter_constraint_set
   | SET_IN VIEW  OPEN_PARENS (arg=NUMBER)? CLOSE_PARENS       #parameter_constraint_set_view
   | SET_IN LIST args=argument_list                #parameter_constraint_set_list_list_eval
   | SET_IN WORLD                                  #parameter_constraint_set_inworld
+  | SET_IN CLIENTS                                #parameter_constraint_set_inclients
   ;
 
 parameter
