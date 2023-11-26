@@ -50,6 +50,7 @@ GROUP:        'group';
 LOC:          'loc';
 CONTENTS:     'contents';
 WORLD:        'world';
+CLIENTS:      'clients';
 
 OVIEW:       'oview';
 VIEW:        'view';

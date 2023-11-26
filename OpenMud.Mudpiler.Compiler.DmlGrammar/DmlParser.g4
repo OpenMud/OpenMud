@@ -31,6 +31,8 @@ identifier_name
   | 'spawn'
   | 'pick'
   | 'prob'
+  | 'clients'
+  | 'group'
   ;
 
 initializer_assignment: path=declaration_object_tree_path ASSIGNMENT expr;
@@ -150,23 +152,44 @@ constant_list: OPEN_PARENS CLOSE_PARENS;
 
 parameter_constraint_set
   : SET_IN USR DOT CONTENTS                      #parameter_constraint_set_usr_contents
-  | SET_IN USR DOT LOC                               #parameter_constraint_set_usr_loc
+  | SET_IN USR DOT LOC                           #parameter_constraint_set_usr_loc
   | SET_IN USR DOT GROUP                         #parameter_constraint_set_usr_group
   | SET_IN OVIEW OPEN_PARENS (arg=NUMBER)? CLOSE_PARENS       #parameter_constraint_set_oview
   | SET_IN VIEW  OPEN_PARENS (arg=NUMBER)? CLOSE_PARENS       #parameter_constraint_set_view
   | SET_IN LIST args=argument_list                #parameter_constraint_set_list_list_eval
   | SET_IN WORLD                                  #parameter_constraint_set_inworld
+  | SET_IN CLIENTS                                #parameter_constraint_set_inclients
+  | SET_IN identifier_name                        #parameter_constraint_set_inVariable
   ;
 
+parameter_list_hint:
+    OPEN_BRACKET CLOSE_BRACKET
+    ;
+
 parameter
-  : (VAR FWD_SLASH)? ((object_ref_type=reference_object_tree_path | primitive_type=identifier_name) FWD_SLASH?)? (name=identifier_name (ASSIGNMENT init=expr)? (AS as_constraints=parameter_aslist)? set_constraints=parameter_constraint_set? )
-  | (name=identifier_name (ASSIGNMENT init=expr)?)
+  : (VAR FWD_SLASH)? 
+    (
+        (
+            object_ref_type=reference_object_tree_path |
+            primitive_type=identifier_name
+        )
+        parameter_list_hint?
+        FWD_SLASH?
+    )?
+    (
+        name=identifier_name parameter_list_hint? (ASSIGNMENT init=expr)? (AS as_constraints=parameter_aslist)? set_constraints=parameter_constraint_set?
+    )
+  | (name=identifier_name parameter_list_hint? (ASSIGNMENT init=expr)?)
   ;
   
 empty_parameter_list: OPEN_PARENS CLOSE_PARENS ;
 non_empty_parameter_list: OPEN_PARENS (parameter (COMMA parameter)*)+ CLOSE_PARENS ;
 parameter_list: OPEN_PARENS (parameter (COMMA parameter)*)? CLOSE_PARENS ;
-argument_list_item: (arg_name=identifier_name ASSIGNMENT)? expr?;
+argument_list_item
+    : (arg_name=identifier_name ASSIGNMENT)? asn=expr?
+    | arg_name_cplx=expr ASSIGNMENT asn=expr
+    ;
+
 argument_list
     : OPEN_PARENS CLOSE_PARENS
     | OPEN_PARENS (argument_list_item (COMMA argument_list_item)*)? CLOSE_PARENS
@@ -193,7 +216,7 @@ stmt
   | compound_stmt
   ;
 
-simple_stmt: small_stmt NEWLINE;
+simple_stmt: small_stmt SEMICOLON? NEWLINE;
 
 return_stmt: RETURN ret=expr?;
 
@@ -333,15 +356,15 @@ static_call:
 
 
 forlist_stmt
-  : FOR OPEN_PARENS iter_var=identifier_name as_list? SET_IN collection=expr CLOSE_PARENS suite #forlist_list_recycle_in
-  | FOR OPEN_PARENS bag=variable_declaration as_list? SET_IN collection=expr CLOSE_PARENS suite #forlist_decl_in
+  : FOR OPEN_PARENS iter_var=identifier_name as_list? (SET_IN | ASSIGNMENT) collection=expr CLOSE_PARENS suite #forlist_list_recycle_in
+  | FOR OPEN_PARENS bag=variable_declaration as_list? (SET_IN | ASSIGNMENT) collection=expr CLOSE_PARENS suite #forlist_decl_in
   | FOR OPEN_PARENS VAR path=object_tree_path_expr as_list? CLOSE_PARENS suite #forlist_list_in
   ;
 
 for_stmt
-  : FOR OPEN_PARENS COMMA loop_test=expr? COMMA update=expr? CLOSE_PARENS suite #for_nodecl
-  | FOR OPEN_PARENS initilizer=variable_declaration COMMA loop_test=expr? COMMA update=expr? CLOSE_PARENS suite #for_decl
-  | FOR OPEN_PARENS initilizer=expr COMMA loop_test=expr? COMMA update=expr? CLOSE_PARENS suite #for_recycle
+  : FOR OPEN_PARENS (COMMA|SEMICOLON) loop_test=expr? (COMMA|SEMICOLON) update=expr? CLOSE_PARENS suite #for_nodecl
+  | FOR OPEN_PARENS initilizer=variable_declaration (COMMA|SEMICOLON) loop_test=expr? (COMMA|SEMICOLON) update=expr? CLOSE_PARENS suite #for_decl
+  | FOR OPEN_PARENS initilizer=expr (COMMA|SEMICOLON) loop_test=expr? (COMMA|SEMICOLON) update=expr? CLOSE_PARENS suite #for_recycle
   ;
 
 
@@ -378,7 +401,7 @@ switch_stmnt: SWITCH OPEN_PARENS expr CLOSE_PARENS NEWLINE INDENT
 if_stmt: IF OPEN_PARENS test=expr CLOSE_PARENS pass=suite? (ELSE IF OPEN_PARENS elif_test=expr CLOSE_PARENS elif_pass=suite)* (ELSE else_pass=suite)?;
 spawn_stmt: SPAWN (OPEN_PARENS delay=expr? CLOSE_PARENS)? run=suite;
 
-do_while_stmnt: DO suite DEDENT WHILE OPEN_PARENS expr CLOSE_PARENS NEWLINE INDENT;
+do_while_stmnt: DO suite WHILE OPEN_PARENS expr CLOSE_PARENS NEWLINE;
 
 while_stmt: WHILE OPEN_PARENS expr CLOSE_PARENS suite;
 

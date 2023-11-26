@@ -34,6 +34,18 @@ public class ListEvalSourceConstraint : IDmlProcAttribute
     public ProcAttributeCoalesceStrategy CoalesceStrategy => ProcAttributeCoalesceStrategy.Concat;
 }
 
+public class VariableEvalSourceConstraint : IDmlProcAttribute
+{
+    public readonly string Name;
+
+    public VariableEvalSourceConstraint(string name)
+    {
+        Name = name;
+    }
+
+    public ProcAttributeCoalesceStrategy CoalesceStrategy => ProcAttributeCoalesceStrategy.Concat;
+}
+
 public class ArgAsConstraint : IDmlProcAttribute
 {
     public readonly int ArgIndex;

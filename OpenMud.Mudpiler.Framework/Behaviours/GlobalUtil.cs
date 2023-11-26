@@ -260,7 +260,7 @@ internal class GlobalUtil : IRuntimeTypeBuilder
 
     public EnvObjectReference text(ProcArgumentList args)
     {
-        var formatString = DmlEnv.AsText(args.Get(0).GetOrDefault("")) ?? "";
+        var formatString = DmlEnv.AsText(args.Get(0).GetOrDefault<object>("")) ?? "";
 
         var formatArgs = args.GetArgumentList().Skip(1).Select(DmlEnv.AsText).Select(x => x ?? "").ToArray();
 

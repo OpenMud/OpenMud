@@ -545,6 +545,26 @@ var/num/test_input = 10
 
 
     [Test]
+    public void ForLoopRecycleVarInRangeUsingEqualsTest()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    var/w = 1
+    var/i
+    for(i = 1 to 3)
+        w *= (i + 1)
+    return w + i
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(r == 1 * 2 * 3 * 4 + 3);
+    }
+
+
+    [Test]
     public void ForLoopRecycleVarInRangeEarlyReturnTest()
     {
         var dmlCode =
@@ -653,6 +673,25 @@ var/num/test_input = 10
     var/w = 1
 
     for(var/i=1, i<=3, i++)
+        w *= (1 + i)
+
+    return w
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(r == 1 * 2 * 3 * 4);
+    }
+
+    [Test]
+    public void ForLoopDeclSemicolonTest()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    var/w = 1
+
+    for(var/i=1; i<=3; i++)
         w *= (1 + i)
 
     return w
@@ -835,5 +874,28 @@ var/num/test_input = 10
         var assembly = MsBuildDmlCompiler.Compile(dmlCode);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
         var r = system.Global.ExecProc("test").CompleteOrException();
+    }
+
+    [Test]
+    public void DoWhileTest()
+    {
+        var dmlCode =
+            @"
+/proc/test_iter()
+    var testset = list(5,8,6,7,9,2,1,3)
+    var total = 0
+    var/i = 1
+  
+    do
+        total += testset[i]
+        i++
+    while(i != 1 && i <= testset.len)
+
+    return total
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test_iter").CompleteOrException();
+        Assert.IsTrue(r == new[] { 5, 8, 6, 7, 9, 2, 1, 3 }.Sum());
     }
 }

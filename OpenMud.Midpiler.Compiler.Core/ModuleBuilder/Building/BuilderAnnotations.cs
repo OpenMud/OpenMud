@@ -19,6 +19,7 @@ public static class BuilderAnnotations
     public static readonly SyntaxAnnotation DmlInvoke = new();
     public static readonly SyntaxAnnotation DmlImmediateEvaluateMethod = new();
     public static readonly SyntaxAnnotation DmlNativeDeferred = new();
+    public static readonly SyntaxAnnotation NamedArgumentTuple = new();
 
     public static SyntaxAnnotation MapSourceFile(string filename, int lineNumber)
     {

@@ -15,25 +15,24 @@ internal class ManagedArgListWrapper : CSharpSyntaxRewriter
         var positional = originate
             .Arguments
             .Skip(managedArgsStartIdx)
-            .Where(a => a.NameColon == null);
+            .Where(a => !a.HasAnnotation(BuilderAnnotations.NamedArgumentTuple));
 
         var namedArgs = originate
             .Arguments
             .Skip(managedArgsStartIdx)
-            .Where(x => x.NameColon != null)
+            .Where(x => x.HasAnnotation(BuilderAnnotations.NamedArgumentTuple))
+            .Select(x => (TupleExpressionSyntax)x.Expression)
             .ToDictionary(
-                x => x.NameColon.Name.Identifier.Text,
-                x => x.WithNameColon(null)
+                x => x.Arguments[0].Expression,
+                x => SyntaxFactory.Argument(x.Arguments[1].Expression)
             );
 
-        ArgumentSyntax createArg(string? name, ArgumentSyntax inner)
+        ArgumentSyntax createArg(ExpressionSyntax? name, ArgumentSyntax inner)
         {
             List<ArgumentSyntax> arguments = new();
 
             if (name != null)
-                arguments.Add(SyntaxFactory.Argument(
-                        SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression,
-                            SyntaxFactory.Literal(name)))
+                arguments.Add(SyntaxFactory.Argument(name)
                     .WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation)
                 );
 
@@ -87,6 +86,8 @@ internal class ManagedArgListWrapper : CSharpSyntaxRewriter
 
         if (BuilderAnnotations.HasManagedArgsAnnotation(r))
             r = GenerateArgListWrapper((ArgumentListSyntax)r, BuilderAnnotations.GetManagedArgsAnnotation(r));
+        else if (r.GetAnnotatedNodes(BuilderAnnotations.NamedArgumentTuple).Any())
+            throw new Exception("Cannot have named arguments in a non-managed argument list.");
 
         return r;
     }

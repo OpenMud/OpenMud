@@ -69,6 +69,7 @@ public static class ParametersConstraintBuilder
     {
         private static readonly string SimpleAnnotationPath = typeof(SimpleSourceConstraint).FullName;
         private static readonly string ListEvalSourceConstraintPath = typeof(ListEvalSourceConstraint).FullName;
+        private static readonly string VariableEvalSourceConstraintPath = typeof(VariableEvalSourceConstraint).FullName;
 
         private static readonly ExpressionVisitor EXPR = new();
 
@@ -134,6 +135,22 @@ public static class ParametersConstraintBuilder
             );
         }
 
+        public static AttributeSyntax CreateEvalVariable(string variableName)
+        {
+            return SyntaxFactory.Attribute(
+                SyntaxFactory.ParseName(VariableEvalSourceConstraintPath),
+                SyntaxFactory.AttributeArgumentList(
+                    SyntaxFactory.SeparatedList(new[] {
+                        SyntaxFactory.AttributeArgument(
+                            SyntaxFactory.LiteralExpression(
+                                SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(variableName)
+                            )
+                        )
+                    })
+                )
+            );
+        }
+
         public override Func<IDreamMakerSymbolResolver, AttributeSyntax> VisitParameter_constraint_set_usr_contents(
             [NotNull] DmlParser.Parameter_constraint_set_usr_contentsContext context)
         {
@@ -156,6 +173,11 @@ public static class ParametersConstraintBuilder
             [NotNull] DmlParser.Parameter_constraint_set_inworldContext context)
         {
             return resolver => CreateSimple(argIdx, SourceType.World);
+        }
+
+        public override Func<IDreamMakerSymbolResolver, AttributeSyntax> VisitParameter_constraint_set_inclients([NotNull] DmlParser.Parameter_constraint_set_inclientsContext context)
+        {
+            return resolver => CreateSimple(argIdx, SourceType.Clients);
         }
 
         public override Func<IDreamMakerSymbolResolver, AttributeSyntax> VisitParameter_constraint_set_oview(
@@ -195,6 +217,11 @@ public static class ParametersConstraintBuilder
 
                 return CreateEvalList(argIdx, argExprs);
             };
+        }
+
+        public override Func<IDreamMakerSymbolResolver, AttributeSyntax> VisitParameter_constraint_set_inVariable([NotNull] DmlParser.Parameter_constraint_set_inVariableContext context)
+        {
+            return resolver => CreateEvalVariable(context.identifier_name().GetText());
         }
     }
 }
