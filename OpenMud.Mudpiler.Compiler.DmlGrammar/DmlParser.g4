@@ -333,8 +333,8 @@ static_call:
 
 
 forlist_stmt
-  : FOR OPEN_PARENS iter_var=identifier_name as_list? SET_IN collection=expr CLOSE_PARENS suite #forlist_list_recycle_in
-  | FOR OPEN_PARENS bag=variable_declaration as_list? SET_IN collection=expr CLOSE_PARENS suite #forlist_decl_in
+  : FOR OPEN_PARENS iter_var=identifier_name as_list? (SET_IN | ASSIGNMENT) collection=expr CLOSE_PARENS suite #forlist_list_recycle_in
+  | FOR OPEN_PARENS bag=variable_declaration as_list? (SET_IN | ASSIGNMENT) collection=expr CLOSE_PARENS suite #forlist_decl_in
   | FOR OPEN_PARENS VAR path=object_tree_path_expr as_list? CLOSE_PARENS suite #forlist_list_in
   ;
 

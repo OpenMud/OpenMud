@@ -545,6 +545,26 @@ var/num/test_input = 10
 
 
     [Test]
+    public void ForLoopRecycleVarInRangeUsingEqualsTest()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    var/w = 1
+    var/i
+    for(i = 1 to 3)
+        w *= (i + 1)
+    return w + i
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(r == 1 * 2 * 3 * 4 + 3);
+    }
+
+
+    [Test]
     public void ForLoopRecycleVarInRangeEarlyReturnTest()
     {
         var dmlCode =
