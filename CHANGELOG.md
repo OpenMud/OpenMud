@@ -1,3 +1,22 @@
+# [2.11.0](https://github.com/OpenMud/OpenMud/compare/v2.10.0...v2.11.0) (2023-11-26)
+
+
+### Bug Fixes
+
+* **compiler:** Added 'group' to identifier_name group in parser, enabling it to be used for variables names etc (i.e. not an exclusive / reserved keyword.) ([34ec97b](https://github.com/OpenMud/OpenMud/commit/34ec97bb6af7fb6f3aca6f3f09e0e09628ac35a5))
+* **compiler:** Parser now permits semi-colons optionally terminating single statement code-suites. ([08711f9](https://github.com/OpenMud/OpenMud/commit/08711f9f46f884e2a97c63922573cd3a992f0d12))
+
+
+### Features
+
+* **compiler:** Added compile-time support for "in clients" argument constraint. ([7370cdd](https://github.com/OpenMud/OpenMud/commit/7370cdda0eb25e13c8fd3d2428398477003a4184))
+* **compiler:** Added compiler support constraining respect to a variable. I.e '/proc/myproc(x in someVariable)' ([9a31183](https://github.com/OpenMud/OpenMud/commit/9a3118303deeb4d8c2bd7dddb354bff839a80063))
+* **compiler:** Added support for do-while loops. ([febae54](https://github.com/OpenMud/OpenMud/commit/febae54a841653bc344cd49e893f36c6c591e754))
+* **compiler:** Added support for parameter declaration with the array hint. ex: '/proc/my_proc(arg0[]) { ... }' While accepted by the parser, this is currently ignored. ([d471952](https://github.com/OpenMud/OpenMud/commit/d471952d3fe62bbad1daf8e43d3bdfb742b4dd4b))
+* **compiler:** Added support for string argument name expressions. For example 'my_call("x"= 10)', or 'my_call("[some_var]"=10)', also supports more complex expressions such as 'my_call("hello" + "world" = 123)' or 'my_call(text(<some expr>)=20)' ([5e00ce4](https://github.com/OpenMud/OpenMud/commit/5e00ce4af92202e3a75cbce079caa897897c43c7))
+* **compiler:** For in loop can also use for-equals syntax. I.e 'for(var/x in 1 to 10)' is the same as the newly supported syntax of 'for(var/x = 1 to 10)' ([9c2744c](https://github.com/OpenMud/OpenMud/commit/9c2744cc6cdd42fdf17af231f09d3b073b8a0ea4))
+* **compiler:** For loop initializer, expression and step can be delimited by a semi-colon instead of a comma (or a mix.) ([46ae178](https://github.com/OpenMud/OpenMud/commit/46ae17864950da704920fa39124debf1f3774005))
+
 # [2.10.0](https://github.com/OpenMud/OpenMud/compare/v2.9.0...v2.10.0) (2023-11-25)
 
 
