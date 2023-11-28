@@ -84,10 +84,16 @@ variable_declaration
 
 variable_set_declaration
   : VAR (path_prefix=object_tree_path_expr)? FWD_SLASH? varset_suite=variable_set_suite
+  | VAR FWD_SLASH? varset_comma_suite=variable_set_comma_suite
+  ;
+
+variable_set_comma_suite
+  :implicit_variable_declaration (COMMA FWD_SLASH? implicit_variable_declaration)+ NEWLINE
   ;
 
 variable_set_suite
-  : NEWLINE (INDENT (implicit_variable_declaration NEWLINE)+ DEDENT);
+  : NEWLINE (INDENT (implicit_variable_declaration NEWLINE)+ DEDENT)
+  ;
 
 expr_lhs
   : lhs=identifier_name                    #expr_lhs_variable
@@ -115,7 +121,8 @@ object_tree_stmt
       (initializer_assignment | variable_declaration)
       NEWLINE
     )
-  | object_tree_definition;
+  | object_tree_definition
+  | variable_set_declaration;
 
 object_tree_suite: NEWLINE (INDENT object_tree_stmt+ DEDENT)?;
 object_tree_var_suite: NEWLINE (INDENT ((implicit_variable_declaration | initializer_assignment | NAME) NEWLINE)+ DEDENT)? ;

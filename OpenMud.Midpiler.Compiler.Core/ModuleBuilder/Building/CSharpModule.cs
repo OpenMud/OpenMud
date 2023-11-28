@@ -123,7 +123,7 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
         methodDeclarations[declarationKey] = decl(methodDeclarations[declarationKey]);
 
-        var baseClass = Touch(effectiveClassNameFullPath);
+        var baseClass = TouchAndGet(effectiveClassNameFullPath);
 
         var methodClassName = baseClass.Identifier.Text + "_" + methodName + "_" + declarationOrder;
         var argBuilderClassName = methodClassName + "_arginit";
@@ -148,9 +148,14 @@ public class CSharpModule : IDreamMakerSymbolResolver
         );
     }
 
-    public ClassDeclarationSyntax Touch(string path)
+    public ClassDeclarationSyntax TouchAndGet(string path)
     {
         return DefineClass(path, c => c);
+    }
+
+    public void Touch(string path)
+    {
+        TouchAndGet(path);
     }
 
     public void DefineClassField(string fullPath, string typeHint, Func<FieldDeclarationSyntax, FieldDeclarationSyntax> decl)

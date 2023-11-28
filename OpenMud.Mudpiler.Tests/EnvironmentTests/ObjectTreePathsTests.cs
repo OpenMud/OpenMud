@@ -246,4 +246,80 @@ var/global/test_global = test(20)
         var r = (int)system.Global["test_global"];
         Assert.IsTrue(r == 20 * 20);
     }
+
+    [Test]
+    public void VariableListDeclarationTest0()
+    {
+        var dmlCode =
+            @"
+/turf
+    var mob/fa, /obj/fq
+
+    test_proc()
+        var mob/a, obj/b, c = 8
+        a = new
+        b = new
+        fa = new
+        fq = new
+        
+        if(!istype(a, /mob))
+            return -1
+
+        if(!istype(b, /obj))
+            return -2
+
+        if(!istype(fa, /mob))
+            return -3
+
+        if(!istype(fq, /obj))
+            return -4
+
+        if(c != 8)
+            return -5
+
+        return 1
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var o = system.CreateAtomic("/turf");
+        var r = o.ExecProc("test_proc").CompleteOrException();
+        Assert.IsTrue((int)r == 1);
+    }
+
+    [Test]
+    public void VariableListDeclarationTest1()
+    {
+        var dmlCode =
+            @"
+/proc/test_global()
+    var a = 8, b = 3
+
+    return a + b
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test_global").CompleteOrException();
+        Assert.IsTrue(r == 8 + 3);
+    }
+
+    [Test]
+    public void VariableListDeclarationTest2()
+    {
+        var dmlCode =
+            @"
+/turf
+    /var/w
+    New(n)
+        w = n
+
+/proc/test_global()
+    var /turf/a = new(8), /turf/b = new(3)
+
+    return a.w + b.w
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test_global").CompleteOrException();
+        Assert.IsTrue(r == 8 + 3);
+    }
 }

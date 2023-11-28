@@ -25,6 +25,12 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         this.CODE = new(mapping);
     }
 
+    public BasicModuleVisitor()
+    {
+        mapping = new SourceMapping(Enumerable.Empty<IToken>());
+        this.CODE = new(mapping);
+    }
+
     private static ParameterSyntax CreateParameter(DmlParser.ParameterContext c, IDreamMakerSymbolResolver resolver)
     {
         var name = c.name.GetText();
@@ -306,9 +312,15 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
     public override IModulePieceBuilder VisitVariable_set_declaration([NotNull] DmlParser.Variable_set_declarationContext context)
     {
-
         var prefix = context.path_prefix?.GetText();
-        var decls = context.varset_suite.implicit_variable_declaration();
+        var decls = new List<DmlParser.Implicit_variable_declarationContext>();
+
+        if (context.varset_suite != null)
+            decls.AddRange(context.varset_suite.implicit_variable_declaration());
+
+        if (context.varset_comma_suite != null)
+            decls.AddRange(context.varset_comma_suite.implicit_variable_declaration().ToList());
+
         var typedDecl = decls
             .Select(p => p.implicit_typed_variable_declaration())
             .Where(p => p != null)
@@ -362,6 +374,9 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
         if (c.object_unopasn_override_definition() != null)
             return Visit(c.object_unopasn_override_definition());
+
+        if(c.variable_set_declaration() != null)
+            return Visit(c.variable_set_declaration());
 
         throw new Exception("Unhandled tree statement.");
     }

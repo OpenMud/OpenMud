@@ -43,5 +43,5 @@ public interface IDreamMakerSymbolResolver
         bool replaceExisting = true);
 
     string DefineSupportMethod(string baseClass, Func<MethodDeclarationSyntax, MethodDeclarationSyntax> value);
-    ClassDeclarationSyntax Touch(string parent);
+    void Touch(string parent);
 }
