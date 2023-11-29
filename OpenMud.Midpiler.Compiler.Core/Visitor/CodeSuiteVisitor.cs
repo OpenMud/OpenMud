@@ -884,6 +884,10 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         string objectTypePrefix = null
     )
     {
+        //Otherwise, empty strings will transform into /, which ultimately means the type derives from datum.
+        if (objectTypePrefix?.Length == 0)
+            objectTypePrefix = null;
+
         TypeSyntax typeDesc;
 
         //It is ambiguous here if the type is a modifier or type name. So we extract them accordingly.
@@ -1004,31 +1008,81 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         return CreateCodePieceBuilder(r);
     }
 
-    public override CodePieceBuilder VisitVariable_set_declaration([NotNull] DmlParser.Variable_set_declarationContext context)
+    public static IEnumerable<Tuple<string, DmlParser.Implicit_variable_declarationContext>> ParseVariableSetBody(DmlParser.Variable_set_leafContext[] leafs)
     {
-        var prefix = context.path_prefix?.GetText();
-        var decls = new List<DmlParser.Implicit_variable_declarationContext>();
+        var decls = new List<Tuple<string, DmlParser.Implicit_variable_declarationContext>>();
 
-        if (context.varset_suite != null)
-            decls.AddRange(context.varset_suite.implicit_variable_declaration());
+        decls.AddRange(
+            leafs
+            .Where(l => l.implicit_variable_declaration() != null)
+            .Select(l => Tuple.Create("", l.implicit_variable_declaration()))
+        );
 
-        if(context.varset_comma_suite != null)
-            decls.AddRange(context.varset_comma_suite.implicit_variable_declaration().ToList());
+        decls.AddRange(
+            leafs
+            .Where(l => l.variable_set_comma_suite() != null)
+            .SelectMany(l =>
+                l.variable_set_comma_suite().implicit_variable_declaration().Select(d => Tuple.Create("", d))
+            )
+        );
+
+
+        var headers = leafs.Select(x => x.variable_set_header()).Where(h => h != null);
+        foreach (var header in headers)
+            decls.AddRange(ParseVariableSetHeader(header));
+
+        return decls;
+    }
+
+
+    public static IEnumerable<Tuple<string, DmlParser.Implicit_variable_declarationContext>> ParseVariableSetHeader(DmlParser.Variable_set_headerContext header)
+    {
+        var decls = new List<Tuple<string, DmlParser.Implicit_variable_declarationContext>>();
+        foreach (var l in ParseVariableSetBody(header.variable_set_leaf()))
+        {
+            var prefix = header.path_prefix?.GetText();
+            var name = l.Item1;
+
+            if (prefix != null)
+                name = DmlPath.Concat(prefix, l.Item1);
+
+            decls.Add(Tuple.Create(name, l.Item2));
+        }
+
+        return decls;
+    }
+
+    public List<VariableDeclarationMetadata> ParseVariableSet(DmlParser.Variable_set_declarationContext context)
+    {
+        var decls = new List<Tuple<string, DmlParser.Implicit_variable_declarationContext>>();
+
+        if (context.variable_set_header() != null)
+            decls.AddRange(ParseVariableSetHeader(context.variable_set_header()));
+
+        if (context.variable_set_comma_suite() != null)
+            decls.AddRange(context.variable_set_comma_suite().implicit_variable_declaration().Select(d => Tuple.Create("", d)));
+
+        if (context.implicit_variable_declaration() != null)
+            decls.Add(Tuple.Create("", context.implicit_variable_declaration()));
 
         var typedDecl = decls
-            .Select(p => p.implicit_typed_variable_declaration())
-            .Where(p => p != null)
-            .Select(p => ParseVariableDeclaration(p, prefix));
+            .Where(p => p.Item2?.implicit_typed_variable_declaration() != null)
+            .Select(p => ParseVariableDeclaration(p.Item2.implicit_typed_variable_declaration(), p.Item1));
 
         var untypedDecl = decls
-                    .Select(p => p.implicit_untyped_variable_declaration())
-                    .Where(p => p != null)
-                    .Select(p => ParseVariableDeclaration(p, prefix));
+            .Where(p => p.Item2?.implicit_untyped_variable_declaration() != null)
+            .Select(p => ParseVariableDeclaration(p.Item2.implicit_untyped_variable_declaration(), p.Item1));
+
+        return typedDecl.Concat(untypedDecl).ToList();
+    }
+
+    public override CodePieceBuilder VisitVariable_set_declaration([NotNull] DmlParser.Variable_set_declarationContext context)
+    {
+        var declarations = ParseVariableSet(context);
 
         return b =>
         {
-            return typedDecl
-                    .Concat(untypedDecl)
+            return declarations
                     .Select(CreateCodePieceBuilder)
                     .SelectMany(i => i(b))
                     .ToArray();

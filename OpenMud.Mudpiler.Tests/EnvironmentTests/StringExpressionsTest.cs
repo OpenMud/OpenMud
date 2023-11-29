@@ -73,4 +73,5 @@ public class StringExpressionsTest
         var t = system.CreateAtomic("/mob/bob");
         Assert.IsTrue(t["desc"] == "%this% is a string");
     }
+
 }

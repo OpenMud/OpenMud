@@ -82,18 +82,27 @@ variable_declaration
   | FWD_SLASH? VAR implicit_untyped_variable_declaration
   ;
 
+
+variable_set_header
+  : FWD_SLASH? path_prefix=reference_object_tree_path? FWD_SLASH? NEWLINE INDENT variable_set_leaf+ DEDENT
+  ;
+
 variable_set_declaration
-  : VAR (path_prefix=object_tree_path_expr)? FWD_SLASH? varset_suite=variable_set_suite
-  | VAR FWD_SLASH? varset_comma_suite=variable_set_comma_suite
+  : VAR variable_set_header
+  | VAR variable_set_comma_suite NEWLINE 
+  | VAR implicit_variable_declaration NEWLINE
+  ;
+
+variable_set_leaf
+  : variable_set_header
+  | implicit_variable_declaration NEWLINE
+  | variable_set_comma_suite NEWLINE
   ;
 
 variable_set_comma_suite
-  :implicit_variable_declaration (COMMA FWD_SLASH? implicit_variable_declaration)+ NEWLINE
+  : FWD_SLASH? implicit_variable_declaration (COMMA FWD_SLASH? implicit_variable_declaration)+
   ;
 
-variable_set_suite
-  : NEWLINE (INDENT (implicit_variable_declaration NEWLINE)+ DEDENT)
-  ;
 
 expr_lhs
   : lhs=identifier_name                    #expr_lhs_variable

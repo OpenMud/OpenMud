@@ -257,6 +257,7 @@ var/global/test_global = test(20)
 
     test_proc()
         var mob/a, obj/b, c = 8
+
         a = new
         b = new
         fa = new
@@ -321,5 +322,93 @@ var/global/test_global = test(20)
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
         var r = (int)system.Global.ExecProc("test_global").CompleteOrException();
         Assert.IsTrue(r == 8 + 3);
+    }
+
+    [Test]
+    public void ConstVarTest()
+    {
+        var dmlCode =
+            @"
+var
+	const
+        ARROWS = 123
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global["ARROWS"];
+        Assert.IsTrue(r == 123);
+    }
+
+    [Test]
+    public void ConstVarTest2()
+    {
+        var dmlCode =
+            @"
+
+var/global/
+    a = 1
+    list/b = 2
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global["a"];
+        var r2 = (int)system.Global["b"];
+        Assert.IsTrue(r == 1 && r2 == 2);
+    }
+
+    [Test]
+    public void LocalVarDeclaration()
+    {
+        var dmlCode =
+            @"
+/proc/testresult(t)
+    return 8
+
+/proc/test()
+    var a = testresult(/mob)
+    return a
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(r == 8);
+    }
+
+
+
+    [Test]
+    public void ConstVarTest3()
+    {
+        var dmlCode =
+@"var
+    const
+        ARROWS = 123
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global["ARROWS"];
+        Assert.IsTrue(r == 123);
+    }
+
+    [Test]
+    public void ConstVarTest4()
+    {
+        var dmlCode =
+            @"
+var
+    const
+        ARROWS = 123
+
+        ARROWS2 = 321
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global["ARROWS"];
+        Assert.IsTrue(r == 123);
     }
 }

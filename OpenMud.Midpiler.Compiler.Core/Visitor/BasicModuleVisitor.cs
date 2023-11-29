@@ -312,27 +312,9 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
     public override IModulePieceBuilder VisitVariable_set_declaration([NotNull] DmlParser.Variable_set_declarationContext context)
     {
-        var prefix = context.path_prefix?.GetText();
-        var decls = new List<DmlParser.Implicit_variable_declarationContext>();
+        var declarations = CODE.ParseVariableSet(context);
 
-        if (context.varset_suite != null)
-            decls.AddRange(context.varset_suite.implicit_variable_declaration());
-
-        if (context.varset_comma_suite != null)
-            decls.AddRange(context.varset_comma_suite.implicit_variable_declaration().ToList());
-
-        var typedDecl = decls
-            .Select(p => p.implicit_typed_variable_declaration())
-            .Where(p => p != null)
-            .Select(p => CODE.ParseVariableDeclaration(p, prefix));
-
-        var untypedDecl = decls
-                    .Select(p => p.implicit_untyped_variable_declaration())
-                    .Where(p => p != null)
-                    .Select(p => CODE.ParseVariableDeclaration(p, prefix));
-
-        var builders = typedDecl
-            .Concat(untypedDecl)
+        var builders = declarations
             .Select(CreateBuilder);
         
         return new CompositeClassPieceBuilder(builders);
