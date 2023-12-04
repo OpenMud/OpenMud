@@ -1,3 +1,23 @@
+# [2.12.0](https://github.com/OpenMud/OpenMud/compare/v2.11.0...v2.12.0) (2023-12-04)
+
+
+### Bug Fixes
+
+* **compiler:** Added support for parameter types with a rooted path. I.e "my_function(/atom/example_param)" ([792f38d](https://github.com/OpenMud/OpenMud/commit/792f38d39d880e22650adb1d02f184d3ca765f63))
+* **compiler:** Resolved error with lazy evaluation causing the compile step to get stuck into a loop. ([95446d3](https://github.com/OpenMud/OpenMud/commit/95446d329a1dc6b87d1421d17030484927dee5c6))
+* **compiler:** Resolved issue with newline not being handled properly within the curly braces. ([ba45e86](https://github.com/OpenMud/OpenMud/commit/ba45e86da0250319925db403f575d2548d7ac1ae))
+* **compiler:** Resolved some edge cases with variable declaration sets. ([75e40fa](https://github.com/OpenMud/OpenMud/commit/75e40fa0dc427e5057cdb2eb8a18c05d92d12bc5))
+
+
+### Features
+
+* **compiler:** Added support for discard parameters using the null keyword. ([3505c7b](https://github.com/OpenMud/OpenMud/commit/3505c7b84a2e53f37287b5307697650b7c4c5c35))
+* **compiler:** Added support for exceptions & exception handling. ([139de86](https://github.com/OpenMud/OpenMud/commit/139de86bb94f7701fa44bab6060b95e43aebb40d))
+* **compiler:** Added support for variable list declarations. I.e 'var/x = ..., var/y = ..., etc' Works with both local, global and class level variables. ([127b3fc](https://github.com/OpenMud/OpenMud/commit/127b3fc1f99293c5ddd899eb609936aca168f9c7))
+* **compiler:** Enabled the user to use the pre-return variable "." similarly to variables. I.e allowing indexing, new operator etc. ([ba17ccc](https://github.com/OpenMud/OpenMud/commit/ba17cccb1ed8b7eb74e0c0c0b7a5c5ec317ec392))
+* **compiler:** Polishing various features (better range support, macro / string processing, support more settings etc.) OpenMud now successfully parses the GoonStation variant of Space Station 13. ([e2669f7](https://github.com/OpenMud/OpenMud/commit/e2669f7c75926201be8ba2879c3bb64adb54a43f))
+* **weavifier:** Introducing a code weavifier to analyze and systematically de-tangle features in DML projects. ([00df9d2](https://github.com/OpenMud/OpenMud/commit/00df9d26b7ee0d1c38e3dd6c134afdc8181b6cf1))
+
 # [2.11.0](https://github.com/OpenMud/OpenMud/compare/v2.10.0...v2.11.0) (2023-11-26)
 
 
