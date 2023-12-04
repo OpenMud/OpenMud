@@ -43,6 +43,7 @@ internal class GlobalUtil : IRuntimeTypeBuilder
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.ADDTEXT, addtext));
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.GENERATE_RANGE, generate_range));
         procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.PICK_WEIGHTED, pick_weighted));
+        procedureCollection.Register(0, new ActionDatumProc(RuntimeFrameworkIntrinsic.THROW_EXCEPTION, throw_exception));
 
     }
 
@@ -87,7 +88,7 @@ internal class GlobalUtil : IRuntimeTypeBuilder
 
         var r = new List<Tuple<double, EnvObjectReference>>();
 
-        for(var i = 0; i < argsList.Length / 2; i++)
+        for (var i = 0; i < argsList.Length / 2; i++)
         {
             var prob = DmlEnv.AsNumeric(argsList[i * 2]);
             var itm = argsList[i * 2 + 1];
@@ -98,10 +99,23 @@ internal class GlobalUtil : IRuntimeTypeBuilder
         return do_pick(r.ToArray());
     }
 
+    private EnvObjectReference throw_exception(ProcArgumentList args, Datum self)
+    {
+        var argsList = args.GetArgumentList();
+
+        if (argsList.Length != 1)
+            throw new DmlRuntimeError("Invalid exception argument list.");
+
+        var exception = argsList.Single();
+
+        throw new DmlUserException(exception);
+    }
+
     private EnvObjectReference generate_range(ProcArgumentList args, Datum self)
     {
         var start = args.Get(0)?.GetOrDefault<int>(0) ?? 0;
         var end = args.Get(1)?.GetOrDefault<int>(0) ?? 0;
+        var step = args.Get(2)?.GetOrDefault<int>(1) ?? 1;
 
         var listBuffer = instantiator(typeSolver.Lookup("/list"));
         var innerList = listBuffer.Get<DmlList>();
@@ -113,12 +127,12 @@ internal class GlobalUtil : IRuntimeTypeBuilder
 
         direction = direction / Math.Abs(direction);
 
-        var count = Math.Max(0, end - start + 1);
+        var count = Math.Max(0, end - start + 1) / step;
 
         for (; count > 0; count--)
         {
             innerList.Add(VarEnvObjectReference.CreateImmutable(start));
-            start += direction;
+            start += direction * step;
         }
 
         return VarEnvObjectReference.CreateImmutable(listBuffer);

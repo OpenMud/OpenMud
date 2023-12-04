@@ -190,6 +190,8 @@ public class MsBuildDmlCompiler
         parser.AddErrorListener(errorListener);
 
         var ctx = parser.dml_module();
+
+
         var visitor = new BasicModuleVisitor(lineMappings);
 
         var allErrors = lexer.GetErrorMessages().Concat(errorListener.Errors).ToList();
@@ -213,8 +215,6 @@ public class MsBuildDmlCompiler
         }
 
         var formattedCode = sb.ToString();
-
-        //var formattedCode = Formatter.Format(compilationUnit, cw);
 
         Console.WriteLine(formattedCode);
 

@@ -133,4 +133,127 @@ internal class ImplicitReturnTests
 
         Assert.IsTrue(DmlEnv.AsNumeric(r) == 6);
     }
+
+    [Test]
+    public void UnaryIncrement()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    . = 2
+    .++
+    var w = .++
+    w += ++.
+    //3 + (1 + 3)
+    . += w
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var r = system.Global.ExecProc("test").CompleteOrException();
+        //(3 + 5) + 5 == 13
+        Assert.IsTrue(DmlEnv.AsNumeric(r) == 13);
+    }
+
+    [Test]
+    public void UnaryIncrementAndTest()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    . = 0
+    .++
+    if(.)
+        .++
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var r = system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(DmlEnv.AsNumeric(r) == 2);
+    }
+
+    [Test]
+    public void UnaryIncrementAndTest2()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    . = -1
+    .++
+    if(.)
+        .++
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var r = system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(DmlEnv.AsNumeric(r) == 0);
+    }
+
+    [Test]
+    public void ArrayIndexAssignmentTest()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    . = list(2,3,4)
+    .[2] = 8
+    
+    return .[2]
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var r = system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(DmlEnv.AsNumeric(r) == 8);
+    }
+
+    [Test]
+    public void ArrayIndexAugAssignmentTest()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    . = list(2,3,4)
+    .[2] += 8
+    
+    return .[2]
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var r = system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(DmlEnv.AsNumeric(r) == 11);
+    }
+
+    [Test]
+    public void NewWithImplicitReturn()
+    {
+        var dmlCode =
+            @"
+/datum/testdatum
+    var/w=100
+/proc/test()
+    . = /datum/testdatum
+    var/x = new .
+    return x.w
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var r = system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(DmlEnv.AsNumeric(r) == 100);
+    }
 }

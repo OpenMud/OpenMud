@@ -4,6 +4,7 @@ using Antlr4.Runtime.Misc;
 using OpenMud.Mudpiler.Compiler.DmeGrammar;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
 using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Visitors;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace OpenMud.Mudpiler.Compiler.DmlPreprocessor;
 
@@ -44,7 +45,7 @@ public class Preprocessor
         throw new NotImplementedException();
     }
 
-    public static IImmutableSourceFileDocument PreprocessAsDocument(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
+    private static IImmutableSourceFileDocument ExecuteMacroPreprocessPass(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
         ResolveResourceDirectory resolveResourceDirectory, ProcessImport processImport,
         out IImmutableDictionary<string, MacroDefinition> resultantDefinitions,
         IImmutableDictionary<string, MacroDefinition>? predefined = null)
@@ -64,7 +65,7 @@ public class Preprocessor
 
 
         var ctx = parser.dmlDocument();
-        var visitor = new DmlPreprocessorVisitor(filePath, resourcePathBase, resourceDirectory, commonTokenStream,
+        var visitor = new DmlMacroVisitor(filePath, resourcePathBase, resourceDirectory, commonTokenStream,
             resolveResourceDirectory, processImport, predefined);
 
         var allErrors = errorListener.Errors.ToList();
@@ -80,12 +81,48 @@ public class Preprocessor
     }
 
 
-    public static string Preprocess(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
+    public static IImmutableSourceFileDocument PreprocessAsDocument(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
         ResolveResourceDirectory resolveResourceDirectory, ProcessImport processImport,
         out IImmutableDictionary<string, MacroDefinition> resultantDefinitions,
         IImmutableDictionary<string, MacroDefinition>? predefined = null)
     {
-        var r = PreprocessAsDocument(
+        var r = Preprocess(filePath, resourcePathBase, resourceDirectory, text, resolveResourceDirectory, processImport, out resultantDefinitions, predefined, false);
+
+        return SourceFileDocument.Create(filePath, 1, r, false);
+    }
+
+    private static string PreprocessText(string filePath, string text)
+    {
+        var errorListener = new ErrorListener();
+
+        var inputStream = new AntlrInputStream(text);
+        var lexer = new DmeLexer(inputStream);
+        lexer.AddErrorListener(errorListener);
+        var commonTokenStream = new CommonTokenStream(lexer);
+
+        var parser = new DmeParser(commonTokenStream);
+        parser.AddErrorListener(errorListener);
+
+
+        var ctx = parser.dmlDocument();
+        var visitor = new DmlTextProcessingVisitor(filePath, commonTokenStream);
+
+        var allErrors = errorListener.Errors.ToList();
+
+        if (allErrors.Any())
+            throw new Exception(string.Join("\n", allErrors));
+
+        var r = visitor.Visit(ctx);
+
+        return r.AsPlainText(false);
+    }
+
+    public static string Preprocess(string filePath, string resourcePathBase, IEnumerable<string> resourceDirectory, string text,
+        ResolveResourceDirectory resolveResourceDirectory, ProcessImport processImport,
+        out IImmutableDictionary<string, MacroDefinition> resultantDefinitions,
+        IImmutableDictionary<string, MacroDefinition>? predefined = null, bool injectLineNumbers = false)
+    {
+        var r = ExecuteMacroPreprocessPass(
             filePath,
             resourcePathBase,
             resourceDirectory,
@@ -96,6 +133,10 @@ public class Preprocessor
             predefined
         );
 
-        return r.AsPlainText();
+        var macroProcessed = r.AsPlainText(injectLineNumbers);
+
+        var result = PreprocessText(filePath, macroProcessed);
+
+        return result;
     }
 }

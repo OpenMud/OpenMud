@@ -7,6 +7,7 @@ using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Utils;
 using OpenMud.Mudpiler.TypeSolver;
+using System.Linq;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
 
@@ -407,5 +408,87 @@ public static class DmlMethodBuilder
                 })
             ))
             .WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation);
+    }
+
+    internal static ClassDeclarationSyntax BuildExceptionHandlers(ClassDeclarationSyntax host, List<Tuple<Tuple<int, int>, int>> lastExceptionHandlers)
+    {
+        var intTupleType = SyntaxFactory.TupleElement(SyntaxFactory.ParseTypeName("int"));
+        
+        var tupleType = SyntaxFactory.GenericName(typeof(Tuple).FullName);
+
+        TypeSyntax excHandlerRangeTupleType = tupleType
+            .WithTypeArgumentList(
+                SyntaxFactory.TypeArgumentList(SyntaxFactory.SeparatedList<TypeSyntax>(new[] {
+                    SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.IntKeyword)),
+                    SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.IntKeyword))
+                }))
+            );
+
+        // Create the type argument for the outer Tuple
+        TypeSyntax exceptionHandlerIndexType = tupleType
+            .WithTypeArgumentList(
+                SyntaxFactory.TypeArgumentList(SyntaxFactory.SeparatedList<TypeSyntax>(new[] {
+                    excHandlerRangeTupleType,
+                    SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.IntKeyword))
+                }))
+            );
+
+        var excIdxReturnType = SyntaxFactory.ArrayType(
+            exceptionHandlerIndexType,
+            SyntaxFactory.List(new[] { SyntaxFactory.ArrayRankSpecifier() })
+        );
+
+        var retExpr = SyntaxFactory.ArrayCreationExpression(
+            excIdxReturnType,
+            SyntaxFactory.InitializerExpression(
+                SyntaxKind.ArrayInitializerExpression,
+                SyntaxFactory.SeparatedList<ExpressionSyntax>(
+                    lastExceptionHandlers.Select(exHandler =>
+                    {
+                        var rangeDef = SyntaxFactory.ObjectCreationExpression(
+                            excHandlerRangeTupleType,
+                            SyntaxFactory.ArgumentList(
+                                SyntaxFactory.SeparatedList<ArgumentSyntax>(new[] {
+                                    SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(exHandler.Item1.Item1))),
+                                    SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(exHandler.Item1.Item2)))
+                                })
+                            ),
+                            null
+                        );
+
+                        return SyntaxFactory.ObjectCreationExpression(
+                            exceptionHandlerIndexType,
+                            SyntaxFactory.ArgumentList(
+                                SyntaxFactory.SeparatedList<ArgumentSyntax>(new[] {
+                                    SyntaxFactory.Argument(rangeDef),
+                                    SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(exHandler.Item2)))
+                                })
+                            ),
+                            null
+                        );
+                    }
+                )
+            )
+        ));
+
+
+        MemberDeclarationSyntax errorHandlersImpl = SyntaxFactory.MethodDeclaration(
+                SyntaxFactory.ParseTypeName(typeof(DmlDatumProcExecutionContext).FullName),
+                "ErrorHandlers"
+            )
+            .WithReturnType(excIdxReturnType)
+            .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
+                SyntaxFactory.Token(SyntaxKind.OverrideKeyword)))
+            .WithBody(SyntaxFactory.Block(
+                SyntaxFactory.List<StatementSyntax>(new[]
+                {
+                SyntaxFactory.ReturnStatement(retExpr)
+                })
+            ))
+            .WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation);
+
+        host = host.WithMembers(SyntaxFactory.List(host.Members.Append(errorHandlersImpl)));
+
+        return host;
     }
 }

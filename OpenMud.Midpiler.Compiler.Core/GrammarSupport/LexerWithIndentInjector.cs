@@ -89,13 +89,11 @@ public class LexerWithIndentInjector : DmlLexer
                 {
                     case OPEN_PARENS:
                     case OPEN_BRACKET:
-                    case OPEN_BRACE:
                         opened++;
                         pendingTokens.AddLast(curToken);
                         break;
                     case CLOSE_PARENS:
                     case CLOSE_BRACKET:
-                    case CLOSE_BRACE:
                         opened--;
                         pendingTokens.AddLast(curToken);
                         break;

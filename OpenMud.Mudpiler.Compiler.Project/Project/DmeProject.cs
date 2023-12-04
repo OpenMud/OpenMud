@@ -10,20 +10,29 @@ using OpenMud.Mudpiler.RuntimeEnvironment;
 
 namespace OpenMud.Mudpiler.Compiler.Project.Project;
 
+public delegate void ResourceNotFoundHandler(string name);
+
 public class DmePreprocessContext
 {
     private readonly ISet<string> importedMaps;
     private readonly ISet<string> importedStyles;
     private readonly ISet<string> importedInterface;
     private readonly string workingDirectory;
+    private readonly ResourceNotFoundHandler resourceNotFoundHandler;
 
-    public DmePreprocessContext(string workingDirectory, ISet<string>? maps = null, ISet<string>? styles = null, ISet<string>? interfaces = null)
+    public DmePreprocessContext(string workingDirectory, ISet<string>? maps = null, ISet<string>? styles = null, ISet<string>? interfaces = null, ResourceNotFoundHandler? resourceNotFoundHandler = null)
     {
         this.workingDirectory = workingDirectory;
 
         importedMaps = maps ?? new HashSet<string>();
         importedStyles = styles ?? new HashSet<string>();
         importedInterface = interfaces ?? new HashSet<string>();
+        this.resourceNotFoundHandler = resourceNotFoundHandler ?? WarnResourceNotFound;
+    }
+
+    private void WarnResourceNotFound(string name)
+    {
+        Console.Error.WriteLine("Warning, resource could not be found: " + name);
     }
 
     public IEnumerable<string> ImportedMaps => importedMaps;
@@ -51,7 +60,7 @@ public class DmePreprocessContext
                 return b;
         }
 
-        Console.Error.WriteLine("Warning, resource could not be found: " + path);
+        this.resourceNotFoundHandler(path);
 
         return path;
     }
@@ -90,7 +99,7 @@ public class DmePreprocessContext
 
         dmeFile = Path.GetFullPath(dmeFile);
 
-        return new DmePreprocessContext(Path.GetDirectoryName(dmeFile) ?? workingDirectory, importedMaps, importedStyles, importedInterface)
+        return new DmePreprocessContext(Path.GetDirectoryName(dmeFile) ?? workingDirectory, importedMaps, importedStyles, importedInterface, resourceNotFoundHandler)
             .PreprocessContents(dmeFile, rsrcPath, resourceDirectories, File.ReadAllText(dmeFile), predef, out resultantMacro);
     }
 
@@ -101,7 +110,7 @@ public class DmePreprocessContext
 
         dmeFile = Path.GetFullPath(dmeFile);
 
-        return new DmePreprocessContext(rsrcPath, importedMaps, importedStyles, importedInterface)
+        return new DmePreprocessContext(rsrcPath, importedMaps, importedStyles, importedInterface, resourceNotFoundHandler)
             .PreprocessContents(dmeFile, rsrcPath, resourceDirectories ?? Enumerable.Empty<string>(), File.ReadAllText(dmeFile),
                 predef, out var _);
     }

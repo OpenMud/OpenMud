@@ -10,7 +10,8 @@ internal class ReservedKeywordVariableNameConflictResolver : CSharpSyntaxRewrite
     {
         "event",
         "internal",
-        "virtual"
+        "virtual",
+        "const"
     };
 
     public override SyntaxNode? VisitVariableDeclarator(VariableDeclaratorSyntax node)

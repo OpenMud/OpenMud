@@ -370,5 +370,44 @@ var/datum/t/mx
         var r = (int)system.Global.ExecProc("test_newop0").CompleteOrException();
         Assert.IsTrue(r == (-20 + -100) * (25 * -30 + 8 * -2 + 15 * -20));
     }
+
+
+    //CodeSuite: VisitNew_call_implicit
+    [Test]
+    public void FieldInitializerStatement_VisitNew_call_implicit2()
+    {
+        //Same as first one but without a semi-colon at the end of field init.
+        var dmlCode =
+            @"
+/datum/t
+    var w = 15
+    var f = 20
+
+    New(n)
+        if(n)
+            w = n
+
+    proc
+        Agg()
+            return w * -f;
+
+var/datum/t/m
+var/datum/t/mw
+var/datum/t/mx
+
+/proc/test_newop0()
+    var w = -20
+    var f = -100
+    m = new {w = 25; f = 30} (8)
+    mw = new {w = 8; f = 2}
+    mx = new()
+    return (mx:Agg() + mw:Agg() + m:Agg()) * (f + w)
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var r = (int)system.Global.ExecProc("test_newop0").CompleteOrException();
+        Assert.IsTrue(r == (-20 + -100) * (25 * -30 + 8 * -2 + 15 * -20));
+    }
 }
 

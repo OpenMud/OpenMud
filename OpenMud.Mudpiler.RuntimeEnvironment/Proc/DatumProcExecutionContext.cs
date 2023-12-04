@@ -20,7 +20,18 @@ public abstract class DatumProcExecutionContext
     public abstract dynamic usr { get; set; }
 
     public abstract EnvObjectReference Result { get; }
-    public EnvObjectReference ImplicitReturn { get; private set; }
+
+    private EnvObjectReference _implicitReturn = new VarEnvObjectReference(null, false);
+    public EnvObjectReference ImplicitReturn { 
+        get
+        {
+            return _implicitReturn;
+        }
+        set
+        {
+            _implicitReturn = new VarEnvObjectReference(value, false);
+        }
+    }
 
     public DatumProcExecutionState State { get; protected set; }
 
@@ -30,11 +41,6 @@ public abstract class DatumProcExecutionContext
     {
         ctx.ClearExecutionDeferal(this);
         ContinueHandler();
-    }
-
-    public void SetImplicitReturn(EnvObjectReference r)
-    {
-        ImplicitReturn = r;
     }
 
     public EnvObjectReference GetImplicitReturn()

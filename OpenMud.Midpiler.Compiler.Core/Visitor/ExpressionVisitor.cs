@@ -184,8 +184,6 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
 
     public ExpressionSyntax CreateVariable(ExpressionSyntax init = null)
     {
-        var dmlOp = typeof(DmlBinaryAssignment).FullName + "." +
-                    Enum.GetName(typeof(DmlBinaryAssignment), DmlBinaryAssignment.Assignment);
         return SyntaxFactory.InvocationExpression(
             SyntaxFactory.MemberAccessExpression(
                 SyntaxKind.SimpleMemberAccessExpression,
@@ -203,7 +201,6 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
                         {
                             SyntaxFactory.Argument(init)
                         }
-                    //blankAssignment ? CreateBlankAssignmentDelegate() : CreateAssignmentDelegate(left(resolver))//SyntaxFactory.Argument(null, SyntaxFactory.Token(SyntaxKind.OutKeyword), left(resolver))
                 )
             )
         );
@@ -484,6 +481,11 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return resolver => Util.IdentifierName(context.lhs.GetText());
     }
 
+    public override ExpressionPieceBuilder VisitExpr_lhs_prereturn([NotNull] Expr_lhs_prereturnContext context)
+    {
+        return r => CreatePrereturnExpression();
+    }
+
     public override ExpressionPieceBuilder VisitBasic_assignment(DmlParser.Basic_assignmentContext context)
     {
         return CreateBinAsn("=", Visit(context.dest), Visit(context.src));
@@ -624,7 +626,7 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     {
         return s.Substring(1, s.Length - 2)
             .Replace("\\\"", "\"")
-            .Replace("\\\'", "'")
+            .Replace("\\'", "'")
             .Replace("\\r", "\r")
             .Replace("\\n", "\n")
             .Replace("\\\\", "\\");
@@ -1029,7 +1031,17 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
 
     public override ExpressionPieceBuilder VisitList_range_expr([NotNull] DmlParser.List_range_exprContext context)
     {
-        return resolver => CreateCall(RuntimeFrameworkIntrinsic.GENERATE_RANGE, new[] { SyntaxFactory.Argument(Visit(context.start)(resolver)), SyntaxFactory.Argument(Visit(context.end)(resolver)) });
+        return resolver => {
+            var args = new[] {
+                SyntaxFactory.Argument(Visit(context.start)(resolver)),
+                SyntaxFactory.Argument(Visit(context.end)(resolver))
+            }.ToList();
+
+            if (context.step != null)
+                args.Add(SyntaxFactory.Argument(Visit(context.step)(resolver)));
+
+            return CreateCall(RuntimeFrameworkIntrinsic.GENERATE_RANGE, args);
+        };
     }
 
     public override ExpressionPieceBuilder VisitPick_expression([NotNull] DmlParser.Pick_expressionContext context)
@@ -1059,9 +1071,67 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
 
     public static ExpressionSyntax CreatePrereturnExpression()
     {
-        return SyntaxFactory.InvocationExpression(
-            SyntaxFactory.ParseName("this.GetImplicitReturn"),
-            SyntaxFactory.ArgumentList()
+        return SyntaxFactory.MemberAccessExpression(
+            SyntaxKind.SimpleMemberAccessExpression,
+            SyntaxFactory.ThisExpression(),
+            SyntaxFactory.IdentifierName("ImplicitReturn")
+        ).WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation);
+    }
+
+    public override ExpressionPieceBuilder VisitExpr_hexnumber([NotNull] Expr_hexnumberContext c)
+    {
+        var hexString = c.literal.Text.TrimStart(new[] { 'x', 'X', '0' });
+        var decValue = int.Parse(hexString, System.Globalization.NumberStyles.HexNumber);
+        return resolver => SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression,
+            SyntaxFactory.Literal(decValue));
+    }
+
+    public override ExpressionPieceBuilder VisitPrereturn_array_augassignment([NotNull] Prereturn_array_augassignmentContext c)
+    {
+        var lhs_eval = CreateBin(DmlBinary.ArrayIndex, r => CreatePrereturnExpression(), Visit(c.asn_idx.idx));
+
+        return CreateTernery(
+            DmlTernery.ArrayEmplace,
+            r => CreatePrereturnExpression(),
+            Visit(c.asn_idx.idx),
+            CreateBinAsn(
+                c.op.GetText(),
+                lhs_eval,
+                Visit(c.src)
+            )
         );
+    }
+
+
+    public override ExpressionPieceBuilder VisitPrereturn_array_assignment([NotNull] Prereturn_array_assignmentContext c)
+    {
+        var lhs_eval = CreateBin(DmlBinary.ArrayIndex, r => CreatePrereturnExpression(), Visit(c.asn_idx.idx));
+
+        return CreateTernery(
+            DmlTernery.ArrayEmplace,
+            r => CreatePrereturnExpression(),
+            Visit(c.asn_idx.idx),
+            Visit(c.src)
+        );
+    }
+
+    public override ExpressionPieceBuilder VisitPrereturn_expr_unary_post([NotNull] Prereturn_expr_unary_postContext c)
+    {
+        return r => CreateUnAsn(c.unop.GetText(), CreatePrereturnExpression(), CreatePrereturnExpression(), false).WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
+    }
+
+    public override ExpressionPieceBuilder VisitPrereturn_expr_unary_pre([NotNull] Prereturn_expr_unary_preContext c)
+    {
+        return r => CreateUnAsn(c.unop.GetText(), CreatePrereturnExpression(), CreatePrereturnExpression(), true).WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
+    }
+    
+    public override ExpressionPieceBuilder VisitPrereturn_simple_assignment([NotNull] Prereturn_simple_assignmentContext context)
+    {
+        return r => CreateAssignment(CreatePrereturnExpression(), Visit(context.expr())(r)).WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
+    }
+
+    public override ExpressionPieceBuilder VisitPrereturn_augasnop([NotNull] Prereturn_augasnopContext c)
+    {
+        return r => CreateBinAsn(c.augAsnOp().GetText(), CreatePrereturnExpression(), Visit(c.src)(r)).WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
     }
 }

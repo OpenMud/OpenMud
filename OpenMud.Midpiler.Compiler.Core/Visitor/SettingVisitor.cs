@@ -8,6 +8,8 @@ namespace OpenMud.Mudpiler.Compiler.Core.Visitor;
 
 public class SettingVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 {
+    private static readonly int DEFAULT_VIEW_DISTANCE = 5;
+
     private readonly int methodDeclarationOrder;
     private readonly ExpressionVisitor EXPR = new();
 
@@ -18,7 +20,7 @@ public class SettingVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
     public override IModulePieceBuilder VisitIf_stmt(DmlParser.If_stmtContext c)
     {
-        return new CompositeClassPieceBuilder(c.suite().Select(Visit).Where(x => x != null));
+        return new CompositeClassPieceBuilder(c.suite().Select(Visit).Where(x => x != null).ToList());
     }
 
     public override IModulePieceBuilder VisitSuite_single_stmt(DmlParser.Suite_single_stmtContext c)
@@ -28,12 +30,12 @@ public class SettingVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
     public override IModulePieceBuilder VisitSuite_multi_stmt(DmlParser.Suite_multi_stmtContext c)
     {
-        return new CompositeClassPieceBuilder(c.stmt().Select(Visit).Where(x => x != null));
+        return new CompositeClassPieceBuilder(c.stmt().Select(Visit).Where(x => x != null).ToList());
     }
 
     public override IModulePieceBuilder VisitSimple_stmt(DmlParser.Simple_stmtContext context)
     {
-        return Visit(context.small_stmt());
+        return Visit(context.small_stmt()) ?? new NullModulePieceBuilder();
     }
 
     public override IModulePieceBuilder VisitSuite_empty([NotNull] DmlParser.Suite_emptyContext context)
@@ -113,6 +115,11 @@ public class SettingVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         return DefineSrc(SourceType.UserLoc);
     }
 
+    public override IModulePieceBuilder VisitSet_src_world([NotNull] DmlParser.Set_src_worldContext context)
+    {
+        return DefineSrc(SourceType.World);
+    }
+
     //set src = usr -> Means must be equal to user
     //set src in usr -> usr.contents ;
     public override IModulePieceBuilder VisitSet_src_user([NotNull] DmlParser.Set_src_userContext context)
@@ -122,11 +129,19 @@ public class SettingVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
     public override IModulePieceBuilder VisitSet_src_view([NotNull] DmlParser.Set_src_viewContext context)
     {
-        return DefineSrc(SourceType.View, int.Parse(context.arg.Text));
+        var viewDistance = context.arg?.Text == null ? DEFAULT_VIEW_DISTANCE : int.Parse(context.arg.Text);
+        return DefineSrc(SourceType.View, viewDistance);
+    }
+
+    public override IModulePieceBuilder VisitSet_src_range([NotNull] DmlParser.Set_src_rangeContext context)
+    {
+        var viewDistance = context.arg?.Text == null ? DEFAULT_VIEW_DISTANCE : int.Parse(context.arg.Text);
+        return DefineSrc(SourceType.Range, viewDistance);
     }
 
     public override IModulePieceBuilder VisitSet_src_oview([NotNull] DmlParser.Set_src_oviewContext context)
     {
-        return DefineSrc(SourceType.OView, int.Parse(context.arg.Text));
+        var viewDistance = context.arg?.Text == null ? DEFAULT_VIEW_DISTANCE : int.Parse(context.arg.Text);
+        return DefineSrc(SourceType.OView, viewDistance);
     }
 }

@@ -9,6 +9,9 @@ public class ScopedClassPieceBuilder : IModulePieceBuilder
     {
         this.parent = parent;
         this.inner = inner;
+
+        if (inner == null)
+            throw new ArgumentException("Inner cannot be null.");
     }
 
     public void Visit(IDreamMakerSymbolResolver resolver)

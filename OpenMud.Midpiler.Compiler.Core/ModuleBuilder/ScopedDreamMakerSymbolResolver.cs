@@ -49,9 +49,9 @@ public class ScopedDreamMakerSymbolResolver : IDreamMakerSymbolResolver
         inner.DefineMethodConfiguration(DmlPath.Concat(basePath, key), value, declarationOrder, replaceExisting);
     }
 
-    public ClassDeclarationSyntax Touch(string path)
+    public void Touch(string path)
     {
-        return inner.Touch(DmlPath.Concat(basePath, path));
+        inner.Touch(DmlPath.Concat(basePath, path));
     }
 
     public string DefineSupportMethod(string baseClass, Func<MethodDeclarationSyntax, MethodDeclarationSyntax> value)

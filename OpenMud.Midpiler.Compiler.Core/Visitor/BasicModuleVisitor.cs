@@ -14,7 +14,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 {
     private readonly CodeSuiteVisitor CODE;
     private static readonly ExpressionVisitor EXPR = new();
-
+    private static int discardParameterIndex = 0;
     private int methodDefinitionOrder;
 
     private readonly SourceMapping mapping;
@@ -25,16 +25,30 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         this.CODE = new(mapping);
     }
 
+    public BasicModuleVisitor()
+    {
+        mapping = new SourceMapping(Enumerable.Empty<IToken>());
+        this.CODE = new(mapping);
+    }
+
     private static ParameterSyntax CreateParameter(DmlParser.ParameterContext c, IDreamMakerSymbolResolver resolver)
     {
-        var name = c.name.GetText();
-        TypeSyntax? type = null;
+        string name;
+        string typeHint = "";
+        EqualsValueClauseSyntax init = null;
+        if (c.NULL() != null)
+        {
+            name = $"__discard{discardParameterIndex++}";
+        }
+        else
+        {
+            name = c.name.GetText();
+            typeHint = c.object_ref_type == null ? "" : c.reference_object_tree_path().GetText();
+            if(c.init != null)
+                init = SyntaxFactory.EqualsValueClause(EXPR.Visit(c.init)(resolver));
+        }
 
-        var typeHint = c.object_ref_type == null ? "" : c.reference_object_tree_path().GetText();
-
-        type = BuiltinTypes.ResolveGenericType();
-
-        var init = c.init == null ? null : SyntaxFactory.EqualsValueClause(EXPR.Visit(c.init)(resolver));
+        var type = BuiltinTypes.ResolveGenericType();
 
         return SyntaxFactory.Parameter(
             SyntaxFactory.List<AttributeListSyntax>(),
@@ -236,7 +250,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         {
             new MethodPieceBuilder(builder, fullName, declOrder),
             settings
-        });
+        }.ToList());
     }
 
     public override IModulePieceBuilder VisitObject_function_definition(DmlParser.Object_function_definitionContext c)
@@ -300,28 +314,17 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
                 .OrderBy(x => x.Start.Line);
 
         return new CompositeClassPieceBuilder(
-            parseOrder.Select(Visit)
+            parseOrder.Select(Visit).ToList()
         );
     }
 
     public override IModulePieceBuilder VisitVariable_set_declaration([NotNull] DmlParser.Variable_set_declarationContext context)
     {
+        var declarations = CODE.ParseVariableSet(context);
 
-        var prefix = context.path_prefix?.GetText();
-        var decls = context.varset_suite.implicit_variable_declaration();
-        var typedDecl = decls
-            .Select(p => p.implicit_typed_variable_declaration())
-            .Where(p => p != null)
-            .Select(p => CODE.ParseVariableDeclaration(p, prefix));
-
-        var untypedDecl = decls
-                    .Select(p => p.implicit_untyped_variable_declaration())
-                    .Where(p => p != null)
-                    .Select(p => CODE.ParseVariableDeclaration(p, prefix));
-
-        var builders = typedDecl
-            .Concat(untypedDecl)
-            .Select(CreateBuilder);
+        var builders = declarations
+            .Select(CreateBuilder)
+            .ToList();
         
         return new CompositeClassPieceBuilder(builders);
     }
@@ -329,7 +332,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
     public override IModulePieceBuilder VisitObject_tree_suite(DmlParser.Object_tree_suiteContext context)
     {
         return new CompositeClassPieceBuilder(
-            context.object_tree_stmt().Select(Visit)
+            context.object_tree_stmt().Select(Visit).ToList()
         );
     }
 
@@ -363,6 +366,9 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         if (c.object_unopasn_override_definition() != null)
             return Visit(c.object_unopasn_override_definition());
 
+        if(c.variable_set_declaration() != null)
+            return Visit(c.variable_set_declaration());
+
         throw new Exception("Unhandled tree statement.");
     }
 
@@ -391,7 +397,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         return new CompositeClassPieceBuilder(new IModulePieceBuilder[]
         {
             fldBuilder
-        });
+        }.ToList());
     }
 
     public override IModulePieceBuilder VisitImplicit_untyped_variable_declaration(
@@ -425,7 +431,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         {
             fldBuilder,
             new FieldInitPieceBuilder(r.variableName, resolver => r.init(resolver))
-        });
+        }.ToList());
     }
 
     public override IModulePieceBuilder VisitImplicit_typed_variable_declaration(

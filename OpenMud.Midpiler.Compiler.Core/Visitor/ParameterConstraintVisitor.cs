@@ -70,6 +70,7 @@ public static class ParametersConstraintBuilder
         private static readonly string SimpleAnnotationPath = typeof(SimpleSourceConstraint).FullName;
         private static readonly string ListEvalSourceConstraintPath = typeof(ListEvalSourceConstraint).FullName;
         private static readonly string VariableEvalSourceConstraintPath = typeof(VariableEvalSourceConstraint).FullName;
+        private static readonly string ProcEvalSourceConstraintPath = typeof(ProcEvalSourceConstraint).FullName;
 
         private static readonly ExpressionVisitor EXPR = new();
 
@@ -151,6 +152,22 @@ public static class ParametersConstraintBuilder
             );
         }
 
+        public static AttributeSyntax CreateEvalProc(string procName)
+        {
+            return SyntaxFactory.Attribute(
+                SyntaxFactory.ParseName(ProcEvalSourceConstraintPath),
+                SyntaxFactory.AttributeArgumentList(
+                    SyntaxFactory.SeparatedList(new[] {
+                        SyntaxFactory.AttributeArgument(
+                            SyntaxFactory.LiteralExpression(
+                                SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(procName)
+                            )
+                        )
+                    })
+                )
+            );
+        }
+
         public override Func<IDreamMakerSymbolResolver, AttributeSyntax> VisitParameter_constraint_set_usr_contents(
             [NotNull] DmlParser.Parameter_constraint_set_usr_contentsContext context)
         {
@@ -222,6 +239,11 @@ public static class ParametersConstraintBuilder
         public override Func<IDreamMakerSymbolResolver, AttributeSyntax> VisitParameter_constraint_set_inVariable([NotNull] DmlParser.Parameter_constraint_set_inVariableContext context)
         {
             return resolver => CreateEvalVariable(context.identifier_name().GetText());
+        }
+
+        public override Func<IDreamMakerSymbolResolver, AttributeSyntax> VisitParameter_constraint_set_inInvoke([NotNull] DmlParser.Parameter_constraint_set_inInvokeContext context)
+        {
+            return resolver => CreateEvalProc(context.identifier_name().GetText());
         }
     }
 }
