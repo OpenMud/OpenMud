@@ -108,6 +108,7 @@ variable_set_comma_suite
 expr_lhs
   : lhs=identifier_name                    #expr_lhs_variable
   | expr_lhs (DOT | COLON) identifier_name #expr_lhs_property
+  | DOT #expr_lhs_prereturn
   ;
 
 array_expr_lhs
@@ -310,8 +311,15 @@ augAsnOp
   | OP_RIGHT_SHIFT_ASSIGNMENT
   ;
 
-prereturn_assignment: DOT ASSIGNMENT src=expr;
-prereturn_augmentation: DOT augAsnOp src=expr;
+prereturn_assignment
+  : DOT ASSIGNMENT src=expr #prereturn_simple_assignment
+  | DOT augAsnOp src=expr #prereturn_augasnop
+  | DOT unop=un_op_asn #prereturn_expr_unary_post
+  | unop=un_op_asn DOT #prereturn_expr_unary_pre
+  | DOT asn_idx=concrete_array_decl op=augAsnOp  src=expr #prereturn_array_augassignment
+  | DOT asn_idx=concrete_array_decl ASSIGNMENT  src=expr #prereturn_array_assignment
+  ;
+
 
 augmented_assignment: dest=expr_lhs op=augAsnOp
   src=expr;
@@ -475,7 +483,8 @@ as_list:
   ;
 
 expr
- : null_expr #expr_null
+ : prereturn_assignment #expr_prereturn_assignment
+ | null_expr #expr_null
  | ISTYPE OPEN_PARENS varname=identifier_name (COMMA typename=expr)? CLOSE_PARENS #expr_istype_local
  | ISTYPE OPEN_PARENS varname=expr (COMMA typename=expr) CLOSE_PARENS #expr_istype_property
  | ISTYPE OPEN_PARENS varname=expr DOT identifier_name CLOSE_PARENS #expr_implicit_istype_property

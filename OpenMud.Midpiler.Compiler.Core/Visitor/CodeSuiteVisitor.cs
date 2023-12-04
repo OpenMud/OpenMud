@@ -718,6 +718,11 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         return resolver => new[] { SyntaxFactory.ExpressionStatement(EXPR.Visit(c)(resolver)) };
     }
 
+    public override CodePieceBuilder VisitExpr_prereturn_assignment([NotNull] DmlParser.Expr_prereturn_assignmentContext c)
+    {
+        return resolver => new[] { SyntaxFactory.ExpressionStatement(EXPR.Visit(c)(resolver)) };
+    }
+
     public override CodePieceBuilder VisitSimple_stmt(DmlParser.Simple_stmtContext context)
     {
         return Visit(context.small_stmt());
