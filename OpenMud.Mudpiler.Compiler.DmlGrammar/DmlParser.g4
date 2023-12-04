@@ -196,6 +196,7 @@ parameter
         name=identifier_name parameter_list_hint? (ASSIGNMENT init=expr)? (AS as_constraints=parameter_aslist)? set_constraints=parameter_constraint_set?
     )
   | (name=identifier_name parameter_list_hint? (ASSIGNMENT init=expr)?)
+  | NULL
   ;
   
 empty_parameter_list: OPEN_PARENS CLOSE_PARENS ;

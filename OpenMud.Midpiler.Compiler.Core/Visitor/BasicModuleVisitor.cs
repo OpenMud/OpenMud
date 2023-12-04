@@ -14,7 +14,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 {
     private readonly CodeSuiteVisitor CODE;
     private static readonly ExpressionVisitor EXPR = new();
-
+    private static int discardParameterIndex = 0;
     private int methodDefinitionOrder;
 
     private readonly SourceMapping mapping;
@@ -33,14 +33,22 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
 
     private static ParameterSyntax CreateParameter(DmlParser.ParameterContext c, IDreamMakerSymbolResolver resolver)
     {
-        var name = c.name.GetText();
-        TypeSyntax? type = null;
+        string name;
+        string typeHint = "";
+        EqualsValueClauseSyntax init = null;
+        if (c.NULL() != null)
+        {
+            name = $"__discard{discardParameterIndex++}";
+        }
+        else
+        {
+            name = c.name.GetText();
+            typeHint = c.object_ref_type == null ? "" : c.reference_object_tree_path().GetText();
+            if(c.init != null)
+                init = SyntaxFactory.EqualsValueClause(EXPR.Visit(c.init)(resolver));
+        }
 
-        var typeHint = c.object_ref_type == null ? "" : c.reference_object_tree_path().GetText();
-
-        type = BuiltinTypes.ResolveGenericType();
-
-        var init = c.init == null ? null : SyntaxFactory.EqualsValueClause(EXPR.Visit(c.init)(resolver));
+        var type = BuiltinTypes.ResolveGenericType();
 
         return SyntaxFactory.Parameter(
             SyntaxFactory.List<AttributeListSyntax>(),
