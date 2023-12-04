@@ -4,7 +4,7 @@ public class CompositeClassPieceBuilder : IModulePieceBuilder
 {
     private readonly IModulePieceBuilder[] builders;
 
-    public CompositeClassPieceBuilder(IEnumerable<IModulePieceBuilder> builders)
+    public CompositeClassPieceBuilder(List<IModulePieceBuilder> builders)
     {
         if (builders.Any(x => x == null))
             throw new ArgumentException("Builder cannot be null.");

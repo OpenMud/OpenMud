@@ -242,7 +242,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         {
             new MethodPieceBuilder(builder, fullName, declOrder),
             settings
-        });
+        }.ToList());
     }
 
     public override IModulePieceBuilder VisitObject_function_definition(DmlParser.Object_function_definitionContext c)
@@ -306,7 +306,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
                 .OrderBy(x => x.Start.Line);
 
         return new CompositeClassPieceBuilder(
-            parseOrder.Select(Visit)
+            parseOrder.Select(Visit).ToList()
         );
     }
 
@@ -315,7 +315,8 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         var declarations = CODE.ParseVariableSet(context);
 
         var builders = declarations
-            .Select(CreateBuilder);
+            .Select(CreateBuilder)
+            .ToList();
         
         return new CompositeClassPieceBuilder(builders);
     }
@@ -323,7 +324,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
     public override IModulePieceBuilder VisitObject_tree_suite(DmlParser.Object_tree_suiteContext context)
     {
         return new CompositeClassPieceBuilder(
-            context.object_tree_stmt().Select(Visit)
+            context.object_tree_stmt().Select(Visit).ToList()
         );
     }
 
@@ -388,7 +389,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         return new CompositeClassPieceBuilder(new IModulePieceBuilder[]
         {
             fldBuilder
-        });
+        }.ToList());
     }
 
     public override IModulePieceBuilder VisitImplicit_untyped_variable_declaration(
@@ -422,7 +423,7 @@ public class BasicModuleVisitor : DmlParserBaseVisitor<IModulePieceBuilder>
         {
             fldBuilder,
             new FieldInitPieceBuilder(r.variableName, resolver => r.init(resolver))
-        });
+        }.ToList());
     }
 
     public override IModulePieceBuilder VisitImplicit_typed_variable_declaration(
