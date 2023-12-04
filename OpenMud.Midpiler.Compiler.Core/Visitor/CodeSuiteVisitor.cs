@@ -1343,4 +1343,83 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             builders.SelectMany(r => r(resolver)).ToArray();
     }
 
+    public override CodePieceBuilder VisitThrow_stmt([NotNull] DmlParser.Throw_stmtContext context)
+    {
+        var throwExpr = EXPR.Visit(context.expr());
+
+        return resolver =>
+        {
+            return new[] {
+                SyntaxFactory.ExpressionStatement(
+                    EXPR.CreateCall(RuntimeFrameworkIntrinsic.THROW_EXCEPTION, new[] {
+                        SyntaxFactory.Argument(throwExpr(resolver))
+                    })
+                )
+            };
+        };
+    }
+
+    public override CodePieceBuilder VisitTry_catch_stmnt([NotNull] DmlParser.Try_catch_stmntContext context)
+    {
+        var bodyBulder = Visit(context.body);
+        var catchClauseBuilder = Visit(context.catch_suite);
+        var declDetails = ParseVariableDeclaration(context.variable_declaration());
+
+        return resolver =>
+        {
+            var body = SyntaxFactory.Block(bodyBulder(resolver));
+            var getLastErrorExpr = SyntaxFactory.MemberAccessExpression(
+                                        SyntaxKind.SimpleMemberAccessExpression,
+                                        SyntaxFactory.ThisExpression().WithAdditionalAnnotations(BuilderAnnotations.DontWrapAnnotation),
+                                        SyntaxFactory.IdentifierName("lastError")
+                                    );
+
+            var initExceptionVar = SyntaxFactory.LocalDeclarationStatement(
+                SyntaxFactory.VariableDeclaration(
+                    SyntaxFactory.ParseTypeName("dynamic"),
+                    SyntaxFactory.SeparatedList(new[]
+                    {
+                        SyntaxFactory.VariableDeclarator(Util.IdentifierName(declDetails.variableName).Identifier)
+                            .WithInitializer(                                SyntaxFactory.EqualsValueClause(
+                                    SyntaxFactory.MemberAccessExpression(
+                                        SyntaxKind.SimpleMemberAccessExpression,
+                                        getLastErrorExpr,
+                                        SyntaxFactory.IdentifierName("UserException")
+                                    )
+                                )
+                            )
+                    })
+                )
+            );
+
+            var catchClauseBody = SyntaxFactory.Block(catchClauseBuilder(resolver).ToArray());
+
+            if (declDetails.objectType != null)
+            {
+                //Add a istype filter...
+                var filterIfStmnt = SyntaxFactory.IfStatement(
+                    SyntaxFactory.PrefixUnaryExpression(
+                        SyntaxKind.LogicalNotExpression,
+                        EXPR.CreateImplicitIsType(
+                            Util.IdentifierName(declDetails.variableName),
+                            ExpressionVisitor.CreateResolveType(declDetails.objectType)
+                        )
+                    ),
+                    SyntaxFactory.ThrowStatement(getLastErrorExpr),
+                    SyntaxFactory.ElseClause(catchClauseBody)
+                );
+
+                catchClauseBody = SyntaxFactory.Block(new StatementSyntax[] { initExceptionVar, filterIfStmnt });
+            } else
+                catchClauseBody = SyntaxFactory.Block(new StatementSyntax[] { initExceptionVar, catchClauseBody });
+
+            var catchClause = SyntaxFactory.CatchClause(SyntaxFactory.CatchDeclaration(SyntaxFactory.ParseTypeName(typeof(DmlUserException).FullName)), null, catchClauseBody);
+
+            return new[]
+            {
+                SyntaxFactory.TryStatement(body, SyntaxFactory.List<CatchClauseSyntax>(new[] { catchClause }), SyntaxFactory.FinallyClause())
+            };
+        };
+    }
+
 }

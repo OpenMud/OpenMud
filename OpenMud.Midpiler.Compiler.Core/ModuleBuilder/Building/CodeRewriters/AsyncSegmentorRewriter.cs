@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using OpenMud.Mudpiler.Compiler.Core.Visitor;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 
@@ -181,6 +182,8 @@ internal class InjectStepSuccession : CSharpSyntaxRewriter
 
     public int InjectedSteps => currentStep - 1;
 
+    public readonly List<Tuple<Tuple<int, int>, int>> ExceptionHandlers = new();
+
     private ExpressionStatementSyntax CreateStepSuccession(out int stepNo)
     {
         stepNo = currentStep++;
@@ -279,6 +282,29 @@ internal class InjectStepSuccession : CSharpSyntaxRewriter
                 )
             );
     }
+
+    public override SyntaxNode? VisitTryStatement(TryStatementSyntax node)
+    {
+        
+        var exceptionHandlerBegin = currentStep;
+        StatementSyntax body = (StatementSyntax)Visit(node.Block);
+        var exceptionHandlerEnd = currentStep - 1;
+        var catchBegin = currentStep;
+        StatementSyntax catchBody = (StatementSyntax)Visit(node.Catches.Single().Block);
+        var catchEndAsn = CreateStepSuccession(out var catchEnd);
+        var catchEndLabel = CreateStepLabel(catchEnd);
+        var skipCatch = AsyncSegmentorRewriter.GenerateGotoSequencePoint(catchEnd);
+
+        ExceptionHandlers.Add(Tuple.Create(Tuple.Create(exceptionHandlerBegin, exceptionHandlerEnd), catchBegin));
+
+        return SyntaxFactory.Block(new[] {
+            body,
+            skipCatch,
+            catchBody,
+            catchEndAsn,
+            catchEndLabel
+        });
+    }
 }
 
 public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
@@ -287,7 +313,7 @@ public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
     private readonly List<Tuple<InvocationExpressionSyntax, BlockSyntax>> injectionPoints = new();
     private bool injectJumps;
     private Dictionary<InvocationExpressionSyntax, string>? topLevelAnchorNames;
-
+    private List<Tuple<Tuple<int, int>, int>>? LastExceptionHandlers = null;
     private BlockSyntax FindBlock(SyntaxNode node)
     {
         SyntaxNode? n;
@@ -312,6 +338,8 @@ public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
 
     public override SyntaxNode? VisitClassDeclaration(ClassDeclarationSyntax node)
     {
+        LastExceptionHandlers = null;
+
         node = (ClassDeclarationSyntax)base.VisitClassDeclaration(node);
 
         node = node.WithMembers(SyntaxFactory.List(
@@ -333,6 +361,9 @@ public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
         topLevelAnchorNames = null;
         blockGroupings = null;
         injectionPoints.Clear();
+
+        if(LastExceptionHandlers != null)
+            node = DmlMethodBuilder.BuildExceptionHandlers(node, LastExceptionHandlers);
 
         return node;
     }
@@ -407,10 +438,16 @@ public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
         var successionGenerator = new InjectStepSuccession();
 
         node = (MethodDeclarationSyntax)successionGenerator.Visit(node);
-
         node = InjectEntrypointDispatcher(node, successionGenerator.InjectedSteps);
 
+        LastExceptionHandlers = successionGenerator.ExceptionHandlers.Any() ? successionGenerator.ExceptionHandlers.ToList() : null;
+
         return node;
+    }
+
+    public static StatementSyntax GenerateGotoSequencePoint(int sequenceId)
+    {
+        return SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression($"InlineIL.IL.Emit.Br(\"exec_{sequenceId}\")"));
     }
 
     private MethodDeclarationSyntax? InjectEntrypointDispatcher(MethodDeclarationSyntax? node, int injectedSteps)
@@ -431,8 +468,7 @@ public class AsyncSegmentorRewriter : CSharpSyntaxRewriter
                                         SyntaxFactory.Literal(s + 1)))))
                             .WithStatements(SyntaxFactory.List(new StatementSyntax[]
                             {
-                                SyntaxFactory.ExpressionStatement(
-                                    SyntaxFactory.ParseExpression($"InlineIL.IL.Emit.Br(\"exec_{s + 1}\")")),
+                                GenerateGotoSequencePoint(s + 1),
                                 SyntaxFactory.BreakStatement()
                             }))
                     )

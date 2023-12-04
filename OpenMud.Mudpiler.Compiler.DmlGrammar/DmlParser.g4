@@ -33,6 +33,7 @@ identifier_name
   | 'prob'
   | 'clients'
   | 'group'
+  | 'throw'
   ;
 
 initializer_assignment: path=declaration_object_tree_path ASSIGNMENT expr;
@@ -255,6 +256,7 @@ small_stmt
   | set_src_statement
   | config_statement
   | del_statement
+  | throw_stmt
   ;
 
 new_call_field_initializer:
@@ -389,7 +391,7 @@ flow_stmt: break_stmt | continue_stmt;
 break_stmt: BREAK target=NAME?;
 continue_stmt: CONTINUE target=NAME?;
 
-compound_stmt: for_stmt | forlist_stmt | if_stmt | do_while_stmnt | while_stmt | switch_stmnt | spawn_stmt;
+compound_stmt: try_catch_stmnt | for_stmt | forlist_stmt | if_stmt | do_while_stmnt | while_stmt | switch_stmnt | spawn_stmt;
 
 switch_exprset
   : expr (COMMA expr)+
@@ -419,6 +421,9 @@ if_stmt: IF OPEN_PARENS test=expr CLOSE_PARENS pass=suite? (ELSE IF OPEN_PARENS 
 spawn_stmt: SPAWN (OPEN_PARENS delay=expr? CLOSE_PARENS)? run=suite;
 
 do_while_stmnt: DO suite WHILE OPEN_PARENS expr CLOSE_PARENS NEWLINE;
+try_catch_stmnt: TRY body=suite CATCH OPEN_PARENS variable_declaration CLOSE_PARENS catch_suite=suite;
+
+throw_stmt: THROW expr;
 
 while_stmt: WHILE OPEN_PARENS expr CLOSE_PARENS suite;
 
