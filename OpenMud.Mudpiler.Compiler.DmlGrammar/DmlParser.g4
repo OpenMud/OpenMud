@@ -183,7 +183,7 @@ parameter_list_hint:
     ;
 
 parameter
-  : (VAR FWD_SLASH)? 
+  : VAR? FWD_SLASH? 
     (
         (
             object_ref_type=reference_object_tree_path |
