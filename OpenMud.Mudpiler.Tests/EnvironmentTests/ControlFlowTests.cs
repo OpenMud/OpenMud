@@ -2,6 +2,7 @@
 using OpenMud.Mudpiler.Compiler.Core;
 using OpenMud.Mudpiler.Framework;
 using OpenMud.Mudpiler.RuntimeEnvironment;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 
 namespace OpenMud.Mudpiler.Tests.EnvironmentTests;
 
@@ -21,6 +22,29 @@ proc/test_if()
     if(test_input == 0)
         return 5
     else
+        return 10
+
+var/num/test_input = 10
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        Assert.IsTrue(10 == (int)system.Global.ExecProc("test_if").CompleteOrException());
+
+        system.Global["test_input"] = 0;
+
+        Assert.IsTrue(5 == (int)system.Global.ExecProc("test_if").CompleteOrException());
+    }
+
+    [Test]
+    public void TestIfStatementColonControlFlow()
+    {
+        var dmlCode =
+            @"
+proc/test_if()
+    if(test_input == 0)
+        return 5
+    else:
         return 10
 
 var/num/test_input = 10
@@ -468,6 +492,7 @@ var/num/test_input = 10
         Assert.IsTrue(r == 1);
     }
 
+
     [Test]
     public void TestIfSingleReturnStatementOnelineWithNoValue()
     {
@@ -541,6 +566,26 @@ var/num/test_input = 10
         var r = (int)system.Global.ExecProc("test").CompleteOrException();
 
         Assert.IsTrue(r == 1 * 2 * 3 * 4 + 3);
+    }
+
+
+    [Test]
+    public void ForLoopRecycleVarInRangeWithStepTest()
+    {
+        var dmlCode =
+            @"
+/proc/test()
+    var/w = 1
+    var/i
+    for(i in 1 to 30 step 3)
+        w += (i + 1)
+    return w + i
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global.ExecProc("test").CompleteOrException();
+
+        Assert.IsTrue(r == 184);
     }
 
 

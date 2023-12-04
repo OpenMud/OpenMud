@@ -9,6 +9,8 @@ using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.CodeSuiteBuilder;
 using OpenMud.Mudpiler.Compiler.DmlGrammar;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
+using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Compiler.Core.Visitor;
@@ -735,55 +737,6 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
 
         return resolver => new[] { SyntaxFactory.ReturnStatement(EXPR.Visit(context.ret)(resolver)) };
     }
-
-    public override CodePieceBuilder VisitPrereturn_assignment([NotNull] DmlParser.Prereturn_assignmentContext context)
-    {
-        return resolver =>
-        {
-            var r = SyntaxFactory.ExpressionStatement(
-                    SyntaxFactory.InvocationExpression(
-                        SyntaxFactory.ParseName("this.SetImplicitReturn"),
-                        SyntaxFactory.ArgumentList(
-                            SyntaxFactory.SeparatedList(new[]
-                            {
-                                SyntaxFactory.Argument(EXPR.Visit(context.expr())(resolver))
-                            }) //.Select(SyntaxFactory.Argument))
-                        )
-                    )
-                )
-                .WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
-
-            return new[] { r };
-        };
-    }
-
-    public override CodePieceBuilder VisitPrereturn_augmentation(DmlParser.Prereturn_augmentationContext c)
-    {
-        return resolver =>
-        {
-            var assignment = ExpressionVisitor.CreateBinAsn(
-                c.augAsnOp().GetText(), 
-                ExpressionVisitor.CreatePrereturnExpression(),
-                EXPR.Visit(c.src)(resolver)
-            );
-
-            var r = SyntaxFactory.ExpressionStatement(
-                    SyntaxFactory.InvocationExpression(
-                        SyntaxFactory.ParseName("this.SetImplicitReturn"),
-                        SyntaxFactory.ArgumentList(
-                            SyntaxFactory.SeparatedList(new[]
-                            {
-                                SyntaxFactory.Argument(assignment)
-                            }) //.Select(SyntaxFactory.Argument))
-                        )
-                    )
-                )
-                .WithAdditionalAnnotations(BuilderAnnotations.ImplicitReturnAssignment);
-
-            return new[] { r }; 
-        };
-    }
-
 
     public override CodePieceBuilder VisitNew_call_implicit([NotNull] DmlParser.New_call_implicitContext c)
     {

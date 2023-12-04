@@ -17,6 +17,10 @@ STRING
  : STRING_LITERAL
  ;
 
+HEX_NUMBER
+ : '0' ('x'|'X') [A-Fa-f0-9]+
+ ;
+
 NUMBER
  : INTEGER
  ;
@@ -35,7 +39,11 @@ INTEGER
 NEWLINE
  : ( '\r'? '\n' | '\r' | '\f') SPACES?
  ;
- 
+
+TRY:          'try';
+CATCH:        'catch';
+THROW:        'throw';
+
 CALL:         'call';
 
 NULL:         'null';
@@ -54,6 +62,8 @@ CLIENTS:      'clients';
 
 OVIEW:       'oview';
 VIEW:        'view';
+RANGE:       'range';
+STEP:        'step';
 
 SPAWN:       'spawn';
 
@@ -150,12 +160,13 @@ STRING_LITERAL
  ;
 
 DECIMAL_INTEGER
- : NON_ZERO_DIGIT DIGIT*
+ : DIGIT DIGIT*
  | '0'+
  ;
 
 SCINOTATION_NUMBER
- : NON_ZERO_DIGIT DIGIT* 'e' DIGIT*
+ : DIGIT DIGIT* ('e'|'E') '-'? DIGIT*
+ | DECIMAL ('e'|'E') '-'? DIGIT*
  ;
 
 BlockComment 

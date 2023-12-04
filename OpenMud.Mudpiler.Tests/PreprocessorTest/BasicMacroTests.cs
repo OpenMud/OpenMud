@@ -43,18 +43,56 @@ hello
 
 #ifdef y
 world
+#else
+norld
 #endif
 ";
 
-        var r = Preprocessor.PreprocessAsDocument(
+        var r = Preprocessor.Preprocess(
             "testfile.dml",
             ".",
             Enumerable.Empty<string>(),
             testCode,
             NullResourceResolver,
             processImport,
-            out _).AsPlainText(false);
+            out _);
         Assert.IsTrue(r.Trim() == "world");
+    }
+
+
+    [Test]
+    public void TestIfDefElse()
+    {
+        var testCode =
+            @"
+
+#define y
+
+#ifdef x
+hello
+#else
+sello
+#endif
+
+#ifdef y
+world
+#endif
+";
+
+        var r = Preprocessor.Preprocess(
+            "testfile.dml",
+            ".",
+            Enumerable.Empty<string>(),
+            testCode,
+            NullResourceResolver,
+            processImport,
+            out _);
+
+        var result = r.Trim().Split("\r\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        Assert.IsTrue(result.Length == 2);
+        Assert.IsTrue(result[0] == "sello");
+        Assert.IsTrue(result[1] == "world");
     }
 
 
@@ -73,14 +111,14 @@ world
     return 8
 ";
 
-        var r = Preprocessor.PreprocessAsDocument(
+        var r = Preprocessor.Preprocess(
             "testfile.dml",
             ".",
             Enumerable.Empty<string>(),
             testCode,
             NullResourceResolver,
             processImport,
-            out _).AsPlainText(false);
+            out _);
 
         var assembly = MsBuildDmlCompiler.Compile(r);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
@@ -235,15 +273,14 @@ hello
 world
 #endif
 ";
-        var r = Preprocessor.PreprocessAsDocument(
+        var r = Preprocessor.Preprocess(
             "testFile.dml",
             ".",
             Enumerable.Empty<string>(),
             testCode,
             NullResourceResolver,
             processImport,
-            out _)
-            .AsPlainText(false);
+            out _);
         Assert.IsTrue(r.Trim() == "hello");
     }
 
@@ -256,9 +293,8 @@ world
 #define DEBUG
 hello
 ";
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
         Assert.IsTrue(r.Trim() == "hello");
         Assert.IsTrue(resultant.ContainsKey("DEBUG"));
     }
@@ -272,9 +308,8 @@ hello
 world
 ";
         importableFiles.Add("hello.dm", "hello");
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -300,9 +335,8 @@ hello world
             throw new Exception("Should not be eexecuting any import directives.");
         }
 
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, resolveImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, resolveImport,
+            out var resultant);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -318,10 +352,9 @@ hello world
 world
 ";
         importableLibFiles.Add("hello.dm", "hello");
-        var rDoc = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
             out var resultant);
 
-        var r = rDoc.AsPlainText(false);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -343,9 +376,8 @@ world
         importableFiles["testfile.dm"] = @"
 #undef test
 hello";
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -370,9 +402,8 @@ hello
 world
 #endif
 ";
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -389,9 +420,8 @@ world
 
 test(1,2,3)
 ";
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -408,9 +438,8 @@ test(1,2,3)
 /proc/test()
     return DEBUG_OUT("":( forceUpdate"")
 ";
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
 
         var assembly = MsBuildDmlCompiler.Compile(r);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
@@ -429,9 +458,8 @@ test(1,2,3)
 /proc/test()
     return 2 C
 ";
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
 
         var assembly = MsBuildDmlCompiler.Compile(r);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
@@ -450,9 +478,8 @@ test(1,2,3)
 /proc/test()
     return -C
 ";
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
 
         var assembly = MsBuildDmlCompiler.Compile(r);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
@@ -471,9 +498,8 @@ test(1,2,3)
 /proc/test()
     return C-1
 ";
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
 
         var assembly = MsBuildDmlCompiler.Compile(r);
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
@@ -492,9 +518,8 @@ test(1,2,3)
 test(1,2,3)
 ""test(1,2,3) test test test""
 ";
-        var r = Preprocessor.PreprocessAsDocument("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
-            out var resultant)
-            .AsPlainText(false);
+        var r = Preprocessor.Preprocess("testFile.dml", ".", Enumerable.Empty<string>(), testCode, NullResourceResolver, processImport,
+            out var resultant);
         var words = string.Join(" ",
             r.Split(new[] { ' ', '\t', '\r', '\n' },
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
@@ -984,6 +1009,30 @@ this is multiline""}
 
         var instance = (string)system.Global.ExecProc("test").CompleteOrException();
         Assert.IsTrue(instance == "this is multiline");
+    }
+
+    [Test]
+    public void FormattedTextFromMacroTest()
+    {
+        var testCode = @"
+
+#define TEST_FORMAT(x) {""My Test [x] Format""}
+/proc/test()
+    var/x = 10
+    return TEST_FORMAT(x * 2)
+";
+        string resolve(List<string> possible, string rsrc)
+        {
+            Assert.Fail("Should not be importing any resource...");
+            return "";
+        }
+
+        var r = Preprocessor.Preprocess("testFile.dml", ".", testCode, resolve, processImport, EnvironmentConstants.BUILD_MACROS);
+        var assembly = MsBuildDmlCompiler.Compile(r);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var instance = (string)system.Global.ExecProc("test").CompleteOrException();
+        Assert.IsTrue(instance.Trim() == "My Test 20 Format");
     }
 
 

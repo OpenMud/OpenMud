@@ -18,5 +18,6 @@ namespace OpenMud.Mudpiler.RuntimeEnvironment
         public static readonly string INDIRECT_NEW = "indirect_new";
         public static readonly string INDIRECT_ISTYPE = "indirect_istype";
         public static readonly string FIELD_LIST_INIT = "_field_list_initialize";
+        public static readonly string THROW_EXCEPTION = "__throwException";
     }
 }

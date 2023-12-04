@@ -10,7 +10,8 @@ public enum SourceType
     OView,
     Any,
     World,
-    Clients
+    Clients,
+    Range
 }
 
 public class VerbSrc : IDmlProcAttribute

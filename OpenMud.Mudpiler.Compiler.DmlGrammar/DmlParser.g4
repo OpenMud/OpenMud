@@ -34,6 +34,9 @@ identifier_name
   | 'clients'
   | 'group'
   | 'throw'
+  | 'switch'
+  | 'range'
+  | 'step'
   ;
 
 initializer_assignment: path=declaration_object_tree_path ASSIGNMENT expr;
@@ -89,9 +92,9 @@ variable_set_header
   ;
 
 variable_set_declaration
-  : VAR variable_set_header
-  | VAR variable_set_comma_suite NEWLINE 
-  | VAR implicit_variable_declaration NEWLINE
+  : FWD_SLASH? VAR variable_set_header
+  | FWD_SLASH? VAR variable_set_comma_suite NEWLINE 
+  | FWD_SLASH? VAR implicit_variable_declaration NEWLINE
   ;
 
 variable_set_leaf
@@ -178,6 +181,7 @@ parameter_constraint_set
   | SET_IN WORLD                                  #parameter_constraint_set_inworld
   | SET_IN CLIENTS                                #parameter_constraint_set_inclients
   | SET_IN identifier_name                        #parameter_constraint_set_inVariable
+  | SET_IN identifier_name OPEN_PARENS CLOSE_PARENS #parameter_constraint_set_inInvoke
   ;
 
 parameter_list_hint:
@@ -218,8 +222,8 @@ argument_list
 
 
 stmt_list_item
-  : small_stmt
-  | compound_stmt
+  : compound_stmt
+  | small_stmt
   ;
 
 stmt_list
@@ -230,9 +234,9 @@ stmt_list
 stmt
   : variable_set_declaration
   | goto_label_declaration
+  | compound_stmt
   | stmt_list
   | simple_stmt
-  | compound_stmt
   ;
 
 simple_stmt: small_stmt SEMICOLON? NEWLINE;
@@ -250,8 +254,6 @@ small_stmt
   | new_call_indirect
   | variable_declaration
   | flow_stmt
-  | prereturn_assignment
-  | prereturn_augmentation
   | expr
   | return_stmt
   | set_src_statement
@@ -265,7 +267,7 @@ new_call_field_initializer:
     ;
 
 new_call_field_initializer_list:
-    OPEN_BRACE new_call_field_initializer (SEMICOLON new_call_field_initializer)* SEMICOLON CLOSE_BRACE
+    OPEN_BRACE new_call_field_initializer (SEMICOLON new_call_field_initializer)* SEMICOLON? CLOSE_BRACE
     ;
 
 new_call_implicit:
@@ -288,6 +290,8 @@ set_src_statement
     | SRC_SET_IN OVIEW OPEN_PARENS (arg=NUMBER)? CLOSE_PARENS # set_src_oview
     | SRC_SET_IN VIEW OPEN_PARENS (arg=NUMBER)? CLOSE_PARENS  # set_src_view
     | SRC_SET_IN USR                       # set_src_user
+    | SRC_SET_IN WORLD                       # set_src_world
+    | SRC_SET_IN RANGE OPEN_PARENS (arg=NUMBER)? CLOSE_PARENS       #set_src_range
     ;
 
     
@@ -416,16 +420,16 @@ switch_constraint
   ;
 
 switch_case
-  : (IF OPEN_PARENS switch_constraint CLOSE_PARENS suite)
+  : (IF OPEN_PARENS switch_constraint CLOSE_PARENS COLON? suite)
   ;
 
 switch_stmnt: SWITCH OPEN_PARENS expr CLOSE_PARENS NEWLINE INDENT
   switch_case+
-  (ELSE else_suite=suite)?
+  (ELSE COLON? else_suite=suite)?
   DEDENT
   ;
 
-if_stmt: IF OPEN_PARENS test=expr CLOSE_PARENS pass=suite? (ELSE IF OPEN_PARENS elif_test=expr CLOSE_PARENS elif_pass=suite)* (ELSE else_pass=suite)?;
+if_stmt: IF OPEN_PARENS test=expr CLOSE_PARENS pass=suite? (ELSE IF OPEN_PARENS elif_test=expr CLOSE_PARENS elif_pass=suite)* (ELSE COLON? else_pass=suite)?;
 spawn_stmt: SPAWN (OPEN_PARENS delay=expr? CLOSE_PARENS)? run=suite;
 
 do_while_stmnt: DO suite WHILE OPEN_PARENS expr CLOSE_PARENS NEWLINE;
@@ -437,9 +441,11 @@ while_stmt: WHILE OPEN_PARENS expr CLOSE_PARENS suite;
 
 suite_multi_stmt
   : NEWLINE INDENT stmt+ DEDENT
-  | NEWLINE? OPEN_BRACE INDENT stmt+ DEDENT CLOSE_BRACE NEWLINE? 
+  | NEWLINE? OPEN_BRACE NEWLINE? INDENT (stmt | NEWLINE)* DEDENT CLOSE_BRACE NEWLINE? 
   | NEWLINE? OPEN_BRACE stmt+ CLOSE_BRACE NEWLINE? 
-  | NEWLINE? OPEN_BRACE stmt_list_item (SEMICOLON stmt_list_item)* SEMICOLON* CLOSE_BRACE NEWLINE?
+  | NEWLINE? OPEN_BRACE NEWLINE* stmt_list_item (SEMICOLON stmt_list_item)* SEMICOLON* CLOSE_BRACE NEWLINE?
+  | NEWLINE? OPEN_BRACE NEWLINE INDENT stmt_list_item (SEMICOLON stmt_list_item)* SEMICOLON* CLOSE_BRACE NEWLINE? DEDENT
+  | stmt_list_item SEMICOLON* NEWLINE?
   ;
 
 suite
@@ -470,8 +476,10 @@ null_expr: NULL;
 
 pick_expr_pair
   : prob=NUMBER SEMICOLON val=expr
-  | SEMICOLON? val=expr
   | PROB OPEN_PARENS prob=NUMBER CLOSE_PARENS SEMICOLON? val=expr
+  | val=expr SEMICOLON prob=NUMBER
+  | val=expr SEMICOLON? PROB OPEN_PARENS prob=NUMBER CLOSE_PARENS
+  | SEMICOLON? val=expr
   ;
 
 pick_expr
@@ -487,7 +495,7 @@ expr
  | null_expr #expr_null
  | ISTYPE OPEN_PARENS varname=identifier_name (COMMA typename=expr)? CLOSE_PARENS #expr_istype_local
  | ISTYPE OPEN_PARENS varname=expr (COMMA typename=expr) CLOSE_PARENS #expr_istype_property
- | ISTYPE OPEN_PARENS varname=expr DOT identifier_name CLOSE_PARENS #expr_implicit_istype_property
+ | ISTYPE OPEN_PARENS varname=expr (DOT | COLON) identifier_name CLOSE_PARENS #expr_implicit_istype_property
  | object_tree_path_expr FWD_SLASH? # expr_type
  | l=expr OPEN_BRACKET r=expr CLOSE_BRACKET #expr_index
  | assoc_list_expr #expr_assoc_list_literal
@@ -498,6 +506,7 @@ expr
  | literal=NUMBER  #expr_int_literal
  | literal=DECIMAL #expr_dec_literal
  | literal=SCINOTATION_NUMBER #expr_dec_scientific_literal
+ | literal=HEX_NUMBER #expr_hexnumber
  | OPEN_PARENS inner=expr CLOSE_PARENS #expr_grouped
  | expr INTERR expr COLON expr #expr_turnary
  | pick_expr #pick_expression
@@ -511,5 +520,5 @@ expr
  | left=expr op=logic_op right=expr #expr_logic_binary
  | left=expr as_list #expr_primitive_assert_type
  | DOT #expr_prereturn
- | start=expr TO end=expr #list_range_expr
+ | start=expr TO end=expr (STEP step=expr)? #list_range_expr
 ;

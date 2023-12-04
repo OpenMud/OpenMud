@@ -13,6 +13,8 @@ public abstract class DmlDatumProcExecutionContext : DatumProcExecutionContext
 
     private EnvObjectReference result = VarEnvObjectReference.NULL;
 
+    protected DmlUserException? lastError = null;
+
     public override ProcArgumentList ActiveArguments
     {
         get => arglist;
@@ -53,11 +55,53 @@ public abstract class DmlDatumProcExecutionContext : DatumProcExecutionContext
         return dmlClone;
     }
 
+    private int FindHandlerContinue(DmlUserException e)
+    {
+        int Distance(Tuple<int, int> r)
+        {
+            var lower = Math.Min(r.Item1, r.Item2);
+            var upper = Math.Max(r.Item1, r.Item2);
+
+            if(currentStep >= lower && currentStep <= upper)
+                return Math.Min(currentStep - lower, upper - currentStep);
+
+            return -1;
+        }
+
+        lastError = e;
+        var handlers = ErrorHandlers();
+
+        var h = handlers.Select(h => Tuple.Create(Distance(h.Item1), h.Item2))
+            .Where(h => h.Item1 >= 0)
+            .OrderBy(e => e.Item1)
+            .FirstOrDefault();
+
+        return h == null ? -1 : h.Item2;
+    }
+
     protected override void ContinueHandler()
     {
-        result = VarEnvObjectReference.CreateImmutable(DoContinue());
-        State = DatumProcExecutionState.Completed;
+        while (true)
+        {
+            try
+            {
+                result = VarEnvObjectReference.CreateImmutable(DoContinue());
+                State = DatumProcExecutionState.Completed;
+                break;
+            }
+            catch (DmlUserException e)
+            {
+                var handlerIdx = FindHandlerContinue(e);
+
+                if (handlerIdx < 0)
+                    throw e;
+
+                currentStep = handlerIdx;
+            }
+        }
     }
+
+    protected virtual Tuple<Tuple<int, int>, int>[] ErrorHandlers() => Array.Empty<Tuple<Tuple<int, int>, int>>();
 }
 
 public abstract class DmlDatumProc : DatumProc

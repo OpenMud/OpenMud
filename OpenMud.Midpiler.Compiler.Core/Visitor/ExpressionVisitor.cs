@@ -184,8 +184,6 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
 
     public ExpressionSyntax CreateVariable(ExpressionSyntax init = null)
     {
-        var dmlOp = typeof(DmlBinaryAssignment).FullName + "." +
-                    Enum.GetName(typeof(DmlBinaryAssignment), DmlBinaryAssignment.Assignment);
         return SyntaxFactory.InvocationExpression(
             SyntaxFactory.MemberAccessExpression(
                 SyntaxKind.SimpleMemberAccessExpression,
@@ -203,7 +201,6 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
                         {
                             SyntaxFactory.Argument(init)
                         }
-                    //blankAssignment ? CreateBlankAssignmentDelegate() : CreateAssignmentDelegate(left(resolver))//SyntaxFactory.Argument(null, SyntaxFactory.Token(SyntaxKind.OutKeyword), left(resolver))
                 )
             )
         );
@@ -629,7 +626,7 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
     {
         return s.Substring(1, s.Length - 2)
             .Replace("\\\"", "\"")
-            .Replace("\\\'", "'")
+            .Replace("\\'", "'")
             .Replace("\\r", "\r")
             .Replace("\\n", "\n")
             .Replace("\\\\", "\\");
@@ -1034,7 +1031,17 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
 
     public override ExpressionPieceBuilder VisitList_range_expr([NotNull] DmlParser.List_range_exprContext context)
     {
-        return resolver => CreateCall(RuntimeFrameworkIntrinsic.GENERATE_RANGE, new[] { SyntaxFactory.Argument(Visit(context.start)(resolver)), SyntaxFactory.Argument(Visit(context.end)(resolver)) });
+        return resolver => {
+            var args = new[] {
+                SyntaxFactory.Argument(Visit(context.start)(resolver)),
+                SyntaxFactory.Argument(Visit(context.end)(resolver))
+            }.ToList();
+
+            if (context.step != null)
+                args.Add(SyntaxFactory.Argument(Visit(context.step)(resolver)));
+
+            return CreateCall(RuntimeFrameworkIntrinsic.GENERATE_RANGE, args);
+        };
     }
 
     public override ExpressionPieceBuilder VisitPick_expression([NotNull] DmlParser.Pick_expressionContext context)

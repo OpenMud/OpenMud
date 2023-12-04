@@ -82,6 +82,30 @@ public class VerbTests
 
 
     [Test]
+    public void TestSrcInWorld()
+    {
+        var dmlCode =
+            @"
+mob/test
+	verb
+		toggledoor()
+			set src in world
+			return
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var asm = system.CreateAtomic("/mob/test");
+        var verbs = asm.DiscoverVerbs(asm).ToHashSet();
+
+        Assert.IsTrue(asm.DiscoverOwnedVerbSource("toggledoor").Source == SourceType.World);
+    }
+
+
+
+
+    [Test]
     public void TestVerbSourcesTranslation()
     {
         var dmlCode =
@@ -402,5 +426,71 @@ public class VerbTests
         var srcConstraint = md.Attributes.Where(a => a is VerbSrc).Cast<VerbSrc>().Single();
 
         Assert.IsTrue(srcConstraint.Source == SourceType.OView && srcConstraint.Argument == 25);
+    }
+
+    [Test]
+    public void TestDefineVerbViewNoArguments()
+    {
+        var dmlCode =
+            @"
+/mob
+    verb/testaa()
+        set src in view()
+        return
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var mob = system.CreateAtomic("/mob");
+        var verb = mob.DiscoverVerbMetadata(mob).Where(v => v.verbName == "testaa").Single();
+        var md = mob.Unwrap<Datum>().EnumerateProcs().Where(p => p.Name == "testaa").Single();
+
+        var srcConstraint = md.Attributes.Where(a => a is VerbSrc).Cast<VerbSrc>().Single();
+
+        Assert.IsTrue(srcConstraint.Source == SourceType.View && srcConstraint.Argument == 5);
+    }
+
+    [Test]
+    public void TestDefineVerbOViewNoArguments()
+    {
+        var dmlCode =
+            @"
+/mob
+    verb/testaa()
+        set src in oview()
+        return
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var mob = system.CreateAtomic("/mob");
+        var verb = mob.DiscoverVerbMetadata(mob).Where(v => v.verbName == "testaa").Single();
+        var md = mob.Unwrap<Datum>().EnumerateProcs().Where(p => p.Name == "testaa").Single();
+
+        var srcConstraint = md.Attributes.Where(a => a is VerbSrc).Cast<VerbSrc>().Single();
+
+        Assert.IsTrue(srcConstraint.Source == SourceType.OView && srcConstraint.Argument == 5);
+    }
+
+    [Test]
+    public void TestDefineVerbRange()
+    {
+        var dmlCode =
+            @"
+/mob
+    verb/testaa()
+        set src in range(3)
+        return
+";
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var mob = system.CreateAtomic("/mob");
+        var verb = mob.DiscoverVerbMetadata(mob).Where(v => v.verbName == "testaa").Single();
+        var md = mob.Unwrap<Datum>().EnumerateProcs().Where(p => p.Name == "testaa").Single();
+
+        var srcConstraint = md.Attributes.Where(a => a is VerbSrc).Cast<VerbSrc>().Single();
+
+        Assert.IsTrue(srcConstraint.Source == SourceType.Range && srcConstraint.Argument == 3);
     }
 }

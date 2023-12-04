@@ -354,4 +354,71 @@ public class FlexibleArguments
         var t0 = (int)system.Global.ExecProc("test0").CompleteOrException();
         Assert.IsTrue(t0 == 4 - 10);
     }
+
+    [Test]
+    public void AtomParameterWithoutVarWithRootedType()
+    {
+        var testCode =
+            @"
+/proc/tgt(/atom/t)
+    if(istype(t))
+        return 1000
+
+    return 11
+
+/proc/test0()
+    var/w = tgt(0)
+    w += tgt(new/atom())
+    return w
+
+";
+        var dmlCode = Preprocessor.Preprocess("testFile.dml", ".", testCode, null, null);
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var t0 = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue(t0 == 1000 + 11);
+    }
+
+    [Test]
+    public void AtomParameterWithoutVarWithUnrootedType()
+    {
+        var testCode =
+            @"
+/proc/tgt(atom/t)
+    if(istype(t))
+        return 1000
+
+    return 11
+
+/proc/test0()
+    var/w = tgt(0)
+    w += tgt(new/atom())
+    return w
+
+";
+        var dmlCode = Preprocessor.Preprocess("testFile.dml", ".", testCode, null, null);
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var t0 = (int)system.Global.ExecProc("test0").CompleteOrException();
+        Assert.IsTrue(t0 == 1000 + 11);
+    }
+
+    [Test]
+    public void DiscardArgumentsTest()
+    {
+        var testCode =
+            @"
+/proc/tgt(null, var/d)
+    return d * d
+
+";
+        var dmlCode = Preprocessor.Preprocess("testFile.dml", ".", testCode, null, null);
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+        var t0 = (int)system.Global.ExecProc("tgt", 5, 8).CompleteOrException();
+        Assert.IsTrue(t0 == 8*8);
+    }
 }

@@ -14,7 +14,7 @@ public delegate (IImmutableDictionary<string, MacroDefinition> macros, IImmutabl
 
 public delegate string ResolveResourceDirectory(List<string> knownFileDirs, string path);
 
-internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFileDocument>
+internal class DmlMacroVisitor : DmeParserBaseVisitor<IImmutableSourceFileDocument>
 {
     private static readonly Regex resourceRegex = new(@"'[^'\r\n]*'");
     private readonly string fileName;
@@ -29,7 +29,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
     private Dictionary<string, MacroDefinition> ConditionalSymbols = new();
     private Dictionary<string, Regex> MacroRegexCache = new();
 
-    public DmlPreprocessorVisitor(string fileName, string resourcePathBase, IEnumerable<string> resourceDirectory,
+    public DmlMacroVisitor(string fileName, string resourcePathBase, IEnumerable<string> resourceDirectory,
         CommonTokenStream commonTokenStream, ResolveResourceDirectory resolveResourceDirectory,
         ProcessImport processImport, IImmutableDictionary<string, MacroDefinition> macros) :
         this(fileName, resourcePathBase, resourceDirectory, commonTokenStream, resolveResourceDirectory, processImport)
@@ -37,7 +37,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
         ConditionalSymbols = macros.ToDictionary(x => x.Key, x => x.Value);
     }
 
-    public DmlPreprocessorVisitor(string fileName, string resourcePathBase, IEnumerable<string> resourceDirectory,
+    public DmlMacroVisitor(string fileName, string resourcePathBase, IEnumerable<string> resourceDirectory,
         CommonTokenStream commonTokenStream, ResolveResourceDirectory resolveResourceDirectory,
         ProcessImport processImport)
     {
@@ -55,13 +55,13 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
 
     private static string NormalizeResourcePath(string path)
     {
-        path = path.Replace("/", "\\");
+        path = path.Replace("\\", "\\\\");
+        path = path.Replace("/", "\\\\");
 
-        while (path.Contains("\\\\"))
-            path = path.Replace("\\\\", "\\");
+        while (path.StartsWith(".\\\\"))
+            path = path.Substring(3);
 
-        while (path.StartsWith(".\\"))
-            path = path.Substring(2);
+        path = path.Replace("'", "\\'");
 
         return path;
     }
@@ -72,11 +72,6 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
             .Replace("\\\'", "'");
     }
 
-    private static string EscapeResourceString(string s)
-    {
-        return s.Replace("'", "\\\'");
-    }
-
     private string ApplyResourceMacros(string source)
     {
         var path = ParseEscapedResource(source);
@@ -84,7 +79,7 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
         var resourcePath = resolveResourceDirectory(ResourceSearchDirectory.ToList(), path);
         resourcePath = NormalizeResourcePath(Path.GetRelativePath(resourcePathBase, resourcePath));
 
-        return "'" + EscapeResourceString(resourcePath) + "'";
+        return "'" + resourcePath + "'";
     }
 
     private Regex GetMacroRegex(string source)
@@ -189,11 +184,6 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
 
     public override IImmutableSourceFileDocument VisitCode([NotNull] DmeParser.CodeContext context)
     {
-        if (context.@string() != null)
-        {
-            return Visit(context.@string());
-        }
-
         if (context.resource() != null)
         {
             var src = context.resource();
@@ -201,8 +191,17 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
             return SourceFileDocument.Create(fileName, src.Start.Line, resourceText, true);
         }
 
+        if (context.@string() != null)
+        {
+            var src = context.@string();
+            return SourceFileDocument.Create(fileName, src.Start.Line, src.GetText(), true);
+        }
+
+
         var code = context.code_literal();
-        if (code != null) {
+
+        if (code != null)
+        {
             var pieces = code.Select(t =>
                 SourceFileDocument.Create(fileName, t.Start.Line, t.GetText(), false)
             );
@@ -224,80 +223,6 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
         return new ConcatSourceFileDocument(new[] { start, r, end }, "");
     }
 
-    private string EscapeString(string str)
-    {
-        var r = new StringBuilder();
-        bool escaped = false;
-
-        foreach(var c in str)
-        {
-            if (c == '\\' && !escaped)
-            {
-                escaped = true;
-                r.Append(c);
-                continue;
-            }
-
-            if (c == '"' && !escaped)
-                r.Append('\\');
-
-            r.Append(c);
-            escaped = false;
-        }
-
-        return r.ToString();
-    }
-
-    private IImmutableSourceFileDocument CreateStringConcat(int line, List<IImmutableSourceFileDocument> contents)
-    {
-        if (contents.Count == 0)
-            return SourceFileDocument.Create(fileName, line, $"\"\"", true);
-
-        if (contents.Count > 1)
-        {
-            var components = new List<IImmutableSourceFileDocument>();
-            var start = SourceFileDocument.Create(fileName, line, $"addtext(", true);
-
-            components.Add(start);
-            for (var i = 0; i < contents.Count; i++)
-            {
-                components.Add(contents[i]);
-
-                if (i != contents.Count - 1)
-                {
-                    var delim = SourceFileDocument.Create(fileName, line, $",", true);
-                    components.Add(delim);
-                }
-            }
-
-            var end = SourceFileDocument.Create(fileName, line, $")", true);
-            components.Add(end);
-
-            return new ConcatSourceFileDocument(components, "");
-        }
-
-        return contents.Single();
-    }
-
-    public override IImmutableSourceFileDocument VisitString_contents_constant([NotNull] DmeParser.String_contents_constantContext context)
-    {
-        var contents = context.GetText();
-        var contentLines = Regex.Split(contents, "\r\n|\r|\n").Select(EscapeString).ToArray();
-
-        //add newline text inbetween
-        for (var i = 0; i < contentLines.Length - 1; i++)
-            contentLines[i] = contentLines[i] + "\\r\\n";
-
-        var netString = string.Join("", contentLines);
-        return SourceFileDocument.Create(fileName, context.Start.Line, "\"" + netString + "\"", true);
-    }
-
-    public override IImmutableSourceFileDocument VisitString([NotNull] DmeParser.StringContext context)
-    {
-        var contents = context.string_contents().Select(Visit).ToList();
-
-        return CreateStringConcat(context.Start.Line, contents);
-    }
 
     public override IImmutableSourceFileDocument VisitPreprocessorImport([NotNull] DmeParser.PreprocessorImportContext context)
     {
@@ -349,9 +274,9 @@ internal class DmlPreprocessorVisitor : DmeParserBaseVisitor<IImmutableSourceFil
 
         if (context.ELSE() != null)
         {
-            var val = _conditions.First.Value;
+            var val = !_conditions.First.Value;
             _conditions.RemoveFirst();
-            _conditions.AddFirst(!val);
+            _conditions.AddFirst(val);
             return SourceFileDocument.CreateStatus(val && IsCompiliedText());
         }
 

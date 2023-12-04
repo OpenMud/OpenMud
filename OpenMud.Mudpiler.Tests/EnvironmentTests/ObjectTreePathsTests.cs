@@ -377,8 +377,6 @@ var/global/
         Assert.IsTrue(r == 8);
     }
 
-
-
     [Test]
     public void ConstVarTest3()
     {
@@ -410,5 +408,36 @@ var
         var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
         var r = (int)system.Global["ARROWS"];
         Assert.IsTrue(r == 123);
+    }
+
+    [Test]
+    public void ConstVarTest5()
+    {
+        var dmlCode =
+            @"
+/var/const
+    ARROWS = 123
+    ARROWS2 = 321
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var r = (int)system.Global["ARROWS"];
+        Assert.IsTrue(r == 123);
+    }
+
+    [Test]
+    public void SingleLineProcTest()
+    {
+        var dmlCode =
+            @"
+/mob/hello/proc/world() return 15
+";
+
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var m = system.CreateAtomic("/mob/hello");
+        var r = (int)m.ExecProc("world").CompleteOrException();
+        Assert.IsTrue(r == 15);
     }
 }

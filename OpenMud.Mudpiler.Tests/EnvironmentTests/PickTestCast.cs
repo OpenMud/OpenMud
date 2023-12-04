@@ -142,5 +142,22 @@ proc/test()
             var possible = new HashSet<int>() { 10, 3, 4 };
             Assert.IsTrue(possible.Contains(r));
         }
+
+        [Test]
+        public void MethodInstantiationTest6()
+        {
+            var dmlCode =
+                @"
+proc/test()
+    return pick(""a"", ""cran-b"";5, ""c"";5, ""d"";5)
+";
+            var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+            var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+
+            var r = (string)system.Global.ExecProc("test").CompleteOrException();
+
+            var possible = new HashSet<string>() { "a", "b", "c", "d'" };
+            Assert.IsTrue(possible.Contains(r));
+        }
     }
 }

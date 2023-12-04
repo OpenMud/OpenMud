@@ -184,12 +184,25 @@ public class MsBuildDmlCompiler
         var commonTokenStream = new CommonTokenStream(lexer);
         var errorListener = new ErrorListener();
 
+        //commonTokenStream.Mark();
+        //commonTokenStream.Fill();
+
         lexer.AddErrorListener(errorListener);
 
+        //var parser = new DmlParser(commonTokenStream) { BuildParseTree = true };
         var parser = new DmlParser(commonTokenStream);
         parser.AddErrorListener(errorListener);
 
+        //Console.WriteLine($"Parse tree: {parser.dml_module().ToStringTree(parser)}");
+        //Console.WriteLine("\nTokens:");
+
+        //foreach (var token in commonTokenStream.GetTokens())
+        //    Console.WriteLine($"  {DmlLexer.DefaultVocabulary.GetSymbolicName(token.Type),-15} '{token.Text}'");
+
         var ctx = parser.dml_module();
+        Console.WriteLine($"Parse tree: {ctx.ToStringTree(parser)}");
+
+
         var visitor = new BasicModuleVisitor(lineMappings);
 
         var allErrors = lexer.GetErrorMessages().Concat(errorListener.Errors).ToList();
