@@ -108,13 +108,13 @@ public class MsBuildDmlCompiler
 
     private static (string bin, string pdb) DoProjectBuild(string projectPath, string msbuildtools)
     {
-        var binFile = Path.Join(projectPath, ".\\dmlbins\\DmlProject.dll");
-        var pdbFile = Path.Join(projectPath, ".\\dmlbins\\DmlProject.pdb");
+        var binFile = Path.Join(projectPath, "./dmlbins/DmlProject.dll");
+        var pdbFile = Path.Join(projectPath, "./dmlbins/DmlProject.pdb");
 
         var startInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"\"{msbuildtools}\\msbuild.dll\" -t:build,FodyTarget -p:OutDir=dmlbins \"{projectPath}\"",
+            Arguments = $"\"{msbuildtools}/MSBuild.dll\" -t:build,FodyTarget -p:OutDir=dmlbins \"{projectPath}\"",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true
@@ -143,7 +143,7 @@ public class MsBuildDmlCompiler
         var startInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"\"{msbuildtools}\\msbuild.dll\" -t:restore \"{projectPath}\"",
+            Arguments = $"\"{msbuildtools}/MSBuild.dll\" -t:restore \"{projectPath}\"",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true
