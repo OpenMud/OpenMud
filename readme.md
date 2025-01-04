@@ -9,9 +9,15 @@ OpenMud is a compiler which enables a user (ranging from developers to creative 
 
 OpenMud also implements all of the core client and server side logic necessary to run your game, while also leaving the door open for extensive customizations for advanced developers.
 
+# Installing
+
+For the latest cutting-edge releases, you should download the source from master branch and build yourself. If you run into a bug or issue, try master branch as it may be resolved and pending release.
+
+For official releases, you can download the releases off of NuGet and NPM, follow the install guide on the documentation page: https://openmud.github.io/docs/getting-started/Installation
+
 # Where is the Documentation?
 
-OpenMud is documented as part of the OpenMud repository: https://openmud.github.io
+OpenMud is documented as part of the OpenMud repository: https://openmud.github.io/docs/getting-started/Installation
 
 
 ## What is the Licensing
