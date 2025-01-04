@@ -23,6 +23,11 @@ internal class TestGame
     private readonly LogicDirectory logicDirectory = new();
     private readonly List<GoRogueSenseAdapter> SenseAdapters = new();
 
+    public List<VerbRejectionMessage> VerbRejectionMessages { get; } = new();
+    public List<string> WorldMessages { get; } = new();
+    public Dictionary<string, List<string>> EntityMessages { get; } = new();
+
+
     public TestGame(IMudSceneBuilder builder, Assembly sourceAssembly)
     {
         var scheduler = new TimeTaskScheduler();
@@ -61,11 +66,13 @@ internal class TestGame
         _world.Subscribe<WorldEchoMessage>(On);
         _world.Subscribe<EntityEchoMessage>(On);
         _world.Subscribe<ConfigureSoundMessage>(On);
+        _world.Subscribe<VerbRejectionMessage>(On);
     }
 
-    public List<string> WorldMessages { get; } = new();
-    public Dictionary<string, List<string>> EntityMessages { get; } = new();
-
+    private void On(in VerbRejectionMessage message)
+    {
+        VerbRejectionMessages.Add(message);
+    }
 
     public List<ConfigureSoundMessage> WorldSoundConfig { get; } = new();
     public Dictionary<string, List<ConfigureSoundMessage>> EntitySoundConfig { get; } = new();
@@ -141,6 +148,17 @@ internal class TestGame
         return logicDirectory[
             _world.GetEntities().With<IdentifierComponent>(isSearch).AsEnumerable().Single()
                 .Get<LogicIdentifierComponent>().LogicInstanceId];
+    }
+
+    internal string GetInstanceNameByObjectDisplayName(string name)
+    {
+        bool isSearch(in DisplayNameComponent p)
+        {
+            return p.Name == name;
+        }
+
+        return _world.GetEntities().With<DisplayNameComponent>(isSearch).AsEnumerable().Single()
+                .Get<IdentifierComponent>().Name;
     }
 
     internal void Slide(string subject, int deltaX, int deltaY)
