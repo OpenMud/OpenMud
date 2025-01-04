@@ -1,3 +1,10 @@
+## [2.12.2](https://github.com/OpenMud/OpenMud/compare/v2.12.1...v2.12.2) (2025-01-04)
+
+
+### Bug Fixes
+
+* **compiler:** Resolved issue where paths used in invoking MSBuild were not compatible with linux. ([44cefac](https://github.com/OpenMud/OpenMud/commit/44cefacbc8c37e2194fea9883771e68b881d37e9))
+
 ## [2.12.1](https://github.com/OpenMud/OpenMud/compare/v2.12.0...v2.12.1) (2025-01-04)
 
 
