@@ -1,3 +1,11 @@
+## [2.12.1](https://github.com/OpenMud/OpenMud/compare/v2.12.0...v2.12.1) (2025-01-04)
+
+
+### Bug Fixes
+
+* **compiler:** Resolved issue with '\r' and other characters not escaping correctly resulting in various issues such as icons not being found at runtime. ([2aa257a](https://github.com/OpenMud/OpenMud/commit/2aa257acc1d7436d98a574815b2c2766d887b777))
+* **core:** Removed optimization which causes OView=0 Verb interactions to fail. Added test case to capture future instances of regression. ([e0adf15](https://github.com/OpenMud/OpenMud/commit/e0adf15ee0cb6230c2e488c6ea9d7cea66dfb620))
+
 # [2.12.0](https://github.com/OpenMud/OpenMud/compare/v2.11.0...v2.12.0) (2023-12-04)
 
 
