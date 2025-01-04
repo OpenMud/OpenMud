@@ -74,4 +74,20 @@ public class StringExpressionsTest
         Assert.IsTrue(t["desc"] == "%this% is a string");
     }
 
+    [Test]
+    public void TestStringLiteralWithSlash()
+    {
+        var testCode =
+        @"
+/mob/bob
+    desc = ""icons\\rat.dmi""
+
+";
+        var dmlCode = Preprocessor.Preprocess("testFile.dml", ".", testCode, null, null);
+        var assembly = MsBuildDmlCompiler.Compile(dmlCode);
+        var system = MudEnvironment.Create(Assembly.LoadFile(assembly), new BaseDmlFramework());
+        var t = system.CreateAtomic("/mob/bob");
+        Assert.IsTrue(t["desc"] == "icons\\rat.dmi");
+    }
+
 }

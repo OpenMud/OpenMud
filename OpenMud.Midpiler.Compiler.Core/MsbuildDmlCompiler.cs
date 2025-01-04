@@ -222,7 +222,7 @@ public class MsBuildDmlCompiler
             .FirstOrDefault();
 
         if (buildAssembly == null)
-            throw new Exception("Not able to locate a VS Build Instance for .Net 7.0");
+            throw new Exception("Not able to locate a VS Build Instance for .Net 7.x; Install the .NET 7.x SDK from microsoft's website.");
 
         if (!MSBuildLocator.IsRegistered)
             MSBuildLocator.RegisterDefaults();

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Microsoft.CodeAnalysis;
@@ -622,14 +623,57 @@ public class ExpressionVisitor : DmlParserBaseVisitor<ExpressionPieceBuilder>
         return resolver => child(resolver);
     }
 
+    //Need to be careful here, the string escape logic is different from "normal" string escaping.
+    //I.e: In DML, \a needs to be preserved (it translates to A\An) and other edge cases. Can't use
+    //built in string unescaping
     public string ParseEscapeString(string s)
     {
-        return s.Substring(1, s.Length - 2)
-            .Replace("\\\"", "\"")
-            .Replace("\\'", "'")
-            .Replace("\\r", "\r")
-            .Replace("\\n", "\n")
-            .Replace("\\\\", "\\");
+        s = s.Substring(1, s.Length - 2);
+        StringBuilder unescaped = new StringBuilder();
+
+        for (int i = 0; i < s.Length; i++)
+        {
+            if (s[i] == '\\' && i + 1 < s.Length)
+            {
+                // Handle escaped characters (e.g., \n, \t, \\)
+                switch (s[i + 1])
+                {
+                    case 'n':
+                        unescaped.Append('\n');
+                        i++;
+                        break;
+                    case 'r':
+                        unescaped.Append('\r');
+                        i++;
+                        break;
+                    case 't':
+                        unescaped.Append('\t');
+                        i++;
+                        break;
+                    case '\\':
+                        unescaped.Append('\\');
+                        i++;
+                        break;
+                    case '"':
+                        unescaped.Append('"');
+                        i++;
+                        break;
+                    case '\'':
+                        unescaped.Append('\'');
+                        i++;
+                        break;
+                    default:
+                        unescaped.Append(s[i]);
+                        break;
+                }
+            }
+            else
+            {
+                unescaped.Append(s[i]);
+            }
+        }
+
+        return unescaped.ToString();
     }
 
     public override ExpressionPieceBuilder VisitExpr_string_literal(

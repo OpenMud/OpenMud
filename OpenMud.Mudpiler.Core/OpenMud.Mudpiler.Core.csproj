@@ -10,9 +10,13 @@
 
 	<ItemGroup>
 		<Antlr4 Remove="Contexts\**" />
+		<Antlr4 Remove="Environment\**" />
 		<Compile Remove="Contexts\**" />
+		<Compile Remove="Environment\**" />
 		<EmbeddedResource Remove="Contexts\**" />
+		<EmbeddedResource Remove="Environment\**" />
 		<None Remove="Contexts\**" />
+		<None Remove="Environment\**" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -28,14 +32,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\OpenMud.Mudpiler.RuntimeEnvironment\OpenMud.Mudpiler.RuntimeEnvironment.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="Environment\Operators\" />
-		<Folder Include="Environment\Proc\" />
-		<Folder Include="Environment\RuntimeTypes\" />
-		<Folder Include="Environment\Settings\" />
-		<Folder Include="Environment\WorldPiece\" />
 	</ItemGroup>
 
 </Project>
