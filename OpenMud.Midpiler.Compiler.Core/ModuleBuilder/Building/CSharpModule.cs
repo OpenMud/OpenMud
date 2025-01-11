@@ -41,12 +41,12 @@ public class CSharpModule : IDreamMakerSymbolResolver
 
     private readonly CSharpSyntaxRewriter[] Rewriters;
 
-    public CSharpModule()
+    public CSharpModule(bool generateDebuggableBuild)
     {
         foreach (var t in DmlPath.DefaultCompilerImplementationTypes)
             primitiveClassNames[t] = DefineClass(t, c => c).Identifier.Text;
 
-        Rewriters = new CSharpSyntaxRewriter[]
+        var rewriteConfiguration = new CSharpSyntaxRewriter[]
         {
             new IsTypeResolverRewriter(LookUpClass, LookUpClassName),
             new ClassNamespaceResolverWalker(),
@@ -61,10 +61,15 @@ public class CSharpModule : IDreamMakerSymbolResolver
             new GenerateLocalContextRewriter(),
             new AsyncSegmentorRewriter(),
             new ImmediateEvaluationRewriter(),
-            new SourceMapperRewriter(),
+            //new SourceMapperRewriter(),
             new ReservedKeywordVariableNameConflictResolver(),
             new CilReturnStatementRewriter()
-        };
+        }.AsEnumerable();
+
+        if (generateDebuggableBuild)
+            rewriteConfiguration = rewriteConfiguration.Append(new DebuggableProcRewriter());
+
+        Rewriters = rewriteConfiguration.ToArray();
     }
 
     public IEnumerable<ModuleMethodDeclarationKey> MethodDeclarations => methodDeclarations.Keys.ToList();

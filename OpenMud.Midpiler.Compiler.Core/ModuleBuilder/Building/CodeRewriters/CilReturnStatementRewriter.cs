@@ -67,11 +67,11 @@ internal class CilReturnStatementRewriter : CSharpSyntaxRewriter
             );
 
             var retStatement = SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression($"InlineIL.IL.Emit.Ret()"));
-
+            
             return SyntaxFactory.Block(new StatementSyntax[] {
-            push,
-            retStatement
-        });
+                push,
+                retStatement
+            });
         }
     }
 
