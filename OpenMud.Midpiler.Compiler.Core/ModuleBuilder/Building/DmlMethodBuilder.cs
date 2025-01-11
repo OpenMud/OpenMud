@@ -100,6 +100,11 @@ public static class DmlMethodBuilder
                                                 SyntaxKind.NumericLiteralExpression,
                                                 SyntaxFactory.Literal(declarationOrder)
                                             )
+                                        ),
+                                        SyntaxFactory.AttributeArgument(
+                                            SyntaxFactory.TypeOfExpression(
+                                                SyntaxFactory.ParseTypeName(contextImplementation.Identifier.Text)
+                                            )
                                         )
                                     })
                                 )
@@ -179,6 +184,8 @@ public static class DmlMethodBuilder
         if(className != null)
             r = r.WithAdditionalAnnotations(BuilderAnnotations.CreateProcClassPathAnnotation(className));
 
+        r = r.WithAdditionalAnnotations(BuilderAnnotations.CreateProcContextClassPathAnnotation());
+        
         return r;
     }
 

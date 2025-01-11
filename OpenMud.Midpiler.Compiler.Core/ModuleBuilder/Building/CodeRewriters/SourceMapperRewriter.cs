@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building.CodeRewriters
 {
+    /*
     internal class SourceMapperRewriter : CSharpSyntaxRewriter
     {
         private Stack<StatementSyntax> statements = new();
@@ -32,5 +33,5 @@ namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building.CodeRewriters
             // Visit children nodes recursively.
             return base.Visit(node);
         }
-    }
+    }*/
 }

@@ -9,6 +9,8 @@ namespace OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building.CodeRewriters;
 internal class GenerateLocalContextRewriter : CSharpSyntaxRewriter
 {
     private readonly HashSet<string> classDecl = new();
+    private readonly Dictionary<string, string> classDeclToOriginName = new();
+    
     private bool isDatumProc;
 
     private (ISet<LocalDeclarationStatementSyntax> decls, ISet<ParameterSyntax> parameters, ISet<IdentifierNameSyntax>
@@ -35,6 +37,7 @@ internal class GenerateLocalContextRewriter : CSharpSyntaxRewriter
     {
         isDatumProc = false;
         classDecl.Clear();
+        classDeclToOriginName.Clear();
 
         cls = (ClassDeclarationSyntax)base.VisitClassDeclaration(cls);
 
@@ -62,7 +65,7 @@ internal class GenerateLocalContextRewriter : CSharpSyntaxRewriter
                                     }
                                 )
                             )
-                        )
+                        ).WithAdditionalAnnotations(BuilderAnnotations.DmlVariableField(classDeclToOriginName[d]))
                 )
                 .ToArray()
         );
@@ -155,10 +158,19 @@ internal class GenerateLocalContextRewriter : CSharpSyntaxRewriter
         var localVarDecl = SyntaxFactory.StructDeclaration("local_execution_context");
 
         foreach (var u in decl.decls)
-            classDecl.Add("localvar_" + u.Declaration.Variables.Single().Identifier.Text);
+        {
+            var sourceName = u.Declaration.Variables.Single().Identifier.Text;
+            var destName = "localvar_" + sourceName;
+            classDeclToOriginName.Add(destName, sourceName);
+            classDecl.Add(destName);
+        }
 
         foreach (var u in decl.parameters)
-            classDecl.Add("localvar_" + u.Identifier.Text);
+        {
+            var destName = "localvar_" + u.Identifier.Text;
+            classDeclToOriginName.Add(destName, u.Identifier.Text);
+            classDecl.Add(destName);
+        }
 
         var argAssignmentStatements = decl.parameters.Select(u =>
             (StatementSyntax)SyntaxFactory.ExpressionStatement(

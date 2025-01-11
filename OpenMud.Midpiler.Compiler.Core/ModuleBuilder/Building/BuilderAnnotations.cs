@@ -25,6 +25,17 @@ public static class BuilderAnnotations
     {
         return new SyntaxAnnotation("sourceMap", $"{lineNumber}:{filename}");
     }
+
+    public static SyntaxAnnotation MarkUserStatement()
+    {
+        return new SyntaxAnnotation("userStatement");
+    }
+
+    public static bool IsUserStatement(SyntaxNode syntax)
+    {
+        return syntax.HasAnnotations("userStatement");
+    }
+    
     public static bool GetSourceMap(SyntaxNode n, out string filename, out int lineNumber)
     {
         filename = "";
@@ -165,5 +176,30 @@ public static class BuilderAnnotations
     internal static bool IsRootGlobal(ClassDeclarationSyntax node)
     {
         return HasDmlClassPath(node, "/");
+    }
+
+    public static SyntaxAnnotation CreateProcContextClassPathAnnotation()
+    {
+        return new SyntaxAnnotation("dmlProcContextClass");
+    }
+    
+    public static bool HasDmlProcContextClassAnnotation(ClassDeclarationSyntax n)
+    {
+        return n.HasAnnotations("dmlProcContextClass");
+    }
+
+    public static SyntaxAnnotation DmlVariableField(string originalVariableName)
+    {
+        return new SyntaxAnnotation("dmlVariableField", originalVariableName);
+    }
+    
+    public static bool IsDmlVariableField(SyntaxNode n)
+    {
+        return n.HasAnnotations("dmlVariableField");
+    }
+    
+    public static string LookupDmlVariableField(SyntaxNode n)
+    {
+        return n.GetAnnotations("dmlVariableField").Single().Data!;
     }
 }

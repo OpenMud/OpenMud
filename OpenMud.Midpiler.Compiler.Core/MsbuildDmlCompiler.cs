@@ -165,7 +165,7 @@ public class MsBuildDmlCompiler
             throw new Exception("Project restore error.");
     }
 
-    public static string Compile(string text, string? destAssemblyName = null, bool disposeIntermediate = true)
+    public static string Compile(string text, string? destAssemblyName = null, bool disposeIntermediate = true, bool debuggable = false)
     {
         var inputStream = new AntlrInputStream(text);
         inputStream.Mark();
@@ -200,7 +200,7 @@ public class MsBuildDmlCompiler
             throw new Exception(string.Join("\n", allErrors));
 
         var r = visitor.Visit(ctx);
-        CSharpModule module = new();
+        CSharpModule module = new(debuggable);
         r.Visit(module);
 
         var compilationUnit = module.CreateCompilationUnit();

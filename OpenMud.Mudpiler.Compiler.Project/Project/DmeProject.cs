@@ -154,7 +154,7 @@ public class DmeProject
     public static DmeProject CompileAndLoad(string path, IMudEntityBuilder builder,
         IImmutableDictionary<string, MacroDefinition>? buildMacros = null, bool disposeIntermediateCompile = true)
     {
-        var binDir = Path.Join(path, ".\\bin");
+        var binDir = Path.Join(path, "./bin");
 
         Directory.CreateDirectory(binDir);
 

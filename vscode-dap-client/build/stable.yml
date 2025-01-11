@@ -1,0 +1,39 @@
+name: $(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+      - main
+pr: none
+
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      name: microsoft/vscode-engineering
+      ref: main
+      endpoint: Monaco
+
+parameters:
+  - name: publishExtension
+    displayName: 🚀 Publish Extension
+    type: boolean
+    default: false
+
+extends:
+  template: azure-pipelines/extension/stable.yml@templates
+  parameters:
+    buildSteps:
+      - script: yarn install --frozen-lockfile
+        displayName: Install dependencies
+
+      - script: yarn run test
+        displayName: Typecheck extension
+
+    tsa:
+      config:
+        serviceTreeID: '053e3ba6-924d-456c-ace0-67812c5ccc52'
+        areaPath: 'Visual Studio Code Debugging Extensions'
+      enabled: true
+
+    publishExtension: ${{ parameters.publishExtension }}

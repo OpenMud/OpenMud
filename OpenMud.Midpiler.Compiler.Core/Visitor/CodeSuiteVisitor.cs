@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.Building;
 using OpenMud.Mudpiler.Compiler.Core.ModuleBuilder.CodeSuiteBuilder;
 using OpenMud.Mudpiler.Compiler.DmlGrammar;
+using OpenMud.Mudpiler.Compiler.DmlPreprocessor.Util;
 using OpenMud.Mudpiler.RuntimeEnvironment;
 using OpenMud.Mudpiler.RuntimeEnvironment.Operators;
 using OpenMud.Mudpiler.RuntimeEnvironment.Proc;
@@ -614,6 +615,24 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
         };
     }
 
+    private BlockSyntax CreateSourceMarker(SourceFileLineAddress? addr)
+    {
+        var r = SyntaxFactory.Block();
+
+        if (addr != null)
+        {
+            r = r.WithAdditionalAnnotations(
+                BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line)
+            );
+        }
+        
+        r = r.WithAdditionalAnnotations(
+            BuilderAnnotations.MarkUserStatement()
+        );
+
+        return r;
+    }
+
     public override CodePieceBuilder VisitSuite_single_stmt(DmlParser.Suite_single_stmtContext c)
     {
         var builder = Visit(c.simple_stmt());
@@ -623,16 +642,12 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             var r = builder(resolver).Single();
 
             var addr = mapping.Lookup(c.start.Line);
-
-            if (addr.HasValue)
-            {
-                r = r.WithAdditionalAnnotations(
-                    BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line));
-            }
-
+            var marker = CreateSourceMarker(addr);
+            
             return new[] {
                 SyntaxFactory.Block(new[]
                 {
+                    marker,
                     r
                 })
             };
@@ -646,16 +661,12 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
             var r = Visit(c.compound_stmt())(resolver).Single();
 
             var addr = mapping.Lookup(c.start.Line);
-
-            if (addr.HasValue)
-            {
-                r = r.WithAdditionalAnnotations(
-                    BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line));
-            }
-
+            var marker = CreateSourceMarker(addr);
+            
             return new[] {
                 SyntaxFactory.Block(new[]
                 {
+                    marker,
                     r
                 })
             };
@@ -677,18 +688,9 @@ public class CodeSuiteVisitor : DmlParserBaseVisitor<CodePieceBuilder>
                     var r = s.Item2(resolver);
 
                     var addr = mapping.Lookup(s.Item1.Start.Line);
-
-                    if (addr.HasValue)
-                    {
-                        r = r.Select(
-                            w =>
-                                w.WithAdditionalAnnotations(
-                                    BuilderAnnotations.MapSourceFile(addr.Value.FileName, addr.Value.Line)
-                                )
-                            ).ToArray();
-                    }
-
-                    return r;
+                    var marker = CreateSourceMarker(addr);
+                    
+                    return r.Prepend(marker);
                 }
                 )
             );
