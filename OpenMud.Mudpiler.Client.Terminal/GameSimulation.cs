@@ -2,6 +2,7 @@
 using DefaultEcs;
 using DefaultEcs.System;
 using OpenMud.Mudpiler.Client.Terminal.Systems;
+using OpenMud.Mudpiler.Client.Terminal.UI;
 using OpenMud.Mudpiler.Core;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.Messages;
@@ -76,6 +77,8 @@ public class GameSimulation
 
         _world.Subscribe<WorldEchoMessage>(On);
         _world.Subscribe<EntityEchoMessage>(On);
+        _world.Subscribe<VerbRejectionMessage>(On);
+        _world.Subscribe<CommandRejectionMessage>(On);
 
         builder.Build(_world);
     }
@@ -88,7 +91,20 @@ public class GameSimulation
 
     private void On(in WorldEchoMessage message)
     {
-        OnWorldEcho(message.Message);
+        if (OnWorldEcho != null)
+            OnWorldEcho(message.Message);
+    }
+
+    private void On(in VerbRejectionMessage message)
+    {
+        if (OnWorldEcho != null)
+            OnWorldEcho("Verb rejected: " + message.Reason);
+    }
+
+    private void On(in CommandRejectionMessage message)
+    {
+        if (OnWorldEcho != null)
+            OnWorldEcho("Command rejected: " + message.Reason);
     }
 
     public void Update(float deltaTimeSeconds)
@@ -133,19 +149,23 @@ public class GameSimulation
         return entity;
     }
 
-    internal void DispatchCommand(string entity, string command)
+    internal void DispatchCommand(string entity, ICommandNounSolver nounSolver, string command)
     {
         var e = _world.CreateEntity();
-
+        
         var cmd = command.Split(" ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
         if (cmd.Length == 0)
             return;
 
         var verb = cmd[0];
+        var noun = cmd.Skip(1).FirstOrDefault();
+        var nounTarget = nounSolver.ResolveNounToTarget(noun);
+        
         var operands = cmd.Skip(1).ToArray();
-
-        e.Set(new ExecuteCommandComponent(entity, null, verb, operands));
+        
+        e.Set(new ExecuteCommandComponent(entity, nounTarget, verb, operands));
+        //e.Set(new ParseCommandComponent(entity, target, command));
     }
 
     internal Entity CreatePlayer(string name)

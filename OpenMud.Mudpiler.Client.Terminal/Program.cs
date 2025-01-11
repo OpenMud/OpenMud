@@ -28,10 +28,18 @@ public class Program
 
     private static bool HadInput;
 
-    public static void Main()
+    public static void Main(string[] args)
     {
-        project = DmeProject.CompileAndLoad(Directory.GetCurrentDirectory(), new BaseEntityBuilder(),
-            EnvironmentConstants.BUILD_MACROS, false);
+        if (args.Contains("--skip-build"))
+        {
+            project = DmeProject.Load(Path.Join(Directory.GetCurrentDirectory(), "./bin"), new BaseEntityBuilder());   
+        }
+        else
+        {
+            project = DmeProject.CompileAndLoad(Directory.GetCurrentDirectory(), new BaseEntityBuilder(),
+                EnvironmentConstants.BUILD_MACROS, false);    
+        }
+        
         // Setup the engine and create the main window.
         Game.Create(160, 50);
 
@@ -64,14 +72,14 @@ public class Program
         inventory.IsVisible = true;
 
         var commands = new CommandsWindow(30, 15, GetPlayer);
-        commands.Position = new Point(130, 15);
+        commands.Position = new Point(90, 0);
         commands.IsVisible = true;
 
 
         // First console
-        var _mapWindow = new Window(130, 40);
-        var _mapConsole = new DrawingArea(120, 30);
-        _mapConsole.Position = new Point(5, 5);
+        var _mapWindow = new Window(60, 12);
+        var _mapConsole = new DrawingArea(50, 10);
+        _mapConsole.Position = new Point(1, 1);
         _mapWindow.Position = new Point(0, 0);
 
         _mapWindow.UseMouse = true;
@@ -86,12 +94,17 @@ public class Program
         _mapWindow.Controls.Add(_mapConsole);
         container.Children.Add(_mapWindow);
 
-        logConsole = new InteractionWindow(160, 10);
-        logConsole.Position = new Point(0, 40);
+        logConsole = new InteractionWindow(160, 30);
+        logConsole.Position = new Point(0, 20);
 
-        commands.OnCommandSelected += logConsole.SetCommandText;
+        //commands.OnCommandSelected += x => logConsole.SetCommandText(x.Template);
+        commands.OnCommandExecuted += x =>
+        {
+            logConsole.SetCommandText(x.Template);
+            logConsole.Submit();
+        };
 
-        logConsole.OnSubmitCommand += OnSubmitCommand;
+        logConsole.OnSubmitCommand += c => OnSubmitCommand(commands, c);
 
         container.Children.Add(logConsole);
         container.Children.Add(commands);
@@ -110,9 +123,9 @@ public class Program
         gameSim.OnEntityEcho += (eid, name, m) => OnWorldEcho(m);
     }
 
-    private static void OnSubmitCommand(string command)
+    private static void OnSubmitCommand(ICommandNounSolver nounSolver, string command)
     {
-        gameSim.DispatchCommand("player", command);
+        gameSim.DispatchCommand("player", nounSolver, command);
     }
 
     private static Entity GetPlayer()

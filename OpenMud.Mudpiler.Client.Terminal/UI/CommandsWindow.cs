@@ -10,11 +10,17 @@ public class CommandTemplate
 {
     public readonly string Display;
     public readonly string Template;
+    public readonly string? Noun;
+    public readonly string? Identifier;
+    public readonly int Precedent;
 
-    public CommandTemplate(string display, string template)
+    public CommandTemplate(string display, string template, string? noun, string? identifier, int precedent)
     {
         Display = display;
         Template = template;
+        Noun = noun;
+        Identifier = identifier;
+        Precedent = precedent;
     }
 
     public override bool Equals(object? obj)
@@ -34,9 +40,14 @@ public class CommandTemplate
     }
 }
 
-public delegate void CommandSelected(string template);
+public interface ICommandNounSolver
+{
+    string? ResolveNounToTarget(string? noun);
+}
 
-public class CommandsWindow : Window
+public delegate void CommandSelected(CommandTemplate template);
+
+public class CommandsWindow : Window, ICommandNounSolver
 {
     private ListBox commands;
     private Func<Entity> getSubject;
@@ -55,15 +66,24 @@ public class CommandsWindow : Window
         commands.Position = new Point(1, 1);
         Controls.Add(commands);
 
-        commands.SelectedItemExecuted += OnItemSelected;
+        commands.SelectedItemChanged += OnItemSelected;
+        commands.SelectedItemExecuted += OnItemExecuted;
     }
 
     public event CommandSelected? OnCommandSelected;
 
+    public event CommandSelected? OnCommandExecuted;
+
     private void OnItemSelected(object? sender, ListBox.SelectedItemEventArgs e)
     {
-        if (OnCommandSelected != null)
-            OnCommandSelected(((CommandTemplate)e.Item).Template);
+        if (OnCommandSelected != null && e.Item != null)
+            OnCommandSelected(((CommandTemplate)e.Item));
+    }
+    
+    private void OnItemExecuted(object? sender, ListBox.SelectedItemEventArgs e)
+    {
+        if (OnCommandExecuted != null)
+            OnCommandExecuted(((CommandTemplate)e.Item));
     }
 
     public override void Update(TimeSpan delta)
@@ -88,7 +108,10 @@ public class CommandsWindow : Window
                 $"{x.Verb} {x.TargetName ?? "(self)"}",
                 x.Target == null
                     ? $"{x.Verb}"
-                    : $"{x.Verb} {x.TargetName}"
+                    : $"{x.Verb} {x.TargetName}",
+                x.TargetName,
+                x.Target,
+                x.Precedent
             ));
 
         var currentSelected = commands.SelectedItem;
@@ -100,8 +123,20 @@ public class CommandsWindow : Window
         if (currentSelected != null)
         {
             var idx = commands.Items.IndexOf(currentSelected);
-            if (idx >= 0)
+            if (idx >= 0 && commands.SelectedIndex != idx)
                 commands.SelectedIndex = idx;
         }
+    }
+
+    public string? ResolveNounToTarget(string? noun)
+    {
+        if (noun == null)
+            return null;
+        
+        return commands.Items.Select(e => ((CommandTemplate)e))
+            .OrderBy(c => c.Precedent)
+            .Where(x => noun.ToLower().Equals(x.Noun))
+            .Select(x => x.Identifier)
+            .FirstOrDefault();
     }
 }
