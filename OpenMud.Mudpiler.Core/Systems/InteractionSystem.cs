@@ -36,12 +36,12 @@ public class InteractionSystem : AEntitySetSystem<float>
         ArgAs.Text
     };
 
-    private readonly EntityVisibilitySolver entityVisibilitySolver;
+    private readonly IEntityVisibilitySolver entityVisibilitySolver;
     private readonly LogicDirectory logicDirectory;
 
     private readonly Func<EnvObjectReference, object> wrap;
 
-    public InteractionSystem(World world, EntityVisibilitySolver entityVisibilitySolver, LogicDirectory logicDirectory,
+    public InteractionSystem(World world, IEntityVisibilitySolver entityVisibilitySolver, LogicDirectory logicDirectory,
         Func<EnvObjectReference, object> wrap, bool useBuffer = false) : base(world, useBuffer)
     {
         this.logicDirectory = logicDirectory;

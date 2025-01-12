@@ -1,4 +1,5 @@
 ﻿using DefaultEcs;
+using OpenMud.Mudpiler.Core;
 using OpenMud.Mudpiler.Core.Components;
 using SadConsole.UI;
 using SadConsole.UI.Controls;
@@ -38,11 +39,6 @@ public class CommandTemplate
     {
         return Display;
     }
-}
-
-public interface ICommandNounSolver
-{
-    string? ResolveNounToTarget(string? noun);
 }
 
 public delegate void CommandSelected(CommandTemplate template);

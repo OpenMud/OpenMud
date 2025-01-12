@@ -5,11 +5,11 @@ namespace OpenMud.Mudpiler.Net.Core;
 
 public class GameService : BackgroundService
 {
-    private readonly IGameSimulation gameSimulation;
+    private readonly IServerGameSimulation serverGameSimulation;
 
-    public GameService(IGameSimulationFactory gameSimulationFactory)
+    public GameService(IServerGameSimulationFactory serverGameSimulationFactory)
     {
-        gameSimulation = gameSimulationFactory.Create();
+        serverGameSimulation = serverGameSimulationFactory.Create();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -17,7 +17,7 @@ public class GameService : BackgroundService
         using var looper = new LogicLooper(60);
         await looper.RegisterActionAsync((in LogicLooperActionContext ctx) =>
         {
-            gameSimulation.Update(new ServerFrame(ctx.CurrentFrame,
+            serverGameSimulation.Update(new ServerFrame(ctx.CurrentFrame,
                 (float)ctx.ElapsedTimeFromPreviousFrame.TotalSeconds));
             return true;
         });

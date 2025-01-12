@@ -1,6 +1,6 @@
 ﻿namespace OpenMud.Mudpiler.Net.Core;
 
-public interface IGameSimulation
+public interface IServerGameSimulation
 {
     void Update(ServerFrame frame);
 }

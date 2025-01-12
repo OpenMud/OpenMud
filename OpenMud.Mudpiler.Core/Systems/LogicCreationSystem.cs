@@ -10,6 +10,9 @@ using OpenMud.Mudpiler.TypeSolver;
 
 namespace OpenMud.Mudpiler.Core.Systems;
 
+//Handles atom creation requests from the Runtime as well as initializing and creating logic for all atoms.
+//This is different from AtomicCreationSystem which just bootstraps (invokes IMudEntityBuilder) for atoms created
+//outside of the OpenMud runtime.
 [With(typeof(CreateLogicComponent))]
 public class LogicCreationSystem : AEntitySetSystem<float>
 {

@@ -3,6 +3,7 @@ using DefaultEcs;
 using OpenMud.Mudpiler.Client.Terminal.Components;
 using OpenMud.Mudpiler.Client.Terminal.UI;
 using OpenMud.Mudpiler.Compiler.Project.Project;
+using OpenMud.Mudpiler.Core;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.Scene;
 using OpenMud.Mudpiler.RuntimeEnvironment;
@@ -40,153 +41,22 @@ public class Program
                 EnvironmentConstants.BUILD_MACROS, false);    
         }
         
-        // Setup the engine and create the main window.
         Game.Create(160, 50);
-
-        // Hook the start event so we can add consoles to the system.
-        Game.Instance.OnStart = Init;
-        Game.Instance.FrameUpdate += OnRootConsoleUpdate;
-        Game.Instance.FrameRender += OnRootConsoleRender;
-
-        // Start the game.
-        Game.Instance.Run();
-        Game.Instance.Dispose();
-    }
-
-    private static void OnRootConsoleRender(object? sender, GameHost e)
-    {
-        gameSim.Render((float)e.UpdateFrameDelta.TotalSeconds);
-        container.Render(e.UpdateFrameDelta);
-    }
-
-    public static void Init()
-    {
-        container = new ScreenObject();
-        Game.Instance.Screen = container;
-        Game.Instance.DestroyDefaultStartingConsole();
-
-        var inventory = new Window(30, 15);
-        inventory.Position = new Point(130, 0);
-        inventory.Title = "Inventory";
-        inventory.CanDrag = false;
-        inventory.IsVisible = true;
-
-        var commands = new CommandsWindow(30, 15, GetPlayer);
-        commands.Position = new Point(90, 0);
-        commands.IsVisible = true;
-
-
-        // First console
-        var _mapWindow = new Window(60, 12);
-        var _mapConsole = new DrawingArea(50, 10);
-        _mapConsole.Position = new Point(1, 1);
-        _mapWindow.Position = new Point(0, 0);
-
-        _mapWindow.UseMouse = true;
-        _mapWindow.UseKeyboard = true;
-        _mapWindow.WithKeyboard(ProcessInput);
-
-        _mapWindow.MoveToFrontOnMouseClick = true;
-        _mapWindow.IsVisible = true;
-        _mapWindow.CanDrag = false;
-        _mapWindow.Title = "Game World";
-
-        _mapWindow.Controls.Add(_mapConsole);
-        container.Children.Add(_mapWindow);
-
-        logConsole = new InteractionWindow(160, 30);
-        logConsole.Position = new Point(0, 20);
-
-        //commands.OnCommandSelected += x => logConsole.SetCommandText(x.Template);
-        commands.OnCommandExecuted += x =>
+        new Thread(GameRunner).Start(Game.Instance);
+        
+        while (true)
         {
-            logConsole.SetCommandText(x.Template);
-            logConsole.Submit();
-        };
-
-        logConsole.OnSubmitCommand += c => OnSubmitCommand(commands, c);
-
-        container.Children.Add(logConsole);
-        container.Children.Add(commands);
-        container.Children.Add(inventory);
-
-        container.Children.MoveToTop(_mapWindow);
-
-        gameSim = new GameSimulation(CreateSceneBuilder(), CreateDmlAssembly(), _mapConsole);
-
-        var player = gameSim.CreatePlayer("player");
-        player.Set<CameraComponent>();
-        player.Set<PlayerCanImpersonateComponent>();
-        player.Set<PlayerImpersonatingComponent>();
-
-        gameSim.OnWorldEcho += OnWorldEcho;
-        gameSim.OnEntityEcho += (eid, name, m) => OnWorldEcho(m);
-    }
-
-    private static void OnSubmitCommand(ICommandNounSolver nounSolver, string command)
-    {
-        gameSim.DispatchCommand("player", nounSolver, command);
-    }
-
-    private static Entity GetPlayer()
-    {
-        return gameSim.GetEntity("player");
-    }
-
-    private static void OnWorldEcho(string message)
-    {
-        logConsole.RecordLog(message);
-    }
-
-    private static bool ProcessInput(IScreenObject @object, Keyboard keyboard)
-    {
-        var deltaX = 0;
-        var deltaY = 0;
-
-        if (keyboard.IsKeyDown(Keys.Up))
-            deltaY = -1;
-
-        if (keyboard.IsKeyDown(Keys.Down))
-            deltaY = 1;
-
-        if (keyboard.IsKeyDown(Keys.Right))
-            deltaX = 1;
-
-        if (keyboard.IsKeyDown(Keys.Left))
-            deltaX = -1;
-
-        if (deltaX == 0 && deltaY == 0)
-        {
-            if (!HadInput)
-                return false;
-
-            HadInput = false;
-        }
-        else
-        {
-            HadInput = true;
+            var gs = new DmeProgram(new TerminalGameFactory(project));
+            gs.Start();
+            Thread.Sleep(10000);
+            gs.Shutdown();
+            Thread.Sleep(3000);
         }
 
-        gameSim.Slide("player", deltaX, deltaY);
-        return true;
     }
 
-    private static IMudSceneBuilder CreateSceneBuilder()
+    private static void GameRunner(object? o)
     {
-        var entityBuilder = new BaseEntityBuilder();
-        var sceneBuilder = project.Maps.Values.Single();
-
-        return sceneBuilder;
-    }
-
-    private static Assembly CreateDmlAssembly()
-    {
-        return project.Logic;
-    }
-
-    // Event handler for RLNET's Update event
-    private static void OnRootConsoleUpdate(object sender, GameHost e)
-    {
-        gameSim.Update((float)e.UpdateFrameDelta.TotalSeconds);
+        ((Game)o).Run();
     }
 }

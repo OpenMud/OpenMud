@@ -5,7 +5,7 @@ public struct ExecutionPoint
     public readonly int Line;
 }
 
-public delegate void DebugRuntimeRequest(IDebugContext ctx);
+public delegate void DebugRuntimeRequest(IDebugClient ctx);
 
 public interface IDebugRuntimeService
 {

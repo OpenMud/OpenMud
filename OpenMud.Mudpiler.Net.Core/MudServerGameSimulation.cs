@@ -14,14 +14,14 @@ using OpenMud.Mudpiler.RuntimeEnvironment.WorldPiece;
 
 namespace OpenMud.Mudpiler.Net.Core;
 
-public class MudGameSimulation : IGameSimulation
+public class MudServerGameSimulation : IServerGameSimulation
 {
     private readonly ISystem<float> _gameSystem;
     private readonly ISystem<ServerFrame> _serverSystem;
 
     private readonly List<GoRogueSenseAdapter> senseAdapters = new();
 
-    public MudGameSimulation(IMudSceneBuilder builder, Assembly sourceAssembly, IWorldStateEncoderFactory worldEncoder,
+    public MudServerGameSimulation(IMudSceneBuilder builder, Assembly sourceAssembly, IWorldStateEncoderFactory worldEncoder,
         IClientDispatcher clientDispatcher, IClientReceiver clientReceiver, IDmlFrameworkFactory frameworkFactory)
     {
         var logicDirectory = new LogicDirectory();

@@ -4,6 +4,7 @@ using DefaultEcs.System;
 using OpenMud.Mudpiler.Client.Terminal.Components;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.Systems;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenTK;
 using SadConsole;
 using SadConsole.UI.Controls;
@@ -13,14 +14,14 @@ namespace OpenMud.Mudpiler.Client.Terminal.Systems;
 [With(typeof(CharacterGraphicComponent), typeof(PositionComponent))]
 public class WorldTerminalRenderSystem : AEntitySetSystem<float>
 {
-    private readonly EntityVisibilitySolver visibilitySolver;
+    private readonly IEntityVisibilitySolver visibilitySolver;
 
     private IImmutableSet<string>? ConstrainedVisiblity;
     private readonly DrawingArea target;
     private readonly Dictionary<Tuple<int, int>, int> zBackgroundBuffer = new();
     private readonly Dictionary<Tuple<int, int>, int> zGlyphBuffer = new();
 
-    public WorldTerminalRenderSystem(EntityVisibilitySolver visibilitySolver, World world, DrawingArea target,
+    public WorldTerminalRenderSystem(IEntityVisibilitySolver visibilitySolver, World world, DrawingArea target,
         bool useBuffer = false) : base(world, useBuffer)
     {
         this.target = target;

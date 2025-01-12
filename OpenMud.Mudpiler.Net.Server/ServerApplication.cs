@@ -90,8 +90,8 @@ public static class ServerApplication
     {
         builder.Services.AddTransient<IDmlFrameworkFactory, BaseDmlFrameworkFactory>();
 
-        builder.Services.AddTransient<IGameSimulationFactory>(sp =>
-            new DmeProjectGameSimulationFactory(
+        builder.Services.AddTransient<IServerGameSimulationFactory>(sp =>
+            new DmeProjectServerGameSimulationFactory(
                 projectDirectory,
                 sp.GetRequiredService<IWorldStateEncoderFactory>(),
                 sp.GetRequiredService<IClientDispatcher>(),

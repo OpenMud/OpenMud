@@ -32,13 +32,13 @@ public class DebugHub : Hub
         return base.OnDisconnectedAsync(exception);
     }
 
-    public void start()
+    public void Start()
     {
-        
+        clientHandler.Request(x => x.Start());
     }
     
-    public void shutdown()
+    public void Shutdown()
     {
-        
+        clientHandler.Request(x => x.Shutdown());
     }
 }

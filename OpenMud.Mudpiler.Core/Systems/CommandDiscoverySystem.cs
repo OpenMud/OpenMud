@@ -2,15 +2,16 @@
 using DefaultEcs.System;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.Utils;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 
 namespace OpenMud.Mudpiler.Core.Systems;
 
 [With(typeof(PlayerCanImpersonateComponent))]
 public class CommandDiscoverySystem : AEntitySetSystem<float>
 {
-    private readonly EntityVisibilitySolver visibilitySolver;
+    private readonly IEntityVisibilitySolver visibilitySolver;
 
-    public CommandDiscoverySystem(World world, EntityVisibilitySolver visibilitySolver, bool useBuffer = false) : base(
+    public CommandDiscoverySystem(World world, IEntityVisibilitySolver visibilitySolver, bool useBuffer = false) : base(
         world, useBuffer)
     {
         this.visibilitySolver = visibilitySolver;
