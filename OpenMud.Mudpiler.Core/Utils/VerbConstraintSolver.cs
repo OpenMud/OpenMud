@@ -1,13 +1,14 @@
 ﻿using DefaultEcs;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.Systems;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 using OpenMud.Mudpiler.RuntimeEnvironment.Settings;
 
 namespace OpenMud.Mudpiler.Core.Utils;
 
 public static class VerbConstraintSolver
 {
-    public static bool TestSourceType(World world, EntityVisibilitySolver visibilitySolver, VerbSrc? definedSource,
+    public static bool TestSourceType(World world, IEntityVisibilitySolver visibilitySolver, VerbSrc? definedSource,
         ref Entity target, ref Entity source, out string reason)
     {
         var targetName = target.Get<IdentifierComponent>().Name;
@@ -87,14 +88,14 @@ public static class VerbConstraintSolver
     }
 
 
-    public static void ValidateSourceType(World world, EntityVisibilitySolver visiblitySolver, VerbSrc? details,
+    public static void ValidateSourceType(World world, IEntityVisibilitySolver visiblitySolver, VerbSrc? details,
         ref Entity target, ref Entity source)
     {
         if (!TestSourceType(world, visiblitySolver, details, ref target, ref source, out var reason))
             throw new VerbRejectionException(reason);
     }
 
-    private static bool IsVerbUsable(World world, EntityVisibilitySolver visiblitySolver, ref Entity target,
+    private static bool IsVerbUsable(World world, IEntityVisibilitySolver visiblitySolver, ref Entity target,
         ref Entity source, VerbDetails details)
     {
         if (!target.Has<IdentifierComponent>())
@@ -104,7 +105,7 @@ public static class VerbConstraintSolver
     }
 
 
-    public static CommandDetails[] DiscoverSelfCommands(World world, EntityVisibilitySolver visiblitySolver,
+    public static CommandDetails[] DiscoverSelfCommands(World world, IEntityVisibilitySolver visiblitySolver,
         Entity host, int precedent)
     {
         if (!host.Has<VerbDetailsComponent>() || !host.Has<IdentifierComponent>())
@@ -139,7 +140,7 @@ public static class VerbConstraintSolver
     }
 
     public static CommandDetails[] DiscoverExternalInteractionCommands(World world,
-        EntityVisibilitySolver visiblitySolver, Entity host, Entity target, int precedent)
+        IEntityVisibilitySolver visiblitySolver, Entity host, Entity target, int precedent)
     {
         if (!target.Has<VerbDetailsComponent>() || !target.Has<IdentifierComponent>())
             return new CommandDetails[0];

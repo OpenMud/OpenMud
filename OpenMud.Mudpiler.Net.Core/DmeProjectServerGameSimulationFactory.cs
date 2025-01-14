@@ -1,11 +1,30 @@
 ﻿using OpenMud.Mudpiler.Compiler.Project.Project;
+using OpenMud.Mudpiler.Core;
 using OpenMud.Mudpiler.Core.RuntimeTypes;
 using OpenMud.Mudpiler.Core.Scene;
 using OpenMud.Mudpiler.Net.Core.Encoding;
 
 namespace OpenMud.Mudpiler.Net.Core;
 
-public class DmeProjectGameSimulationFactory : IGameSimulationFactory
+public class DmeProjectServerGameSimulationFactory(
+    IGameFactory gameFactory,
+    IWorldStateEncoderFactory worldEncoder,
+    IClientDispatcher dispatcher,
+    IClientReceiver receiver)
+    : IServerGameSimulationFactory
+{
+    public IServerGameSimulation Create()
+    {
+        return new MudServerGameSimulation(
+            gameFactory.Create(),
+            worldEncoder,
+            dispatcher,
+            receiver
+        );
+    }
+}
+/*
+public class DmeProjectServerGameSimulationFactory : IServerGameSimulationFactory
 {
     private readonly DmeProject project;
     private readonly IClientDispatcher dispatcher;
@@ -13,7 +32,7 @@ public class DmeProjectGameSimulationFactory : IGameSimulationFactory
     private readonly IClientReceiver receiver;
     private readonly IWorldStateEncoderFactory worldEncoder;
 
-    public DmeProjectGameSimulationFactory(string projectDirectory, IWorldStateEncoderFactory worldEncoder,
+    public DmeProjectServerGameSimulationFactory(string projectDirectory, IWorldStateEncoderFactory worldEncoder,
         IClientDispatcher dispatcher, IClientReceiver receiver, IDmlFrameworkFactory frameworkFactory)
     {
         this.worldEncoder = worldEncoder;
@@ -23,9 +42,9 @@ public class DmeProjectGameSimulationFactory : IGameSimulationFactory
         this.frameworkFactory = frameworkFactory;
     }
 
-    public IGameSimulation Create()
+    public IServerGameSimulation Create()
     {
-        return new MudGameSimulation(
+        return new MudServerGameSimulation(
             project.Maps.Values.Single(),
             project.Logic,
             worldEncoder,
@@ -35,3 +54,4 @@ public class DmeProjectGameSimulationFactory : IGameSimulationFactory
         );
     }
 }
+*/

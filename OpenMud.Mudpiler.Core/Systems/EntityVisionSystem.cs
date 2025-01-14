@@ -2,15 +2,16 @@
 using DefaultEcs;
 using DefaultEcs.System;
 using OpenMud.Mudpiler.Core.Components;
+using OpenMud.Mudpiler.RuntimeEnvironment.RuntimeTypes;
 
 namespace OpenMud.Mudpiler.Core.Systems;
 
 [With(typeof(VisionComponent))]
 public class EntityVisionSystem : AEntitySetSystem<float>
 {
-    private readonly EntityVisibilitySolver visibilitySolver;
+    private readonly IEntityVisibilitySolver visibilitySolver;
 
-    public EntityVisionSystem(World world, EntityVisibilitySolver visibilitySolver, bool useBuffer = false) : base(
+    public EntityVisionSystem(World world, IEntityVisibilitySolver visibilitySolver, bool useBuffer = false) : base(
         world, useBuffer)
     {
         this.visibilitySolver = visibilitySolver;

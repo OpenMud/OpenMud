@@ -161,7 +161,7 @@ public static class AssetCompiler
 
             assetDirectory[relativeFullPath] = $"{relativeFileName}.json";
 
-            var dest_png = Path.Join(dst, $".\\{relativeFileName}.png");
+            var dest_png = Path.Join(dst, $"./{relativeFileName}.png");
             var resource_name = Path.GetFileName(relativeFileName);
             try
             {
@@ -188,17 +188,18 @@ public static class AssetCompiler
         Dictionary<string, string[]> animationsDirectory, Dictionary<string, string> audioResources, string indexName)
     {
         assetDirectory = assetDirectory.ToDictionary(
-            x => x.Key.Replace("\\", "\\\\"),
+            x => x.Key.Replace("/", "\\").Replace("\\", "\\\\"),
             x => "assets/" + x.Value.Replace("\\", "/")
         );
 
         animationsDirectory = animationsDirectory.ToDictionary(
-            x => x.Key.Replace("\\", "\\\\"),
+            //OpenMud runtime uses \\ delimter, so resource name key must use this for the name.
+            x => x.Key.Replace("/", "\\").Replace("\\", "\\\\"),
             x => x.Value.Select(v => v.Replace("\\", "\\\\")).ToArray()
         );
 
         audioResources = audioResources.ToDictionary(
-            x => x.Key.Replace("\\", "\\\\"),
+            x => x.Key.Replace("/", "\\").Replace("\\", "\\\\"),
             x => "assets/" + x.Value.Replace("\\", "/")
         );
 

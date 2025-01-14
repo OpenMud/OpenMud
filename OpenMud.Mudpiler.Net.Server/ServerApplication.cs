@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using DefaultEcs;
 using Microsoft.Extensions.FileProviders;
+using OpenMud.Mudpiler.Core;
 using OpenMud.Mudpiler.Core.Components;
 using OpenMud.Mudpiler.Core.Messages;
 using OpenMud.Mudpiler.Core.RuntimeTypes;
@@ -90,14 +91,14 @@ public static class ServerApplication
     {
         builder.Services.AddTransient<IDmlFrameworkFactory, BaseDmlFrameworkFactory>();
 
-        builder.Services.AddTransient<IGameSimulationFactory>(sp =>
-            new DmeProjectGameSimulationFactory(
+        builder.Services.AddTransient<IGameLogicSystemFactory, DefaultGameLogicSystemFactory>();
+        builder.Services.AddTransient<IServerGameSimulationFactory, DmeProjectServerGameSimulationFactory>();
+
+        builder.Services.AddTransient<IGameFactory>(
+            sp => new MultiplayerGameFactory(
                 projectDirectory,
-                sp.GetRequiredService<IWorldStateEncoderFactory>(),
-                sp.GetRequiredService<IClientDispatcher>(),
-                sp.GetRequiredService<IClientReceiver>(),
-                sp.GetRequiredService<IDmlFrameworkFactory>()
-            )
+                sp.GetRequiredService<IDmlFrameworkFactory>(),
+                sp.GetRequiredService<IGameLogicSystemFactory>())
         );
     }
 
