@@ -46,7 +46,7 @@ public class Program
         
         while (true)
         {
-            var gs = new DmeProgram(new TerminalGameFactory(project));
+            var gs = new DmeProgram(new TerminalGameFactory(project, new DefaultGameLogicSystemFactory()));
             gs.Start();
             Thread.Sleep(10000);
             gs.Shutdown();

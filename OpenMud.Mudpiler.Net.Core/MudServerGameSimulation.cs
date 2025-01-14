@@ -16,6 +16,36 @@ namespace OpenMud.Mudpiler.Net.Core;
 
 public class MudServerGameSimulation : IServerGameSimulation
 {
+    private readonly IGameSimulation _game;
+    private readonly ISystem<ServerFrame> _serverSystem;
+
+    private readonly List<GoRogueSenseAdapter> senseAdapters = new();
+
+    public MudServerGameSimulation(IGameSimulation game, IWorldStateEncoderFactory worldEncoder,
+        IClientDispatcher clientDispatcher, IClientReceiver clientReceiver)
+    {
+        this._game = game;
+
+        _serverSystem = new SequentialSystem<ServerFrame>(
+            new NetworkWorldRequestRealizerSystem(game.World, clientReceiver),
+            new NetworkWorldSynchronizerSystem(game.World, clientDispatcher, worldEncoder),
+            new GamePlayerResourceSystem(game.World)
+        );
+    }
+
+    public void Update(ServerFrame delta)
+    {
+        _game.Update(delta.DeltaSeconds);
+        _serverSystem.Update(delta);
+
+        foreach (var a in senseAdapters)
+            a.ClearCache();
+    }
+}
+
+/*
+public class MudServerGameSimulation : IServerGameSimulation
+{
     private readonly ISystem<float> _gameSystem;
     private readonly ISystem<ServerFrame> _serverSystem;
 
@@ -74,3 +104,4 @@ public class MudServerGameSimulation : IServerGameSimulation
             a.ClearCache();
     }
 }
+*/

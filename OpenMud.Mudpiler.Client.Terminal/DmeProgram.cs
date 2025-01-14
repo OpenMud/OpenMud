@@ -21,8 +21,7 @@ namespace OpenMud.Mudpiler.Client.Terminal;
 
 public class DmeProgram
 {
-    private TerminalGameFactory gameSimFactory;
-    
+    private readonly TerminalGameFactory gameSimFactory;
     private ScreenObject container;
 
     private IGameSimulation gameSim;

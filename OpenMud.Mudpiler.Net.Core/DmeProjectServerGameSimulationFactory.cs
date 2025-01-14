@@ -1,10 +1,29 @@
 ﻿using OpenMud.Mudpiler.Compiler.Project.Project;
+using OpenMud.Mudpiler.Core;
 using OpenMud.Mudpiler.Core.RuntimeTypes;
 using OpenMud.Mudpiler.Core.Scene;
 using OpenMud.Mudpiler.Net.Core.Encoding;
 
 namespace OpenMud.Mudpiler.Net.Core;
 
+public class DmeProjectServerGameSimulationFactory(
+    IGameFactory gameFactory,
+    IWorldStateEncoderFactory worldEncoder,
+    IClientDispatcher dispatcher,
+    IClientReceiver receiver)
+    : IServerGameSimulationFactory
+{
+    public IServerGameSimulation Create()
+    {
+        return new MudServerGameSimulation(
+            gameFactory.Create(),
+            worldEncoder,
+            dispatcher,
+            receiver
+        );
+    }
+}
+/*
 public class DmeProjectServerGameSimulationFactory : IServerGameSimulationFactory
 {
     private readonly DmeProject project;
@@ -35,3 +54,4 @@ public class DmeProjectServerGameSimulationFactory : IServerGameSimulationFactor
         );
     }
 }
+*/

@@ -23,53 +23,14 @@ public interface IGameFactory
     public IGameSimulation Create();
 }
 
-public abstract class BaseGameFactory : IGameFactory
+public interface IGameLogicSystemFactory
 {
-    protected abstract IGameSimulation CreateGame(World world, GameServices services, ISystem<float> logicSystem);
-    protected abstract MudEnvironment CreateMudEnvironment(World ecsWorld, GameServices services);
-    protected abstract IMudSceneBuilder CreateSceneBuilder();
+    ISystem<float> Create(World ecsWorld, GameServices services, MudEnvironment environment);
+}
 
-    protected virtual IMudEntityBuilder CreateEntityBuilder()
-    {
-        return new BaseEntityBuilder();
-    }
-    
-    public IGameSimulation Create()
-    {
-        var world = new World();
-        var sceneBuilder = CreateSceneBuilder();
-        var services = CreateServices(world, sceneBuilder.Bounds.Width, sceneBuilder.Bounds.Height);
-        var environment = CreateMudEnvironment(world, services);
-        var logicSystem = CreateLogicSystem(
-            world,
-            services,
-            environment
-        );
-        
-        sceneBuilder.Build(world);
-        
-        return CreateGame(world, services, logicSystem);
-    }
-
-    protected GameServices CreateServices(World ecsWorld, int boundsWidth, int boundsHeight)
-    {
-        var logicDirectory = new LogicDirectory();
-        var scheduler = new TimeTaskScheduler();
-        
-        var densityAdapter = new GoRogueDensityAdapter(ecsWorld, boundsWidth, boundsHeight);
-        var visibilitySolver = new EntityVisibilitySolver(logicDirectory, densityAdapter);
-
-        return new GameServices()
-        {
-            DensityAdapter = densityAdapter,
-            LogicDirectory = logicDirectory,
-            VisibilitySolver = visibilitySolver,
-            TimeTaskScheduler = scheduler,
-            EntityBuilder = CreateEntityBuilder()
-        };
-    }
-
-    protected virtual ISystem<float> CreateLogicSystem(World ecsWorld, GameServices services, MudEnvironment environment)
+public class DefaultGameLogicSystemFactory : IGameLogicSystemFactory
+{
+    public ISystem<float> Create(World ecsWorld, GameServices services, MudEnvironment environment)
     {
         var walkabilityAdapter = new GoRogueWalkabilityAdapter(services.DensityAdapter);
 
@@ -93,5 +54,58 @@ public abstract class BaseGameFactory : IGameFactory
             new GameFlowSystem(ecsWorld, services.LogicDirectory),
             new EntityVisionSystem(ecsWorld, services.VisibilitySolver)
         );
+    }
+}
+
+public abstract class BaseGameFactory(IGameLogicSystemFactory logicSystemFactory) : IGameFactory
+{
+    protected readonly IGameLogicSystemFactory LogicSystemFactory = logicSystemFactory;
+
+    protected abstract IGameSimulation CreateGame(World world, GameServices services, ISystem<float> logicSystem);
+    protected abstract MudEnvironment CreateMudEnvironment(World ecsWorld, GameServices services);
+    protected abstract IMudSceneBuilder CreateSceneBuilder();
+
+    protected virtual IMudEntityBuilder CreateEntityBuilder()
+    {
+        return new BaseEntityBuilder();
+    }
+    
+    public IGameSimulation Create()
+    {
+        var world = new World();
+        var sceneBuilder = CreateSceneBuilder();
+        var services = CreateServices(world, sceneBuilder.Bounds.Width, sceneBuilder.Bounds.Height);
+        var environment = CreateMudEnvironment(world, services);
+        var logicSystem = LogicSystemFactory.Create(
+                world,
+                services,
+                environment
+        );/*CreateLogicSystem(
+                world,
+                services,
+                environment
+            );*/
+        
+        sceneBuilder.Build(world);
+        
+        return CreateGame(world, services, logicSystem);
+    }
+
+    protected GameServices CreateServices(World ecsWorld, int boundsWidth, int boundsHeight)
+    {
+        var logicDirectory = new LogicDirectory();
+        var scheduler = new TimeTaskScheduler();
+        
+        var densityAdapter = new GoRogueDensityAdapter(ecsWorld, boundsWidth, boundsHeight);
+        var visibilitySolver = new EntityVisibilitySolver(logicDirectory, densityAdapter);
+
+        return new GameServices()
+        {
+            DensityAdapter = densityAdapter,
+            LogicDirectory = logicDirectory,
+            VisibilitySolver = visibilitySolver,
+            TimeTaskScheduler = scheduler,
+            EntityBuilder = CreateEntityBuilder()
+        };
     }
 }

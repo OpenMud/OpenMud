@@ -16,12 +16,13 @@ public sealed class TerminalGameFactory : BaseGameFactory
 
     private DrawingArea? DrawingArea { get; } = null;
     
-    public TerminalGameFactory(DmeProject project)
+    public TerminalGameFactory(DmeProject project, IGameLogicSystemFactory logicSystemFactory)
+        : base(logicSystemFactory)
     {
         this.Project = project;
     }
 
-    private TerminalGameFactory(DmeProject project, DrawingArea drawingArea)
+    private TerminalGameFactory(DmeProject project, DrawingArea drawingArea, IGameLogicSystemFactory logicSystemFactory) : base(logicSystemFactory)
     {
         this.Project = project;
         this.DrawingArea = drawingArea;
@@ -29,7 +30,7 @@ public sealed class TerminalGameFactory : BaseGameFactory
 
     public TerminalGameFactory SetRenderTarget(DrawingArea drawingArea)
     {
-        return new TerminalGameFactory(Project, drawingArea);
+        return new TerminalGameFactory(Project, drawingArea, LogicSystemFactory);
     }
 
     protected override IGameSimulation CreateGame(World ecsWorld, GameServices services, ISystem<float> logicSystem)

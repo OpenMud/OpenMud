@@ -32,7 +32,7 @@ public class MsBuildDmlCompiler
 
 
         var csPropertyGroup = projectRootElement.AddPropertyGroup();
-        csPropertyGroup.AddProperty("TargetFramework", "net7.0");
+        csPropertyGroup.AddProperty("TargetFramework", "net8.0");
         csPropertyGroup.AddProperty("OutputType", "Library");
 
 
@@ -218,11 +218,11 @@ public class MsBuildDmlCompiler
 
         Console.WriteLine(formattedCode);
 
-        var buildAssembly = MSBuildLocator.QueryVisualStudioInstances().Where(x => x.Version.Major == 7)
+        var buildAssembly = MSBuildLocator.QueryVisualStudioInstances().Where(x => x.Version.Major == 8)
             .FirstOrDefault();
 
         if (buildAssembly == null)
-            throw new Exception("Not able to locate a VS Build Instance for .Net 7.x; Install the .NET 7.x SDK from microsoft's website.");
+            throw new Exception("Not able to locate a VS Build Instance for .Net 8.x; Install the .NET 8.x SDK from microsoft's website.");
 
         if (!MSBuildLocator.IsRegistered)
             MSBuildLocator.RegisterDefaults();
